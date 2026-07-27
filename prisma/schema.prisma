@@ -1,0 +1,162 @@
+// Prisma Schema — Klas Berdaya
+// Database: MySQL
+// ORM: Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// USER & AUTH
+// ─────────────────────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  VALIDATOR
+  USER
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  name          String    @db.VarChar(100)
+  email         String    @unique @db.VarChar(150)
+  passwordHash  String    @db.VarChar(255)
+  role          UserRole  @default(USER)
+  kabupaten     String?   @db.VarChar(100)   // nama kabupaten/kota (untuk role USER)
+  kecamatan     String?   @db.VarChar(100)   // nama kecamatan (untuk role USER)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  selfAssessments SelfAssessment[]
+  validations     AssessmentValidation[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ASSESSMENT (template yang dibuat admin)
+// ─────────────────────────────────────────────────────────────
+
+enum AssessmentTemplateStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Assessment {
+  id          Int                      @id @default(autoincrement())
+  title       String                   @db.VarChar(255)
+  description String?                  @db.Text
+  periode     String                   @db.VarChar(20)
+  status      AssessmentTemplateStatus @default(DRAFT)
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  categories  AssessmentCategory[]
+
+  @@map("assessments")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ASSESSMENT CATEGORY
+// ─────────────────────────────────────────────────────────────
+
+model AssessmentCategory {
+  id           Int        @id @default(autoincrement())
+  assessmentId Int
+  code         String     @db.VarChar(10)    // contoh: "A", "B"
+  name         String     @db.VarChar(255)
+  description  String?    @db.Text
+  order        Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  indicators AssessmentIndicator[]
+
+  @@unique([assessmentId, code])
+  @@map("assessment_categories")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ASSESSMENT INDICATOR
+// ─────────────────────────────────────────────────────────────
+
+model AssessmentIndicator {
+  id          Int      @id @default(autoincrement())
+  categoryId  Int
+  number      Int
+  indicator   String   @db.Text
+  maxScore    Int      @default(4)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category        AssessmentCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  selfAssessments SelfAssessment[]
+
+  @@unique([categoryId, number])
+  @@map("assessment_indicators")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SELF ASSESSMENT
+// ─────────────────────────────────────────────────────────────
+
+enum AssessmentStatus {
+  DRAFT
+  SUBMITTED
+  VALIDATED
+  REJECTED
+}
+
+model SelfAssessment {
+  id            Int               @id @default(autoincrement())
+  indicatorId   Int
+  submittedById Int
+  periode       String            @db.VarChar(20)
+  description   String            @db.Text
+  score         Int
+  supportingDoc String?           @db.VarChar(500)
+  status        AssessmentStatus  @default(DRAFT)
+  submittedAt   DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  indicator   AssessmentIndicator    @relation(fields: [indicatorId], references: [id], onDelete: Restrict)
+  submittedBy User                   @relation(fields: [submittedById], references: [id], onDelete: Restrict)
+  validations AssessmentValidation[]
+
+  @@unique([indicatorId, submittedById, periode])
+  @@map("self_assessments")
+}
+
+// ─────────────────────────────────────────────────────────────
+// VALIDATION
+// ─────────────────────────────────────────────────────────────
+
+enum ValidationStatus {
+  APPROVED
+  REJECTED
+  REVISION_NEEDED
+}
+
+model AssessmentValidation {
+  id               Int              @id @default(autoincrement())
+  selfAssessmentId Int
+  validatorId      Int
+  status           ValidationStatus
+  validatedScore   Int?
+  notes            String?          @db.Text
+  validatedAt      DateTime         @default(now())
+
+  selfAssessment SelfAssessment @relation(fields: [selfAssessmentId], references: [id], onDelete: Cascade)
+  validator      User           @relation(fields: [validatorId], references: [id], onDelete: Restrict)
+
+  @@map("assessment_validations")
+}
