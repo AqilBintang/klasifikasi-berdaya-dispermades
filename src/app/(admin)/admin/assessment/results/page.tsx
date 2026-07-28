@@ -1,132 +1,190 @@
+import Link from 'next/link'
+import { prisma } from '@/lib/prisma'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faAward, faTrophy, faChartBar } from '@fortawesome/free-solid-svg-icons'
+import { faAward, faChartBar, faArrowRight, faCalendarDays } from '@fortawesome/free-solid-svg-icons'
+import { getKlasifikasi, getStatusAkhir, KLASIFIKASI_CONFIG, type KlasifikasiLevel } from '@/lib/scoring'
 
-interface ResultGroup {
-  user: { id: number; name: string }
-  assessment: { id: number; title: string }
-  periode: string
-  entries: {
-    id: number
-    score: number
-    status: string
-    indicator: { number: number; indicator: string; maxScore: number; category: { code: string; name: string } }
-    validations: { validatedScore: number | null; status: string }[]
-  }[]
-  totalScore: number
-  maxTotalScore: number
-}
-
-async function getResults(): Promise<ResultGroup[]> {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-    const res = await fetch(`${baseUrl}/api/assessment/results`, { cache: 'no-store' })
-    if (!res.ok) return []
-    const json = await res.json()
-    return json.data ?? []
-  } catch {
-    return []
-  }
-}
-
-function ScoreBar({ score, max }: { score: number; max: number }) {
-  const pct = max > 0 ? Math.round((score / max) * 100) : 0
-  const color = pct >= 80 ? 'bg-green-500' : pct >= 60 ? 'bg-amber-400' : 'bg-red-400'
+function KlasifikasiBadge({ level }: { level: KlasifikasiLevel | null }) {
+  if (!level) return <span className="text-xs text-gray-400 italic">—</span>
+  const cfg = KLASIFIKASI_CONFIG[level]
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-2 rounded-full bg-gray-200 overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-xs font-medium text-gray-600 w-10 text-right">{pct}%</span>
-    </div>
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold border ${cfg.bg} ${cfg.color} ${cfg.border}`}>
+      {cfg.emoji} {level}
+    </span>
   )
 }
 
-export default async function AssessmentResultsPage() {
-  const groups = await getResults()
+async function getRekapitulasi() {
+  const entries = await prisma.selfAssessment.findMany({
+    where: { status: { in: ['VALIDATED', 'SUBMITTED'] } },
+    include: {
+      submittedBy: { select: { id: true, name: true, kecamatan: true, kabupaten: true } },
+      indicator: {
+        include: {
+          category: {
+            include: {
+              assessment: { select: { id: true, title: true, periode: true } },
+              _count: { select: { indicators: true } },
+            },
+          },
+        },
+      },
+      validations: { orderBy: { validatedAt: 'desc' }, take: 1, select: { validatedScore: true } },
+    },
+    orderBy: [
+      { submittedBy: { kecamatan: 'asc' } },
+      { indicator: { category: { assessmentId: 'asc' } } },
+    ],
+  })
+
+  // Group by user + assessment + periode
+  const map: Record<string, {
+    user: { id: number; name: string; kecamatan: string | null; kabupaten: string | null }
+    assessment: { id: number; title: string; periode: string }
+    totalScore: number; maxScore: number; maxPossibleTotal: number
+    catScores: Record<string, { code: string; name: string; totalScore: number; maxScore: number; maxPossible: number }>
+    lastUpdated: string
+  }> = {}
+
+  for (const e of entries) {
+    const key = `${e.submittedById}_${e.indicator.category.assessmentId}_${e.periode}`
+    const effScore = e.validations[0]?.validatedScore ?? e.score
+
+    if (!map[key]) {
+      map[key] = {
+        user: e.submittedBy,
+        assessment: {
+          id: e.indicator.category.assessmentId,
+          title: e.indicator.category.assessment.title,
+          periode: e.periode,
+        },
+        totalScore: 0, maxScore: 0, maxPossibleTotal: 0,
+        catScores: {},
+        lastUpdated: '',
+      }
+    }
+
+    map[key].totalScore      += effScore
+    map[key].maxScore        += e.indicator.maxScore
+    map[key].maxPossibleTotal += e.indicator.maxScore
+
+    const catKey = e.indicator.categoryId.toString()
+    if (!map[key].catScores[catKey]) {
+      map[key].catScores[catKey] = {
+        code: e.indicator.category.code,
+        name: e.indicator.category.name,
+        totalScore: 0, maxScore: 0,
+        maxPossible: e.indicator.category._count.indicators * 4,
+      }
+    }
+    map[key].catScores[catKey].totalScore += effScore
+    map[key].catScores[catKey].maxScore   += e.indicator.maxScore
+  }
+
+  return Object.entries(map).map(([key, g]) => {
+    const [userId, assessmentId] = key.split('_')
+    return {
+      ...g,
+      key,
+      userId:       parseInt(userId, 10),
+      assessmentId: parseInt(assessmentId, 10),
+      statusAkhir:  getStatusAkhir(g.totalScore, g.maxPossibleTotal),
+      categories:   Object.values(g.catScores).map((c) => ({
+        ...c,
+        klasifikasi: getKlasifikasi(c.totalScore, c.maxPossible),
+      })),
+    }
+  }).sort((a, b) => (a.user.kecamatan ?? a.user.name).localeCompare(b.user.kecamatan ?? b.user.name))
+}
+
+export default async function RekapitulasiPage() {
+  const data = await getRekapitulasi()
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Hasil Nilai Assessment</h2>
-          <p className="mt-1 text-sm text-gray-500">Rekap hasil penilaian per kecamatan</p>
+          <h2 className="text-2xl font-bold text-gray-900">Rekapitulasi Assessment</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Data hasil assessment semua kecamatan. Klik untuk melihat detail isian.
+          </p>
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <FontAwesomeIcon icon={faChartBar} className="w-4 h-4" />
-          <span>{groups.length} kecamatan</span>
+          <span>{data.length} rekapitulasi</span>
         </div>
       </div>
 
-      {groups.length === 0 ? (
+      {data.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white py-16 text-center">
           <FontAwesomeIcon icon={faAward} className="w-12 h-12 text-gray-300 mb-4" />
-          <p className="text-gray-500 font-medium">Belum ada hasil assessment</p>
-          <p className="mt-1 text-sm text-gray-400">Hasil akan muncul setelah kecamatan mengisi dan admin memvalidasi</p>
+          <p className="text-gray-500 font-medium">Belum ada data rekapitulasi</p>
+          <p className="mt-1 text-sm text-gray-400">Muncul setelah kecamatan submit dan divalidasi</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {/* Summary cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {groups
-              .sort((a, b) => (b.totalScore / b.maxTotalScore) - (a.totalScore / a.maxTotalScore))
-              .slice(0, 3)
-              .map((g, i) => {
-                const pct = g.maxTotalScore > 0
-                  ? Math.round((g.totalScore / g.maxTotalScore) * 100)
-                  : 0
-                const medals = ['🥇', '🥈', '🥉']
-                return (
-                  <div key={`${g.user.id}_${g.assessment.id}`}
-                    className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm text-center">
-                    <div className="text-3xl mb-2">{medals[i]}</div>
-                    <h3 className="font-semibold text-gray-900">{g.user.name}</h3>
-                    <p className="text-xs text-gray-400 mt-0.5">{g.assessment.title}</p>
-                    <div className="mt-3">
-                      <span className="text-2xl font-bold text-gray-900">{pct}%</span>
-                      <p className="text-xs text-gray-400">{g.totalScore} / {g.maxTotalScore} poin</p>
-                    </div>
-                  </div>
-                )
-              })}
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {data.map((item) => {
+            const pct = item.maxScore > 0 ? Math.round((item.totalScore / item.maxScore) * 100) : 0
+            const barColor = pct >= 80 ? 'bg-green-500' : pct >= 60 ? 'bg-amber-400' : 'bg-red-400'
 
-          {/* Full table */}
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-            <div className="flex items-center gap-2 border-b px-6 py-3 bg-gray-50">
-              <FontAwesomeIcon icon={faTrophy} className="w-4 h-4 text-amber-500" />
-              <h3 className="font-semibold text-gray-800 text-sm">Rekap Semua Kecamatan</h3>
-            </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-xs font-semibold text-gray-600">
-                  <th className="px-4 py-3 w-8">#</th>
-                  <th className="px-4 py-3">Kecamatan</th>
-                  <th className="px-4 py-3">Assessment</th>
-                  <th className="px-4 py-3">Periode</th>
-                  <th className="px-4 py-3 text-center">Total Skor</th>
-                  <th className="px-4 py-3 w-48">Progress</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {groups
-                  .sort((a, b) => (b.totalScore / b.maxTotalScore) - (a.totalScore / a.maxTotalScore))
-                  .map((g, i) => (
-                    <tr key={`${g.user.id}_${g.assessment.id}_${g.periode}`} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-gray-400 text-center">{i + 1}</td>
-                      <td className="px-4 py-3 font-medium text-gray-900">{g.user.name}</td>
-                      <td className="px-4 py-3 text-gray-600 line-clamp-1">{g.assessment.title}</td>
-                      <td className="px-4 py-3 text-gray-500">{g.periode}</td>
-                      <td className="px-4 py-3 text-center font-semibold">
-                        {g.totalScore} <span className="font-normal text-gray-400">/ {g.maxTotalScore}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <ScoreBar score={g.totalScore} max={g.maxTotalScore} />
-                      </td>
-                    </tr>
+            return (
+              <Link
+                key={item.key}
+                href={`/admin/assessment/results/${item.userId}/${item.assessmentId}?periode=${item.assessment.periode}`}
+                className="group rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition-all hover:border-sky-300"
+              >
+                {/* Header card */}
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <p className="font-bold text-gray-900 group-hover:text-sky-700 transition-colors">
+                      {item.user.kecamatan ?? item.user.name}
+                    </p>
+                    {item.user.kabupaten && (
+                      <p className="text-xs text-gray-500">{item.user.kabupaten}</p>
+                    )}
+                  </div>
+                  <FontAwesomeIcon icon={faArrowRight} className="w-4 h-4 text-gray-300 group-hover:text-sky-500 transition-colors mt-0.5" />
+                </div>
+
+                {/* Assessment info */}
+                <p className="text-xs text-gray-500 line-clamp-1 mb-1">{item.assessment.title}</p>
+                <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-3">
+                  <FontAwesomeIcon icon={faCalendarDays} className="w-3 h-3" />
+                  Periode {item.assessment.periode}
+                </div>
+
+                {/* Score bar */}
+                <div className="mb-3">
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>Total Skor</span>
+                    <span className="font-semibold text-gray-700">{item.totalScore}/{item.maxScore}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                    <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+
+                {/* Per kategori mini */}
+                <div className="space-y-1 mb-3">
+                  {item.categories.map((cat) => (
+                    <div key={cat.code} className="flex items-center justify-between text-xs">
+                      <span className="text-gray-600">Kat. {cat.code}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-700">{cat.totalScore}/{cat.maxScore}</span>
+                        <KlasifikasiBadge level={cat.klasifikasi} />
+                      </div>
+                    </div>
                   ))}
-              </tbody>
-            </table>
-          </div>
+                </div>
+
+                {/* Status akhir */}
+                <div className="flex items-center justify-between border-t pt-3 mt-3">
+                  <span className="text-xs font-semibold text-gray-600">Status Akhir</span>
+                  <KlasifikasiBadge level={item.statusAkhir} />
+                </div>
+              </Link>
+            )
+          })}
         </div>
       )}
     </div>

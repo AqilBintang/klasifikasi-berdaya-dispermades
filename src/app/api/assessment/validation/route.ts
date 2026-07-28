@@ -29,7 +29,9 @@ export async function GET(req: NextRequest) {
         }),
       },
       include: {
-        submittedBy: { select: { id: true, name: true, email: true } },
+        submittedBy: {
+          select: { id: true, name: true, email: true, kecamatan: true, kabupaten: true },
+        },
         indicator: {
           include: {
             category: {
@@ -45,7 +47,11 @@ export async function GET(req: NextRequest) {
           },
         },
       },
-      orderBy: { submittedAt: 'desc' },
+      orderBy: [
+        { submittedBy: { kecamatan: 'asc' } },
+        { indicator: { category: { order: 'asc' } } },
+        { indicator: { number: 'asc' } },
+      ],
     })
 
     return NextResponse.json({ data: submissions })

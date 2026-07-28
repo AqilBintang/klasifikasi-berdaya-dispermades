@@ -1,72 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { BookOpen, Calendar, Megaphone, ArrowRight, Search } from 'lucide-react'
-
-import { getRecentPrograms, mockPrograms } from '@/data/programs'
-import { getUpcomingActivities, mockActivities } from '@/data/activities'
-import { getRecentAnnouncements, mockAnnouncements } from '@/data/announcements'
-
-import { StatisticCard, StatisticCardSkeleton } from '@/components/shared/ui/StatisticCard'
-import { ProgramCard, ProgramCardSkeleton } from '@/components/shared/ui/ProgramCard'
-import { ActivityCard, ActivityCardSkeleton } from '@/components/shared/ui/ActivityCard'
-import { AnnouncementCard, AnnouncementCardSkeleton } from '@/components/shared/ui/AnnouncementCard'
-import { SectionEmpty, SectionError } from '@/components/shared/ui/SectionStates'
+import { useState } from 'react'
+import { Search } from 'lucide-react'
 import { InfoBanner } from '@/components/shared/ui/InfoBanner'
 import type { BannerSlide } from '@/components/shared/ui/InfoBanner'
-import { buttonVariants } from '@/components/ui/button'
 
 import { cn } from '@/lib/utils'
-import type { Program } from '@/types/program'
-import type { Activity } from '@/types/activity'
-
-import type { Announcement } from '@/types/announcement'
-
-function SectionHeader({ title, href, id }: { title: string; href: string; id: string }) {
-  return (
-    <div className="flex items-center justify-between mb-4">
-      <h2 id={id} className="text-xl font-semibold">
-        {title}
-      </h2>
-      <Link
-        href={href}
-        className={buttonVariants({ variant: 'ghost', size: 'sm' })}
-      >
-        Lihat Semua <ArrowRight className="ml-1 h-4 w-4" />
-      </Link>
-    </div>
-  )
-}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(true)
-  const [hasError, setHasError] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<'Semua' | 'Mandiri' | 'Maju' | 'Berkembang' | 'Tertinggal' | 'Sangat Tertinggal'>('Semua')
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800)
-    return () => clearTimeout(timer)
-  }, [])
-
-  // Derived data
-  const recentPrograms: Program[] = getRecentPrograms(3)
-  const upcomingActivities: Activity[] = getUpcomingActivities(3)
-  const recentAnnouncements: Announcement[] = getRecentAnnouncements(3)
-
-  // Statistics
-  const activePrograms = mockPrograms.filter((p) => p.status === 'active').length
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const upcomingCount = mockActivities.filter((a) => new Date(a.date) >= today).length
-  const announcementsCount = mockAnnouncements.length
-
-  // Today's date in Indonesian format — tidak dipakai di hero, bisa untuk section lain nanti
 
   const bannerSlides: BannerSlide[] = [
     { id: 'banner-1' },
@@ -167,181 +112,45 @@ export default function DashboardPage() {
       </section>
 
       {/* ── Wireframe Section ── */}
-      <section className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+      <section
+        className="w-full"
+        style={{ backgroundColor: 'oklch(88.87% 0.0568 219.092)' }}
+      >
+        <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
 
-          {/* Kiri — Placeholder deskripsi */}
-          <div className="flex flex-col gap-4">
-            {/* Label */}
-            <div className="h-4 w-24 rounded bg-gray-300/60 border border-dashed border-gray-400" />
-            {/* Heading */}
-            <div className="h-8 w-3/4 rounded bg-gray-300/60 border border-dashed border-gray-400" />
-            <div className="h-8 w-1/2 rounded bg-gray-300/60 border border-dashed border-gray-400" />
-            {/* Body text lines */}
-            <div className="flex flex-col gap-2 mt-2">
-              <div className="h-3 w-full rounded bg-gray-200/80 border border-dashed border-gray-300" />
-              <div className="h-3 w-full rounded bg-gray-200/80 border border-dashed border-gray-300" />
-              <div className="h-3 w-5/6 rounded bg-gray-200/80 border border-dashed border-gray-300" />
-              <div className="h-3 w-4/5 rounded bg-gray-200/80 border border-dashed border-gray-300" />
-              <div className="h-3 w-full rounded bg-gray-200/80 border border-dashed border-gray-300" />
-              <div className="h-3 w-3/4 rounded bg-gray-200/80 border border-dashed border-gray-300" />
+            <div className="flex flex-col gap-4">
+              <div className="inline-flex w-fit items-center rounded-full bg-white/60 px-3 py-1 text-xs font-semibold text-sky-800 ring-1 ring-sky-200">
+                Tentang Platform
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900">
+                Klasifikasi Berdaya
+              </h2>
+              <p className="text-sm md:text-base text-justify leading-relaxed text-gray-700">
+                Lorem ipsum dolor, sit amet consectetur adipisicing elit. Facere deleniti ex esse voluptas, facilis ipsum officiis vitae tempore neque ullam exercitationem perferendis quasi itaque autem explicabo totam dicta nisi rem inventore temporibus dolores? Optio quisquam fugit, possimus placeat similique eveniet beatae quibusdam sed, aliquam sequi iure aut repudiandae eum quas reiciendis delectus ipsa magnam earum tenetur ea id, odio libero maiores? Quasi nihil, dolor mollitia atque omnis consequuntur pariatur officia soluta libero autem quibusdam repellat, blanditiis beatae iste ea distinctio minima doloremque animi? Impedit voluptatem, labore harum accusamus ex quis, est eius repudiandae animi illo consequuntur aliquid totam maiores delectus itaque expedita eveniet ipsa quae eos? Autem illo voluptas nobis, praesentium ea architecto, dolores similique, velit adipisci obcaecati minus quisquam consequatur est beatae. Quia veritatis minima amet impedit at molestiae, recusandae harum voluptates dignissimos placeat dolore quisquam. Nobis soluta et velit eligendi sunt quae odio doloremque illo dolores, aperiam ipsam.
+              </p>
             </div>
-            {/* CTA button */}
-            <div className="mt-4 h-10 w-36 rounded-full bg-gray-300/60 border border-dashed border-gray-400" />
-          </div>
 
-          {/* Kanan — Placeholder gambar */}
-          <div className="relative w-full aspect-[4/3] rounded-2xl border-2 border-dashed border-gray-400 bg-gray-200/50 flex flex-col items-center justify-center gap-3">
-            {/* Image icon placeholder */}
-            <svg
-              className="w-16 h-16 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="1.5" />
-              <circle cx="8.5" cy="8.5" r="1.5" strokeWidth="1.5" />
-              <path d="M21 15l-5-5L5 21" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="text-sm text-gray-400 font-medium">Gambar</span>
-            <span className="text-xs text-gray-400">Rasio 4 : 3</span>
-          </div>
+            <div className="relative w-full aspect-[4/3] rounded-2xl border-2 border-dashed border-gray-400 bg-white/35 flex flex-col items-center justify-center gap-3">
+              <svg
+                className="w-16 h-16 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="1.5" />
+                <circle cx="8.5" cy="8.5" r="1.5" strokeWidth="1.5" />
+                <path d="M21 15l-5-5L5 21" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="text-sm text-gray-400 font-medium">Gambar</span>
+              <span className="text-xs text-gray-400">Rasio 4 : 3</span>
+            </div>
 
+          </div>
         </div>
       </section>
 
-      {/* ── Dashboard Content ── */}
-      <div className="space-y-8 px-4 md:px-6 lg:px-8 py-12 max-w-7xl mx-auto bg-white/80 rounded-3xl mt-6 mb-8 shadow-sm">
-
-      {/* ── Statistics ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {isLoading ? (
-          <>
-            <StatisticCardSkeleton />
-            <StatisticCardSkeleton />
-            <StatisticCardSkeleton />
-          </>
-        ) : (
-          <>
-            <StatisticCard
-              title="Program Aktif"
-              value={activePrograms}
-              icon={BookOpen}
-            />
-            <StatisticCard
-              title="Kegiatan Mendatang"
-              value={upcomingCount}
-              icon={Calendar}
-            />
-            <StatisticCard
-              title="Pengumuman"
-              value={announcementsCount}
-              icon={Megaphone}
-            />
-          </>
-        )}
-      </div>
-
-      {/* ── Programs Section ── */}
-      <section aria-labelledby="section-programs">
-        <SectionHeader
-          id="section-programs"
-          title="Program Terbaru"
-          href="/programs"
-        />
-        {hasError ? (
-          <SectionError
-            message="Gagal memuat data program."
-            onRetry={() => setHasError(false)}
-          />
-        ) : isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <ProgramCardSkeleton />
-            <ProgramCardSkeleton />
-            <ProgramCardSkeleton />
-          </div>
-        ) : recentPrograms.length === 0 ? (
-          <SectionEmpty message="Belum ada program yang tersedia." />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {recentPrograms.map((program) => (
-              <ProgramCard
-                key={program.id}
-                program={program}
-                onClick={() => router.push('/programs/' + program.id)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* ── Activities Section ── */}
-      <section aria-labelledby="section-activities">
-        <SectionHeader
-          id="section-activities"
-          title="Kegiatan Mendatang"
-          href="/activities"
-        />
-        {hasError ? (
-          <SectionError
-            message="Gagal memuat data kegiatan."
-            onRetry={() => setHasError(false)}
-          />
-        ) : isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <ActivityCardSkeleton />
-            <ActivityCardSkeleton />
-            <ActivityCardSkeleton />
-          </div>
-        ) : upcomingActivities.length === 0 ? (
-          <SectionEmpty message="Belum ada kegiatan mendatang." />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {upcomingActivities.map((activity) => (
-              <ActivityCard
-                key={activity.id}
-                activity={activity}
-                onClick={() => router.push('/activities/' + activity.id)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* ── Announcements Section ── */}
-      <section aria-labelledby="section-announcements">
-        <SectionHeader
-          id="section-announcements"
-          title="Pengumuman Terbaru"
-          href="/announcements"
-        />
-        {hasError ? (
-          <SectionError
-            message="Gagal memuat data pengumuman."
-            onRetry={() => setHasError(false)}
-          />
-        ) : isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <AnnouncementCardSkeleton />
-            <AnnouncementCardSkeleton />
-            <AnnouncementCardSkeleton />
-          </div>
-        ) : recentAnnouncements.length === 0 ? (
-          <SectionEmpty message="Belum ada pengumuman." />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {recentAnnouncements.map((announcement) => (
-              <AnnouncementCard
-                key={announcement.id}
-                announcement={announcement}
-                onClick={() => router.push('/announcements/' + announcement.id)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-    </div>
     </div>
   )
 }

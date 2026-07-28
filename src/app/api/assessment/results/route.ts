@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getKlasifikasi, calcCategoryScore } from '@/lib/scoring'
 
 // GET /api/assessment/results?assessmentId=1&periode=2025
 export async function GET(req: NextRequest) {
@@ -19,18 +20,20 @@ export async function GET(req: NextRequest) {
         }),
       },
       include: {
-        submittedBy: { select: { id: true, name: true } },
+        submittedBy: { select: { id: true, name: true, kecamatan: true, kabupaten: true } },
         indicator: {
           include: {
             category: {
-              include: { assessment: { select: { id: true, title: true } } },
+              include: {
+                assessment: { select: { id: true, title: true } },
+              },
             },
           },
         },
         validations: {
           orderBy: { validatedAt: 'desc' },
           take: 1,
-          include: { validator: { select: { id: true, name: true } } },
+          select: { validatedScore: true, status: true, notes: true, validatedAt: true },
         },
       },
       orderBy: [
@@ -39,34 +42,74 @@ export async function GET(req: NextRequest) {
       ],
     })
 
-    // Group by submittedBy + assessment
-    const grouped: Record<string, {
-      user: { id: number; name: string }
+    // Group by kecamatan (submittedBy) + assessment + periode
+    type GroupKey = string
+    const grouped: Record<GroupKey, {
+      user: { id: number; name: string; kecamatan: string | null; kabupaten: string | null }
       assessment: { id: number; title: string }
       periode: string
-      entries: typeof results
+      categories: Record<string, {
+        categoryId: number
+        code: string
+        name: string
+        totalScore: number
+        maxScore: number
+        klasifikasi: string | null
+        entries: typeof results
+      }>
       totalScore: number
       maxTotalScore: number
     }> = {}
 
     for (const r of results) {
       const key = `${r.submittedById}_${r.indicator.category.assessmentId}_${r.periode}`
+
       if (!grouped[key]) {
         grouped[key] = {
           user: r.submittedBy,
           assessment: r.indicator.category.assessment,
           periode: r.periode,
-          entries: [],
+          categories: {},
           totalScore: 0,
           maxTotalScore: 0,
         }
       }
-      grouped[key].entries.push(r)
-      grouped[key].totalScore += r.validations[0]?.validatedScore ?? r.score
+
+      const catKey = r.indicator.categoryId.toString()
+      if (!grouped[key].categories[catKey]) {
+        grouped[key].categories[catKey] = {
+          categoryId: r.indicator.categoryId,
+          code:       r.indicator.category.code,
+          name:       r.indicator.category.name,
+          totalScore: 0,
+          maxScore:   0,
+          klasifikasi: '',
+          entries:    [],
+        }
+      }
+
+      const effectiveScore = r.validations[0]?.validatedScore ?? r.score
+      grouped[key].categories[catKey].totalScore  += effectiveScore
+      grouped[key].categories[catKey].maxScore    += r.indicator.maxScore
+      grouped[key].categories[catKey].entries.push(r)
+      grouped[key].totalScore    += effectiveScore
       grouped[key].maxTotalScore += r.indicator.maxScore
     }
 
-    return NextResponse.json({ data: Object.values(grouped) })
+    // Hitung klasifikasi per kategori — hanya jika maxScore >= 64
+    for (const group of Object.values(grouped)) {
+      for (const cat of Object.values(group.categories)) {
+        const klasifikasi = getKlasifikasi(cat.totalScore, cat.maxScore)
+        cat.klasifikasi = klasifikasi ?? null  // null = tidak berlaku
+      }
+    }
+
+    const data = Object.values(grouped).map((g) => ({
+      ...g,
+      categories: Object.values(g.categories),
+    }))
+
+    return NextResponse.json({ data })
   } catch (err) {
     console.error('[GET /api/assessment/results]', err)
     return NextResponse.json({ error: 'Gagal mengambil hasil.' }, { status: 500 })

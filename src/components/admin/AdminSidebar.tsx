@@ -10,6 +10,7 @@ import {
   faCirclePlus,
   faCheckDouble,
   faAward,
+  faChartBar,
   faUsers,
   faChevronDown,
   faChevronRight,
@@ -24,8 +25,7 @@ import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 const ASSESSMENT_ITEMS = [
   { label: 'Create Assessment',       href: '/admin/assessment/create',     icon: faCirclePlus },
   { label: 'Validation Assessment',   href: '/admin/assessment/validation',  icon: faCheckDouble },
-  { label: 'Hasil Nilai Assessment',  href: '/admin/assessment/results',     icon: faAward },
-]
+  { label: 'Rekapitulasi Assessment', href: '/admin/assessment/results',     icon: faAward },]
 
 // ─── SidebarContent ───────────────────────────────────────────────────────────
 
@@ -143,6 +143,24 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
             )}
           </li>
 
+          {/* ── Klasifikasi Berdaya ── */}
+          <li>
+            <Link
+              href="/admin/klasifikasi-berdaya"
+              onClick={onClose}
+              aria-current={isActive('/admin/klasifikasi-berdaya') ? 'page' : undefined}
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                isActive('/admin/klasifikasi-berdaya')
+                  ? 'bg-sky-500/20 text-sky-300'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
+              )}
+            >
+              <FontAwesomeIcon icon={faChartBar} className="w-4 h-4 shrink-0" />
+              <span>Klasifikasi Berdaya</span>
+            </Link>
+          </li>
+          
           {/* ── Manage User ── */}
           <li>
             <Link
@@ -160,9 +178,6 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
               <span>Manage User</span>
             </Link>
           </li>
-
-          
-
         </ul>
       </nav>
 

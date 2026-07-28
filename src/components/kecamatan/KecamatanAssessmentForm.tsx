@@ -1,35 +1,21 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faFloppyDisk, faPaperPlane, faSpinner,
   faCheckCircle, faTriangleExclamation, faUpload,
+  faCloudArrowUp, faCircleCheck,
 } from '@fortawesome/free-solid-svg-icons'
 import { cn } from '@/lib/utils'
+import { useUnsavedWarning } from '@/hooks/useUnsavedWarning'
 
-interface Indicator {
-  id: number
-  number: number
-  indicator: string
-  maxScore: number
-}
-
-interface Category {
-  id: number
-  code: string
-  name: string
-  indicators: Indicator[]
-}
-
+interface Indicator { id: number; number: number; indicator: string; maxScore: number }
+interface Category   { id: number; code: string; name: string; indicators: Indicator[] }
 interface ExistingEntry {
-  id: number
-  indicatorId: number
-  description: string
-  score: number
-  supportingDoc: string | null
-  status: string
+  id: number; indicatorId: number; description: string
+  score: number; supportingDoc: string | null; status: string
 }
 
 interface Props {
@@ -39,41 +25,120 @@ interface Props {
   periode: string
 }
 
-interface RowState {
-  description: string
-  score: string
-  supportingDoc: string
-}
+interface RowState { description: string; score: string; supportingDoc: string }
+
+type AutoSaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 export function KecamatanAssessmentForm({ assessment, existingEntries, submittedById, periode }: Props) {
   const router = useRouter()
 
-  // Init state dari existing entries
-  const initRows: Record<number, RowState> = {}
-  for (const cat of assessment.categories) {
-    for (const ind of cat.indicators) {
-      const existing = existingEntries.find((e) => e.indicatorId === ind.id)
-      initRows[ind.id] = {
-        description:  existing?.description   ?? '',
-        score:        existing?.score != null  ? String(existing.score) : '',
-        supportingDoc: existing?.supportingDoc ?? '',
+  // Init rows dari existing
+  const initRows = useCallback((): Record<number, RowState> => {
+    const r: Record<number, RowState> = {}
+    for (const cat of assessment.categories) {
+      for (const ind of cat.indicators) {
+        const ex = existingEntries.find((e) => e.indicatorId === ind.id)
+        r[ind.id] = {
+          description:   ex?.description    ?? '',
+          score:         ex?.score != null   ? String(ex.score) : '',
+          supportingDoc: ex?.supportingDoc   ?? '',
+        }
       }
     }
-  }
+    return r
+  }, [assessment.categories, existingEntries])
 
-  const [rows, setRows] = useState<Record<number, RowState>>(initRows)
+  const [rows, setRows]           = useState<Record<number, RowState>>(initRows)
+  const [isDirty, setIsDirty]     = useState(false)
+  const [autoSave, setAutoSave]   = useState<AutoSaveStatus>('idle')
   const [submitting, setSubmitting] = useState(false)
   const [submitType, setSubmitType] = useState<'draft' | 'submit' | null>(null)
-  const [result, setResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [result, setResult]       = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
-  const updateRow = (indId: number, field: keyof RowState, value: string) =>
-    setRows((p) => ({ ...p, [indId]: { ...p[indId], [field]: value } }))
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isFirstMount  = useRef(true)
+  const rowsRef       = useRef(rows)  // selalu up-to-date untuk flush saat blur
 
-  // Cek apakah semua sudah SUBMITTED (read-only)
+  // Update ref setiap kali rows berubah
+  useEffect(() => { rowsRef.current = rows }, [rows])
+
   const allSubmitted = existingEntries.length > 0 &&
     existingEntries.every((e) => e.status === 'SUBMITTED' || e.status === 'VALIDATED')
 
+  // Blokir browser refresh/close jika ada unsaved changes
+  useUnsavedWarning(isDirty && !allSubmitted)
+
+  // ── Auto-save logic ───────────────────────────────────────────
+
+  const doSaveDraft = useCallback(async (currentRows: Record<number, RowState>) => {
+    const entries = Object.entries(currentRows)
+      .filter(([, r]) => r.description.trim() || r.score)
+      .map(([indId, r]) => ({
+        indicatorId:   parseInt(indId, 10),
+        submittedById,
+        periode,
+        description:   r.description.trim() || '-',
+        score:         parseInt(r.score || '0', 10),
+        supportingDoc: r.supportingDoc.trim() || null,
+      }))
+
+    if (entries.length === 0) return
+
+    setAutoSave('saving')
+    try {
+      await Promise.all(
+        entries.map((e) =>
+          fetch('/api/assessment/self-assessment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(e),
+          })
+        )
+      )
+      setAutoSave('saved')
+      setIsDirty(false)
+      setTimeout(() => setAutoSave('idle'), 2500)
+    } catch {
+      setAutoSave('error')
+      setTimeout(() => setAutoSave('idle'), 3000)
+    }
+  }, [submittedById, periode])
+
+  // Trigger auto-save 800ms setelah user berhenti mengetik
+  useEffect(() => {
+    if (isFirstMount.current) { isFirstMount.current = false; return }
+    if (allSubmitted || !isDirty) return
+
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    autoSaveTimer.current = setTimeout(() => {
+      doSaveDraft(rows)
+    }, 800)
+
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
+  }, [rows, isDirty, allSubmitted, doSaveDraft])
+
+  // Flush save segera saat user blur dari field (pindah focus/navigasi)
+  const handleFieldBlur = useCallback(() => {
+    if (!isDirty || allSubmitted) return
+    if (autoSaveTimer.current) {
+      clearTimeout(autoSaveTimer.current)
+      autoSaveTimer.current = null
+    }
+    doSaveDraft(rowsRef.current)
+  }, [isDirty, allSubmitted, doSaveDraft])
+
+  const updateRow = (indId: number, field: keyof RowState, value: string) => {
+    setRows((p) => ({ ...p, [indId]: { ...p[indId], [field]: value } }))
+    setIsDirty(true)
+    setResult(null)
+  }
+
+  // ── Manual save / submit ──────────────────────────────────────
+
   const handleSave = async (status: 'DRAFT' | 'SUBMITTED') => {
+    // Batalkan auto-save yang pending
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+
     setSubmitting(true)
     setSubmitType(status === 'DRAFT' ? 'draft' : 'submit')
     setResult(null)
@@ -81,23 +146,21 @@ export function KecamatanAssessmentForm({ assessment, existingEntries, submitted
     const entries = Object.entries(rows)
       .filter(([, r]) => r.description.trim() || r.score)
       .map(([indId, r]) => ({
-        indicatorId: parseInt(indId, 10),
+        indicatorId:   parseInt(indId, 10),
         submittedById,
         periode,
-        description: r.description.trim() || '-',
-        score: parseInt(r.score || '0', 10),
+        description:   r.description.trim() || '-',
+        score:         parseInt(r.score || '0', 10),
         supportingDoc: r.supportingDoc.trim() || null,
       }))
 
     if (entries.length === 0) {
       setResult({ type: 'error', message: 'Isi minimal satu indikator sebelum menyimpan.' })
-      setSubmitting(false)
-      setSubmitType(null)
+      setSubmitting(false); setSubmitType(null)
       return
     }
 
     try {
-      // Upsert semua entries
       const saves = await Promise.all(
         entries.map((e) =>
           fetch('/api/assessment/self-assessment', {
@@ -108,7 +171,6 @@ export function KecamatanAssessmentForm({ assessment, existingEntries, submitted
         )
       )
 
-      // Jika submit, patch status ke SUBMITTED
       if (status === 'SUBMITTED') {
         await Promise.all(
           saves.map((s) =>
@@ -123,30 +185,58 @@ export function KecamatanAssessmentForm({ assessment, existingEntries, submitted
         )
       }
 
+      setIsDirty(false)
+      setAutoSave('idle')
       setResult({
         type: 'success',
         message: status === 'DRAFT'
           ? 'Berhasil disimpan sebagai draft.'
-          : 'Assessment berhasil disubmit untuk divalidasi.',
+          : 'Assessment berhasil disubmit untuk divalidasi!',
       })
-      setTimeout(() => router.refresh(), 1000)
+      if (status === 'SUBMITTED') {
+        setTimeout(() => router.refresh(), 1200)
+      }
     } catch {
       setResult({ type: 'error', message: 'Terjadi kesalahan. Coba lagi.' })
     } finally {
-      setSubmitting(false)
-      setSubmitType(null)
+      setSubmitting(false); setSubmitType(null)
     }
   }
 
+  // ── Render ────────────────────────────────────────────────────
+
   return (
     <div className="space-y-6">
-      {allSubmitted && (
+      {/* Status bar: submitted / auto-save indicator */}
+      {allSubmitted ? (
         <div className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
           <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4" />
           Assessment sudah disubmit dan sedang menunggu validasi.
         </div>
+      ) : (
+        <div className="flex items-center justify-between rounded-lg bg-sky-50 border border-sky-200 px-4 py-2.5 text-xs text-sky-700">
+          <span>Perubahan akan otomatis disimpan sebagai draft dalam 2 detik.</span>
+          <span className="flex items-center gap-1.5 font-medium">
+            {autoSave === 'saving' && (
+              <><FontAwesomeIcon icon={faSpinner} className="w-3 h-3 animate-spin" /> Menyimpan...</>
+            )}
+            {autoSave === 'saved' && (
+              <><FontAwesomeIcon icon={faCircleCheck} className="w-3 h-3 text-green-600" />
+              <span className="text-green-700">Tersimpan otomatis</span></>
+            )}
+            {autoSave === 'error' && (
+              <><FontAwesomeIcon icon={faTriangleExclamation} className="w-3 h-3 text-red-500" />
+              <span className="text-red-600">Auto-save gagal</span></>
+            )}
+            {autoSave === 'idle' && isDirty && (
+              <><FontAwesomeIcon icon={faCloudArrowUp} className="w-3 h-3 text-sky-500" />
+              <span>Ada perubahan belum disimpan</span></>
+            )}
+          </span>
+        </div>
       )}
 
+      {/* Result banner */}
       {result && (
         <div className={cn(
           'flex items-start gap-3 rounded-lg border px-4 py-3 text-sm',
@@ -157,6 +247,7 @@ export function KecamatanAssessmentForm({ assessment, existingEntries, submitted
         </div>
       )}
 
+      {/* Tabel per kategori */}
       {assessment.categories.map((cat) => (
         <div key={cat.id} className="rounded-xl border bg-white shadow-sm overflow-hidden">
           <div className="bg-sky-600 px-6 py-3">
@@ -181,7 +272,7 @@ export function KecamatanAssessmentForm({ assessment, existingEntries, submitted
                 {cat.indicators.map((ind) => {
                   const row = rows[ind.id]
                   const existing = existingEntries.find((e) => e.indicatorId === ind.id)
-                  const isSubmitted = existing?.status === 'SUBMITTED' || existing?.status === 'VALIDATED'
+                  const isLocked = existing?.status === 'SUBMITTED' || existing?.status === 'VALIDATED'
                   return (
                     <tr key={ind.id} className="hover:bg-gray-50">
                       <td className="px-3 py-3 text-center text-gray-500 font-medium">{ind.number}</td>
@@ -190,9 +281,9 @@ export function KecamatanAssessmentForm({ assessment, existingEntries, submitted
                         <textarea
                           value={row.description}
                           onChange={(e) => updateRow(ind.id, 'description', e.target.value)}
-                          disabled={isSubmitted}
-                          rows={3}
-                          maxLength={5000}
+                          onBlur={handleFieldBlur}
+                          disabled={isLocked}
+                          rows={3} maxLength={5000}
                           placeholder="Deskripsi pencapaian..."
                           className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20 disabled:bg-gray-50 disabled:text-gray-400"
                         />
@@ -201,7 +292,8 @@ export function KecamatanAssessmentForm({ assessment, existingEntries, submitted
                         <select
                           value={row.score}
                           onChange={(e) => updateRow(ind.id, 'score', e.target.value)}
-                          disabled={isSubmitted}
+                          onBlur={handleFieldBlur}
+                          disabled={isLocked}
                           className="w-16 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-sky-400 focus:outline-none disabled:bg-gray-50"
                         >
                           <option value="">-</option>
@@ -216,7 +308,8 @@ export function KecamatanAssessmentForm({ assessment, existingEntries, submitted
                           type="url"
                           value={row.supportingDoc}
                           onChange={(e) => updateRow(ind.id, 'supportingDoc', e.target.value)}
-                          disabled={isSubmitted}
+                          onBlur={handleFieldBlur}
+                          disabled={isLocked}
                           placeholder="https://..."
                           maxLength={500}
                           className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
@@ -231,10 +324,11 @@ export function KecamatanAssessmentForm({ assessment, existingEntries, submitted
         </div>
       ))}
 
+      {/* Action buttons */}
       {!allSubmitted && (
         <div className="flex flex-col sm:flex-row items-center justify-end gap-3 rounded-xl border bg-white px-6 py-4 shadow-sm">
           <p className="text-xs text-gray-400 mr-auto">
-            Draft: tersimpan, belum dikirim. Submit: dikirim ke admin untuk divalidasi.
+            Draft: tersimpan, belum dikirim ke admin. Submit: dikirim ke admin untuk divalidasi.
           </p>
           <button type="button" disabled={submitting} onClick={() => handleSave('DRAFT')}
             className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
@@ -248,7 +342,7 @@ export function KecamatanAssessmentForm({ assessment, existingEntries, submitted
             {submitting && submitType === 'submit'
               ? <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin" />
               : <FontAwesomeIcon icon={faPaperPlane} className="w-4 h-4" />}
-            Submit
+            Submit Assessment
           </button>
         </div>
       )}
