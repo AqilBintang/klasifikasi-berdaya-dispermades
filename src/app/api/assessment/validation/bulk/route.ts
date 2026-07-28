@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { deleteBackupsForSelfAssessmentIds, upsertBackupsForSelfAssessmentIds } from '@/lib/export/backup-snapshot'
 
 const bulkSchema = z.object({
   selfAssessmentIds: z.array(z.number().int().positive()).min(1),
@@ -52,6 +53,10 @@ export async function POST(req: NextRequest) {
         data:  { status: newStatus },
       })
     })
+
+    const ids = submissions.map((s) => s.id)
+    if (newStatus === 'VALIDATED') await upsertBackupsForSelfAssessmentIds(ids)
+    else await deleteBackupsForSelfAssessmentIds(ids)
 
     return NextResponse.json({
       message: `${submissions.length} submission berhasil divalidasi.`,

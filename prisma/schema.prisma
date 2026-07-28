@@ -196,3 +196,21 @@ model AssessmentValidation {
 
   @@map("assessment_validations")
 }
+
+model AssessmentBackup {
+  id             Int      @id @default(autoincrement())
+  assessmentTitle String   @db.VarChar(255)
+  periode         String   @db.VarChar(20)
+  tahun           Int?
+  kabupaten       String?  @db.VarChar(100)
+  kecamatan       String?  @db.VarChar(100)
+  totalScore      Int      @default(0)
+  maxPossibleTotal Int     @default(0)
+  statusAkhir      String? @db.VarChar(20)
+  snapshot         Json
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([assessmentTitle, periode, kecamatan])
+  @@map("assessment_backups")
+}

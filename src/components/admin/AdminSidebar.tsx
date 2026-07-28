@@ -11,6 +11,7 @@ import {
   faCheckDouble,
   faAward,
   faChartBar,
+  faFileArrowDown,
   faUsers,
   faChevronDown,
   faChevronRight,
@@ -158,6 +159,23 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
             >
               <FontAwesomeIcon icon={faChartBar} className="w-4 h-4 shrink-0" />
               <span>Klasifikasi Berdaya</span>
+            </Link>
+          </li>
+
+          <li>
+            <Link
+              href="/admin/backup"
+              onClick={onClose}
+              aria-current={isActive('/admin/backup') ? 'page' : undefined}
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                isActive('/admin/backup')
+                  ? 'bg-sky-500/20 text-sky-300'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
+              )}
+            >
+              <FontAwesomeIcon icon={faFileArrowDown} className="w-4 h-4 shrink-0" />
+              <span>Backup & Export</span>
             </Link>
           </li>
           

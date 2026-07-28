@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { deleteBackupForGroup, upsertBackupIfComplete } from '@/lib/export/backup-snapshot'
 
 const validateSchema = z.object({
   selfAssessmentId: z.number().int().positive(),
@@ -79,6 +80,13 @@ export async function POST(req: NextRequest) {
     // Cek self assessment ada dan statusnya SUBMITTED
     const sa = await prisma.selfAssessment.findUnique({
       where: { id: selfAssessmentId },
+      select: {
+        id: true,
+        status: true,
+        submittedById: true,
+        periode: true,
+        indicator: { select: { category: { select: { assessmentId: true } } } },
+      },
     })
     if (!sa) {
       return NextResponse.json({ error: 'Self assessment tidak ditemukan.' }, { status: 404 })
@@ -114,6 +122,10 @@ export async function POST(req: NextRequest) {
 
       return validation
     })
+
+    const assessmentId = sa.indicator.category.assessmentId
+    if (status === 'APPROVED') await upsertBackupIfComplete({ submittedById: sa.submittedById, periode: sa.periode, assessmentId })
+    else await deleteBackupForGroup({ submittedById: sa.submittedById, periode: sa.periode, assessmentId })
 
     return NextResponse.json({ data: result }, { status: 201 })
   } catch (err) {
