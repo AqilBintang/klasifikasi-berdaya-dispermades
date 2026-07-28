@@ -10,6 +10,8 @@ interface AssessmentDetail {
   description: string | null
   periode: string
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+  isLocked: boolean
+  answerCount: number
   categories: {
     id: number
     code: string
@@ -63,12 +65,17 @@ export default async function AssessmentDetailPage({
             <h2 className="text-2xl font-bold text-gray-900">{assessment.title}</h2>
             <p className="mt-1 text-sm text-gray-500">
               Periode: {assessment.periode} · Status: {assessment.status}
+              {assessment.isLocked && (
+                <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+                  🔒 Terkunci · {assessment.answerCount} jawaban masuk
+                </span>
+              )}
             </p>
           </div>
         </div>
       </div>
 
-      <EditAssessmentForm assessment={assessment} />
+      <EditAssessmentForm assessment={assessment} isLocked={assessment.isLocked} />
     </div>
   )
 }

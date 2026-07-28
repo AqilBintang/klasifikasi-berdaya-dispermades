@@ -7,7 +7,7 @@ import { Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { label: 'Home',             href: '/dashboard' },
+  { label: 'Home',             href: '/home' },
   { label: 'About Programs',   href: '/programs' },
   { label: 'FAQ',              href: '/faq' },
   { label: 'Announcements',    href: '/announcements' },
@@ -83,14 +83,11 @@ export function Navbar() {
                   href={item.href}
                   aria-current={active ? 'page' : undefined}
                   className={cn(
-                    'text-sm font-medium transition-colors duration-200',
-                    scrolled
-                      ? active
-                        ? 'text-gray-900 font-semibold'
-                        : 'text-gray-600 hover:text-gray-900'
-                      : active
-                        ? 'text-gray-900 font-semibold'
-                        : 'text-gray-600 hover:text-gray-900'
+                    'relative text-sm font-medium transition-colors duration-200 pb-1',
+                    'after:absolute after:bottom-0 after:left-0 after:h-0.5 after:rounded-full after:transition-all after:duration-200',
+                    active
+                      ? 'text-sky-600 after:w-full after:bg-sky-500'
+                      : 'text-gray-600 hover:text-gray-900 after:w-0 hover:after:w-full hover:after:bg-gray-400'
                   )}
                 >
                   {item.label}
@@ -161,9 +158,9 @@ export function Navbar() {
                     href={item.href}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
-                      'flex items-center rounded-lg px-4 py-3 text-sm font-medium transition-colors',
+                      'flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors',
                       active
-                        ? 'bg-gray-100 text-gray-900 font-semibold'
+                        ? 'bg-sky-50 text-sky-700 font-semibold border-l-2 border-sky-500'
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                     )}
                   >

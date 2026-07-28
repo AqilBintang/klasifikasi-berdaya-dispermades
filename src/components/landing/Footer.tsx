@@ -7,7 +7,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 
 const NAV_LINKS = [
-  { label: 'Home',            href: '/dashboard' },
+  { label: 'Home',            href: '/home' },
   { label: 'About Programs',  href: '/programs' },
   { label: 'FAQ',             href: '/faq' },
   { label: 'Announcements',   href: '/announcements' },

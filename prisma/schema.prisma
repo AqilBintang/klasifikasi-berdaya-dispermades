@@ -59,6 +59,7 @@ model Assessment {
   updatedAt   DateTime                 @updatedAt
 
   categories  AssessmentCategory[]
+  rubrics     AssessmentRubric[]
 
   @@map("assessments")
 }
@@ -99,13 +100,48 @@ model AssessmentIndicator {
 
   category        AssessmentCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   selfAssessments SelfAssessment[]
+  rubricItems     RubricItem[]
 
   @@unique([categoryId, number])
   @@map("assessment_indicators")
 }
 
 // ─────────────────────────────────────────────────────────────
-// SELF ASSESSMENT
+// RUBRIK PENILAIAN (panduan skor per indikator)
+// ─────────────────────────────────────────────────────────────
+
+model AssessmentRubric {
+  id           Int      @id @default(autoincrement())
+  assessmentId Int
+  title        String   @db.VarChar(255)   // judul rubrik, misal: "RUBRIK PENILAIAN KECAMATAN BERDAYA PROGRAM"
+  description  String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assessment   Assessment        @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  items        RubricItem[]
+
+  @@map("assessment_rubrics")
+}
+
+model RubricItem {
+  id          Int    @id @default(autoincrement())
+  rubricId    Int
+  indicatorId Int                            // relasi ke indikator assessment
+  score1      String @db.Text               // deskripsi skor 1
+  score2      String @db.Text               // deskripsi skor 2
+  score3      String @db.Text               // deskripsi skor 3
+  score4      String @db.Text               // deskripsi skor 4
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rubric    AssessmentRubric    @relation(fields: [rubricId], references: [id], onDelete: Cascade)
+  indicator AssessmentIndicator @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+
+  @@unique([rubricId, indicatorId])
+  @@map("rubric_items")
+}
+
 // ─────────────────────────────────────────────────────────────
 
 enum AssessmentStatus {

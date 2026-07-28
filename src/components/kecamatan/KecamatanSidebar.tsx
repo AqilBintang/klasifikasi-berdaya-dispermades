@@ -7,15 +7,17 @@ import {
   faGauge,
   faClipboardList,
   faChartBar,
+  faBook,
   faRightFromBracket,
 } from '@fortawesome/free-solid-svg-icons'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { label: 'Dashboard',       href: '/kecamatan/dashboard',   icon: faGauge },
-  { label: 'Isi Assessment',  href: '/kecamatan/assessment',  icon: faClipboardList },
-  { label: 'Hasil Nilai',     href: '/kecamatan/hasil',       icon: faChartBar },
+  { label: 'Dashboard',      href: '/kecamatan/dashboard',  icon: faGauge },
+  { label: 'Panduan',        href: '/kecamatan/panduan',    icon: faBook },
+  { label: 'Isi Assessment', href: '/kecamatan/assessment', icon: faClipboardList },
+  { label: 'Hasil Nilai',    href: '/kecamatan/hasil',      icon: faChartBar },
 ]
 
 export function KecamatanSidebar() {
@@ -27,7 +29,7 @@ export function KecamatanSidebar() {
         {/* Brand */}
         <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-700/60">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo/logo-kota.png" alt="Logo" className="h-8 w-auto brightness-0 invert" />
+          <img src="/logo/logo-kota.png" alt="Logo" className="h-8 w-auto" />
           <div>
             <p className="font-bold text-sm text-white">Klas Berdaya</p>
             <p className="text-xs text-gray-400">Portal Kecamatan</p>

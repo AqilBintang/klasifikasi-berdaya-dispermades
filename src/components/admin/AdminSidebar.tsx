@@ -14,6 +14,7 @@ import {
   faChevronDown,
   faChevronRight,
   faRightFromBracket,
+  faBook
 } from '@fortawesome/free-solid-svg-icons'
 import { cn } from '@/lib/utils'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
@@ -78,6 +79,24 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
             </Link>
           </li>
 
+          {/* ── Panduan ── */}
+          <li>
+            <Link
+              href="/admin/panduan"
+              onClick={onClose}
+              aria-current={isActive('/admin/panduan') ? 'page' : undefined}
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                isActive('/admin/panduan')
+                  ? 'bg-sky-500/20 text-sky-300'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
+              )}
+            >
+              <FontAwesomeIcon icon={faBook} className="w-4 h-4 shrink-0" />
+              <span>Panduan Rubrik</span>
+            </Link>
+          </li>
+          
           {/* ── Assessment group ── */}
           <li>
             <button
@@ -141,6 +160,8 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
               <span>Manage User</span>
             </Link>
           </li>
+
+          
 
         </ul>
       </nav>

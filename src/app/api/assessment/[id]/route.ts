@@ -49,7 +49,15 @@ export async function GET(
     if (!assessment) {
       return NextResponse.json({ error: 'Assessment tidak ditemukan.' }, { status: 404 })
     }
-    return NextResponse.json({ data: assessment })
+
+    // Cek apakah ada jawaban (locked)
+    const answerCount = await prisma.selfAssessment.count({
+      where: {
+        indicator: { category: { assessmentId: numId } },
+      },
+    })
+
+    return NextResponse.json({ data: { ...assessment, isLocked: answerCount > 0, answerCount } })
   } catch (err) {
     console.error('[GET /api/assessment/[id]]', err)
     return NextResponse.json({ error: 'Gagal mengambil data.' }, { status: 500 })
@@ -76,6 +84,27 @@ export async function PATCH(
     }
 
     const { title, description, periode, status, categories } = parsed.data
+
+    // Cek apakah ada kecamatan yang sudah mengisi — jika ada, lock semua perubahan
+    if (categories || title !== undefined || description !== undefined || periode !== undefined) {
+      const answerCount = await prisma.selfAssessment.count({
+        where: {
+          indicator: {
+            category: { assessmentId: numId },
+          },
+        },
+      })
+      if (answerCount > 0) {
+        return NextResponse.json(
+          {
+            error: 'Assessment terkunci. Sudah ada kecamatan yang mengisi assessment ini sehingga tidak dapat diedit.',
+            locked: true,
+            answerCount,
+          },
+          { status: 423 } // 423 Locked
+        )
+      }
+    }
 
     const updated = await prisma.$transaction(async (tx) => {
       // Update info dasar
@@ -153,9 +182,25 @@ export async function DELETE(
     const numId = parseInt(id, 10)
     if (isNaN(numId)) return NextResponse.json({ error: 'ID tidak valid.' }, { status: 400 })
 
+    // Cek lock sebelum hapus
+    const answerCount = await prisma.selfAssessment.count({
+      where: {
+        indicator: { category: { assessmentId: numId } },
+      },
+    })
+    if (answerCount > 0) {
+      return NextResponse.json(
+        {
+          error: 'Assessment tidak dapat dihapus karena sudah ada kecamatan yang mengisi.',
+          locked: true,
+          answerCount,
+        },
+        { status: 423 }
+      )
+    }
+
     await prisma.assessment.delete({ where: { id: numId } })
-    return NextResponse.json({ message: 'Assessment berhasil dihapus.' })
-  } catch (err) {
+    return NextResponse.json({ message: 'Assessment berhasil dihapus.' })  } catch (err) {
     console.error('[DELETE /api/assessment/[id]]', err)
     return NextResponse.json({ error: 'Gagal menghapus assessment.' }, { status: 500 })
   }

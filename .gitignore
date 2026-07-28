@@ -1,5 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# settings vscode
+.vscode
+
 # dependencies
 /node_modules
 /.pnp
@@ -44,6 +47,7 @@ next-env.d.ts
 .kiro
 AGENTS.md
 /src/generated/prisma
-.windsurf
+.windsurf/
 .agents/
 .claude/
+skills-lock.json

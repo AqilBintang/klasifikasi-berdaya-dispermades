@@ -78,7 +78,7 @@ const newCategory = (order: number): CategoryBlock => ({
   indicators: [newIndicator(1)],
 })
 
-export function EditAssessmentForm({ assessment }: { assessment: AssessmentData }) {
+export function EditAssessmentForm({ assessment, isLocked = false }: { assessment: AssessmentData; isLocked?: boolean }) {
   const router = useRouter()
   const [title, setTitle] = useState(assessment.title)
   const [description, setDescription] = useState(assessment.description ?? '')
@@ -175,6 +175,20 @@ export function EditAssessmentForm({ assessment }: { assessment: AssessmentData 
 
   return (
     <div className="space-y-6">
+      {/* Locked banner */}
+      {isLocked && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-5 py-4">
+          <span className="text-xl">🔒</span>
+          <div>
+            <p className="font-semibold text-amber-800 text-sm">Assessment Terkunci</p>
+            <p className="text-amber-700 text-sm mt-0.5">
+              Assessment ini tidak dapat diedit karena sudah ada kecamatan yang mengisi.
+              Untuk mengubah konten, arsipkan assessment ini dan buat yang baru.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Result */}
       {result && (
         <div className={cn(
@@ -196,17 +210,20 @@ export function EditAssessmentForm({ assessment }: { assessment: AssessmentData 
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Judul <span className="text-red-500">*</span></label>
             <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={255}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20" />
+              disabled={isLocked}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Periode <span className="text-red-500">*</span></label>
             <input type="text" value={periode} onChange={(e) => setPeriode(e.target.value)} maxLength={20}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20" />
+              disabled={isLocked}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
             <select value={status} onChange={(e) => setStatus(e.target.value as typeof status)}
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
+              disabled={isLocked}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none disabled:bg-gray-50 disabled:cursor-not-allowed">
               <option value="DRAFT">Draft</option>
               <option value="PUBLISHED">Published</option>
               <option value="ARCHIVED">Archived</option>
@@ -215,7 +232,8 @@ export function EditAssessmentForm({ assessment }: { assessment: AssessmentData 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi <span className="text-gray-400 font-normal">(opsional)</span></label>
             <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20" />
+              disabled={isLocked}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed" />
           </div>
         </div>
       </div>
@@ -230,7 +248,7 @@ export function EditAssessmentForm({ assessment }: { assessment: AssessmentData 
                 placeholder="Nama kategori..." maxLength={255}
                 className="bg-transparent border-b border-white/40 text-white placeholder:text-white/60 text-sm font-medium focus:outline-none focus:border-white w-72" />
             </div>
-            <button type="button" onClick={() => removeCategory(cat.tempId)} disabled={categories.length === 1}
+            <button type="button" onClick={() => removeCategory(cat.tempId)} disabled={categories.length === 1 || isLocked}
               className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed">
               <FontAwesomeIcon icon={faTrash} className="w-3 h-3" /> Hapus
             </button>
@@ -246,41 +264,46 @@ export function EditAssessmentForm({ assessment }: { assessment: AssessmentData 
                 </div>
                 <textarea value={ind.indicator} onChange={(e) => updateIndicator(cat.tempId, ind.tempId, 'indicator', e.target.value)}
                   placeholder="Tuliskan indikator penilaian..." rows={2} maxLength={2000}
-                  className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20" />
+                  disabled={isLocked}
+                  className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed" />
                 <button type="button" onClick={() => removeIndicator(cat.tempId, ind.tempId)}
-                  disabled={cat.indicators.length === 1}
+                  disabled={cat.indicators.length === 1 || isLocked}
                   className="mt-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed">
                   <FontAwesomeIcon icon={faTrash} className="w-3.5 h-3.5" />
                 </button>
               </div>
             ))}
             <button type="button" onClick={() => addIndicator(cat.tempId)}
-              className="mt-1 flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-sky-400 hover:text-sky-600 w-full justify-center">
+              disabled={isLocked}
+              className="mt-1 flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-sky-400 hover:text-sky-600 w-full justify-center disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:text-gray-500">
               <FontAwesomeIcon icon={faPlus} className="w-3.5 h-3.5" /> Tambah Indikator
             </button>
           </div>
         </div>
       ))}
 
-      <button type="button" onClick={addCategory}
-        className="flex items-center gap-2 rounded-xl border-2 border-dashed border-gray-300 px-6 py-4 text-sm font-medium text-gray-500 hover:border-sky-400 hover:text-sky-600 w-full justify-center">
-        <FontAwesomeIcon icon={faFolderPlus} className="w-4 h-4" /> Tambah Kategori Baru
-      </button>
-
-      {/* Action */}
-      <div className="flex flex-col sm:flex-row items-center justify-end gap-3 rounded-xl border bg-white px-6 py-4 shadow-sm">
-        {status === 'PUBLISHED' && (
-          <button type="button" onClick={() => { setStatus('ARCHIVED') }}
-            className="flex items-center gap-2 rounded-lg border border-amber-300 px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 mr-auto">
-            <FontAwesomeIcon icon={faBoxArchive} className="w-3.5 h-3.5" /> Archive
-          </button>
-        )}
-        <button type="button" disabled={saving} onClick={handleSave}
-          className="flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50">
-          {saving ? <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin" /> : <FontAwesomeIcon icon={faFloppyDisk} className="w-4 h-4" />}
-          Simpan Perubahan
+      {!isLocked && (
+        <button type="button" onClick={addCategory}
+          className="flex items-center gap-2 rounded-xl border-2 border-dashed border-gray-300 px-6 py-4 text-sm font-medium text-gray-500 hover:border-sky-400 hover:text-sky-600 w-full justify-center">
+          <FontAwesomeIcon icon={faFolderPlus} className="w-4 h-4" /> Tambah Kategori Baru
         </button>
-      </div>
+      )}
+
+      {!isLocked && (
+        <div className="flex flex-col sm:flex-row items-center justify-end gap-3 rounded-xl border bg-white px-6 py-4 shadow-sm">
+          {status === 'PUBLISHED' && (
+            <button type="button" onClick={() => { setStatus('ARCHIVED') }}
+              className="flex items-center gap-2 rounded-lg border border-amber-300 px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 mr-auto">
+              <FontAwesomeIcon icon={faBoxArchive} className="w-3.5 h-3.5" /> Archive
+            </button>
+          )}
+          <button type="button" disabled={saving} onClick={handleSave}
+            className="flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50">
+            {saving ? <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin" /> : <FontAwesomeIcon icon={faFloppyDisk} className="w-4 h-4" />}
+            Simpan Perubahan
+          </button>
+        </div>
+      )}
     </div>
   )
 }
