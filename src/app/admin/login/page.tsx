@@ -1,26 +1,23 @@
 'use client'
 
 import { Suspense, useState } from 'react'
-import Link from 'next/link'
 import { signIn, signOut, getSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSpinner, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
+import { faSpinner, faEye, faEyeSlash, faShield } from '@fortawesome/free-solid-svg-icons'
 
-function LoginForm() {
+function AdminLoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [email, setEmail]         = useState('')
-  const [password, setPassword]   = useState('')
-  const [showPw, setShowPw]       = useState(false)
-  const [loading, setLoading]     = useState(false)
-  const [error, setError]         = useState('')
-  const [isAdminError, setIsAdminError] = useState(false)
+  const [email, setEmail]       = useState('')
+  const [password, setPassword] = useState('')
+  const [showPw, setShowPw]     = useState(false)
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setIsAdminError(false)
     setLoading(true)
     try {
       const result = await signIn('credentials', {
@@ -29,18 +26,17 @@ function LoginForm() {
         redirect: false,
       })
       if (result?.error) {
-        setError('Email atau password salah. Silakan coba lagi.')
+        setError('Email atau password salah.')
       } else {
         const session = await getSession()
-        // Halaman ini khusus kecamatan — tolak jika role ADMIN
-        if (session?.user.role === 'ADMIN') {
+        // Halaman ini khusus admin — tolak jika bukan ADMIN
+        if (session?.user.role !== 'ADMIN') {
           await signOut({ redirect: false })
-          setIsAdminError(true)
-          setError('Akun admin tidak dapat login di sini.')
+          setError('Akun ini tidak memiliki akses admin.')
           setLoading(false)
           return
         }
-        const callbackUrl = searchParams.get('callbackUrl') ?? '/kecamatan/dashboard'
+        const callbackUrl = searchParams.get('callbackUrl') ?? '/admin'
         router.push(callbackUrl)
         router.refresh()
       }
@@ -53,7 +49,6 @@ function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Email */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1.5">
           Email
@@ -62,14 +57,13 @@ function LoginForm() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="email@kecamatan.go.id"
+          placeholder="admin@klasberdaya.id"
           required
           autoComplete="email"
-          className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20"
+          className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/20"
         />
       </div>
 
-      {/* Password */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1.5">
           Password
@@ -82,7 +76,7 @@ function LoginForm() {
             placeholder="Masukkan password"
             required
             autoComplete="current-password"
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 pr-12 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20"
+            className="w-full rounded-xl border border-gray-300 px-4 py-3 pr-12 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/20"
           />
           <button
             type="button"
@@ -95,61 +89,46 @@ function LoginForm() {
         </div>
       </div>
 
-      {/* Error */}
       {error && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-          <p>{error}</p>
-          {isAdminError && (
-            <Link
-              href="/admin/login"
-              className="mt-1 inline-block font-medium underline hover:text-red-800"
-            >
-              Pergi ke halaman login admin →
-            </Link>
-          )}
-        </div>
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          {error}
+        </p>
       )}
 
-      {/* Submit */}
       <button
         type="submit"
         disabled={loading}
-        className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 py-3 text-sm font-semibold text-white hover:bg-sky-700 transition-colors disabled:opacity-60"
+        className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors disabled:opacity-60"
       >
         {loading && <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin" />}
-        {loading ? 'Masuk...' : 'Masuk'}
+        {loading ? 'Masuk...' : 'Masuk sebagai Admin'}
       </button>
     </form>
   )
 }
 
-export default function LoginPage() {
+export default function AdminLoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 to-blue-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-slate-100 p-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 mb-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo/logo-kota.png" alt="Logo" className="h-12 w-auto object-contain" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo/kecamatan-berdaya.png" alt="Klas Berdaya" className="h-12 w-auto object-contain" />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 mb-4">
+            <FontAwesomeIcon icon={faShield} className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Portal Kecamatan</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Login untuk mengakses dashboard kecamatan Anda
+            Akses terbatas untuk administrator
           </p>
         </div>
 
-        {/* Card */}
         <div className="bg-white rounded-2xl shadow-lg p-8">
           <Suspense>
-            <LoginForm />
+            <AdminLoginForm />
           </Suspense>
         </div>
 
         <p className="text-center mt-6 text-xs text-gray-400">
-          Hubungi administrator jika mengalami kendala login
+          Halaman ini hanya untuk administrator sistem
         </p>
       </div>
     </div>

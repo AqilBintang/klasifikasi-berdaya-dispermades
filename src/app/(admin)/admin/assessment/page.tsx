@@ -8,27 +8,21 @@ import {
   faBoxArchive,
   faPencil,
 } from '@fortawesome/free-solid-svg-icons'
+import { prisma } from '@/lib/prisma'
 
-interface AssessmentItem {
-  id: number
-  title: string
-  description: string | null
-  periode: string
-  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
-  createdAt: string
-  categories: { id: number; name: string; _count?: { indicators: number } }[]
-}
-
-async function getAssessments(): Promise<AssessmentItem[]> {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-    const res = await fetch(`${baseUrl}/api/assessment`, { cache: 'no-store' })
-    if (!res.ok) return []
-    const json = await res.json()
-    return json.data ?? []
-  } catch {
-    return []
-  }
+async function getAssessments() {
+  return prisma.assessment.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      categories: {
+        select: {
+          id: true,
+          name: true,
+          _count: { select: { indicators: true } },
+        },
+      },
+    },
+  })
 }
 
 const STATUS_CONFIG = {

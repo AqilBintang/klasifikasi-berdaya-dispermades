@@ -27,8 +27,12 @@ model User {
   email         String    @unique @db.VarChar(150)
   passwordHash  String    @db.VarChar(255)
   role          UserRole  @default(USER)
-  kabupaten     String?   @db.VarChar(100)   // nama kabupaten/kota (untuk role USER)
-  kecamatan     String?   @db.VarChar(100)   // nama kecamatan (untuk role USER)
+  // Keep existing string columns for migration
+  kabupatenName String?   @db.VarChar(100) @map("kabupaten")
+  kecamatanName String?   @db.VarChar(100) @map("kecamatan")
+  // New fields for relational data
+  kabupatenId   Int?      @db.Int
+  kecamatanId   Int?      @db.Int
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -36,7 +40,38 @@ model User {
   selfAssessments SelfAssessment[]
   validations     AssessmentValidation[]
 
+  // Relations
+  kabupaten     Wilayah?  @relation("UserKabupaten", fields: [kabupatenId], references: [id])
+  kecamatan     Wilayah?  @relation("UserKecamatan", fields: [kecamatanId], references: [id])
+
   @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────
+// WILAYAH (provinsi, kabupaten/kota, kecamatan, dsb.)
+// ─────────────────────────────────────────────────────────────
+
+model Wilayah {
+  id          Int      @id @default(autoincrement())
+  kode        String   @unique @db.VarChar(13)   // Kode Wilayah (misal: 33, 33.01, 33.01.01)
+  nama        String   @db.VarChar(100)          // Nama Wilayah
+  level       Int      @db.Int                   // 1: Provinsi, 2: Kabupaten/Kota, 3: Kecamatan, 4: Desa, dsb.
+  parentId    Int?     @db.Int                   // Referensi ke Wilayah induk (null untuk provinsi)
+  lat         Float?   @db.Double                // Latitude in degrees
+  lng         Float?   @db.Double                // Longitude in degrees
+  luas        Float?   @db.Double                // Area in km2
+  penduduk    Float?   @db.Double                // Population
+  path        String?  @db.LongText              // Boundaries/polygon area (GeoJSON or WKT)
+  status      Int?     @db.Int                   // Status kode wilayah
+
+  // Relations
+  parent      Wilayah? @relation("WilayahParent", fields: [parentId], references: [id])
+  children    Wilayah[] @relation("WilayahParent")
+  // Reverse relations for User
+  usersAsKabupaten User[] @relation("UserKabupaten")
+  usersAsKecamatan User[] @relation("UserKecamatan")
+
+  @@map("wilayah")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -118,8 +153,8 @@ model AssessmentRubric {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  assessment   Assessment        @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  items        RubricItem[]
+  assessment Assessment        @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  items      RubricItem[]
 
   @@map("assessment_rubrics")
 }

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 import { useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -11,6 +12,7 @@ import {
   faCheckDouble,
   faAward,
   faChartBar,
+  faMapLocationDot,
   faFileArrowDown,
   faUsers,
   faChevronDown,
@@ -164,6 +166,23 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
 
           <li>
             <Link
+              href="/admin/wilayah"
+              onClick={onClose}
+              aria-current={isActive('/admin/wilayah') ? 'page' : undefined}
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                isActive('/admin/wilayah')
+                  ? 'bg-sky-500/20 text-sky-300'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
+              )}
+            >
+              <FontAwesomeIcon icon={faMapLocationDot} className="w-4 h-4 shrink-0" />
+              <span>Wilayah</span>
+            </Link>
+          </li>
+
+          <li>
+            <Link
               href="/admin/backup"
               onClick={onClose}
               aria-current={isActive('/admin/backup') ? 'page' : undefined}
@@ -204,7 +223,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
         <button
           type="button"
           aria-label="Keluar dari admin"
-          onClick={() => console.log('admin logout')}
+          onClick={() => signOut({ callbackUrl: '/login' })}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-gray-100 transition-colors"
         >
           <FontAwesomeIcon icon={faRightFromBracket} className="w-4 h-4 shrink-0" />

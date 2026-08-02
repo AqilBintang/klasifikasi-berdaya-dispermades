@@ -28,8 +28,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name:      user.name,
           email:     user.email,
           role:      user.role,
-          kabupaten: user.kabupaten ?? undefined,
-          kecamatan: user.kecamatan ?? undefined,
+          kabupaten: user.kabupatenName ?? undefined,
+          kecamatan: user.kecamatanName ?? undefined,
         }
       },
     }),

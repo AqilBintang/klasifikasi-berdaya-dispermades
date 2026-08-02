@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { auth } from '@/auth'
 import { z } from 'zod'
 
 const updateSchema = z.object({
@@ -11,6 +12,11 @@ const updateSchema = z.object({
 // PATCH /api/users/[id]
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const session = await auth()
+    if (!session || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+    }
+
     const { id } = await params
     const numId = parseInt(id, 10)
     if (isNaN(numId)) return NextResponse.json({ error: 'ID tidak valid.' }, { status: 400 })
@@ -36,6 +42,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 // DELETE /api/users/[id] — soft delete (set isActive = false)
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const session = await auth()
+    if (!session || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+    }
+
     const { id } = await params
     const numId = parseInt(id, 10)
     if (isNaN(numId)) return NextResponse.json({ error: 'ID tidak valid.' }, { status: 400 })

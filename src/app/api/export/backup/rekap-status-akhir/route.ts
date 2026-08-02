@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
 import { auth } from '@/auth'
+import { prisma } from '@/lib/prisma'
 import { jsonToSheet, workbookToXlsxBuffer } from '@/lib/excel'
 import { buildRekapStatusAkhir } from '@/lib/export/assessment-export'
 
@@ -18,15 +19,26 @@ export async function GET(req: NextRequest) {
   const periode = searchParams.get('periode') ?? undefined
   const kecamatanParam = searchParams.get('kecamatan') ?? undefined
 
-  let kecamatan = kecamatanParam
+  let kecamatanNama: string | undefined = kecamatanParam
   if (session.user.role === 'USER') {
-    if (!session.user.kecamatan) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    kecamatan = session.user.kecamatan
+    const me = await prisma.user.findUnique({
+      where: { email: session.user.email! },
+      select: { kecamatan: { select: { id: true, nama: true } } },
+    })
+    if (!me?.kecamatan) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    kecamatanNama = me.kecamatan.nama
   }
 
-  if (!periode || !kecamatan) return NextResponse.json({ error: 'periode dan kecamatan wajib diisi' }, { status: 400 })
+  if (!periode || !kecamatanNama) return NextResponse.json({ error: 'periode dan kecamatan wajib diisi' }, { status: 400 })
 
-  const rows = await buildRekapStatusAkhir({ periode, kecamatan })
+  // Resolve kecamatanId dari nama
+  const wilayah = await prisma.wilayah.findFirst({
+    where: { nama: kecamatanNama, level: 3 },
+    select: { id: true },
+  })
+  if (!wilayah) return NextResponse.json({ error: 'Kecamatan tidak ditemukan' }, { status: 404 })
+
+  const rows = await buildRekapStatusAkhir({ periode, kecamatanId: wilayah.id })
   const exportRows = rows.map((r) => ({
     'Judul Assessment': r.assessmentTitle,
     'Periode': r.periode,
@@ -45,7 +57,7 @@ export async function GET(req: NextRequest) {
   const parts = [
     'rekap-status-akhir',
     safeName(periode),
-    safeName(kecamatan),
+    safeName(kecamatanNama),
     stamp,
   ].filter(Boolean)
   const filename = `${parts.join('-')}.xlsx`

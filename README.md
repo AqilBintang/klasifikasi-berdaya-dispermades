@@ -1,36 +1,123 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Klas Berdaya
 
-## Getting Started
+Aplikasi dashboard untuk **klasifikasi indeks desa berdaya** di Jawa Tengah. Digunakan oleh pihak kecamatan untuk mengisi self-assessment, dan oleh admin untuk memvalidasi, mengelola data, serta mengekspor hasil ke Excel.
 
-First, run the development server:
+## Fitur Utama
+
+- **Landing page** — tampilan publik hasil klasifikasi desa per kabupaten/kota
+- **Dashboard kecamatan** — self-assessment per indikator, lihat statistik, dan riwayat pengisian
+- **Dashboard admin** — validasi assessment, manajemen user, kelola rubrik penilaian, backup/export Excel
+- **Autentikasi berbasis role** — `admin`, `kecamatan`, dan akses publik (landing)
+- **Export data** — download rekapitulasi ke `.xlsx` (per kecamatan, rekap status akhir, snapshot penuh)
+
+## Tech Stack
+
+| Kategori | Library/Tool |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| UI | React 19, Tailwind CSS v4, shadcn/ui |
+| Auth | NextAuth v5 (beta) |
+| Database | PostgreSQL + Prisma v6 |
+| Chart | Recharts |
+| Export | xlsx |
+| Validasi | Zod v4 |
+
+## Struktur Project
+
+```
+src/
+├── app/
+│   ├── (admin)/admin/      # Halaman admin (assessment, validasi, user, backup, dll)
+│   ├── (kecamatan)/        # Halaman kecamatan (dashboard, assessment, statistik)
+│   ├── (landing)/          # Halaman publik
+│   ├── admin/login/        # Login khusus admin
+│   ├── login/              # Login kecamatan
+│   └── api/                # API routes (assessment, rubric, users, export, wilayah)
+├── components/
+│   ├── admin/              # Komponen halaman admin
+│   ├── kecamatan/          # Komponen halaman kecamatan
+│   ├── landing/            # Komponen halaman publik
+│   ├── shared/ui/          # Komponen UI reusable (YearFilter, dll)
+│   └── ui/                 # shadcn/ui components
+├── data/                   # Data statis (wilayah Jateng, mock data)
+├── hooks/                  # Custom hooks (useAutoSave, useUnsavedWarning)
+├── lib/                    # Utilities (prisma client, excel, scoring, export, klasifikasi)
+└── types/                  # TypeScript type definitions
+prisma/
+├── schema.prisma           # Database schema
+├── seed.ts                 # Database seeder
+└── migrations/             # Migration history
+scripts/                    # Skrip utilitas (backfill, backup preview)
+```
+
+## Setup & Menjalankan
+
+### Prasyarat
+
+- Node.js 20+
+- PostgreSQL
+
+### Instalasi
+
+```bash
+npm install
+```
+
+### Konfigurasi Environment
+
+Buat file `.env` dari contoh berikut:
+
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/klas-berdaya"
+NEXTAUTH_SECRET="your-secret-here"
+NEXTAUTH_URL="http://localhost:3000"
+```
+
+### Database
+
+```bash
+# Generate Prisma client
+npm run db:generate
+
+# Jalankan migrasi
+npm run db:migrate
+
+# Seed data awal (opsional)
+npm run db:seed
+```
+
+### Development
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Build Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm run start
+```
 
-## Learn More
+## Scripts Tersedia
 
-To learn more about Next.js, take a look at the following resources:
+| Script | Keterangan |
+|---|---|
+| `npm run dev` | Jalankan development server |
+| `npm run build` | Build untuk production |
+| `npm run lint` | Jalankan ESLint |
+| `npm run db:generate` | Generate Prisma client |
+| `npm run db:migrate` | Jalankan migrasi database |
+| `npm run db:seed` | Seed data awal |
+| `npm run db:studio` | Buka Prisma Studio |
+| `npm run backup:backfill` | Backfill data backup assessment |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Role & Akses
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Role | Path | Keterangan |
+|---|---|---|
+| Admin | `/admin` | Validasi, manajemen user/rubrik, export |
+| Kecamatan | `/kecamatan` | Self-assessment dan lihat statistik |
+| Publik | `/` | Lihat hasil klasifikasi desa |

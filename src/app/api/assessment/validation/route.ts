@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { auth } from '@/auth'
 import { z } from 'zod'
 import { deleteBackupForGroup, upsertBackupIfComplete } from '@/lib/export/backup-snapshot'
 
@@ -14,6 +15,11 @@ const validateSchema = z.object({
 // GET /api/assessment/validation?status=SUBMITTED&assessmentId=1
 export async function GET(req: NextRequest) {
   try {
+    const session = await auth()
+    if (!session || !['ADMIN', 'VALIDATOR'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(req.url)
     const status      = searchParams.get('status')
     const assessmentId = searchParams.get('assessmentId')
@@ -31,7 +37,11 @@ export async function GET(req: NextRequest) {
       },
       include: {
         submittedBy: {
-          select: { id: true, name: true, email: true, kecamatan: true, kabupaten: true },
+          select: {
+            id: true, name: true, email: true,
+            kabupaten: { select: { nama: true } },
+            kecamatan: { select: { nama: true } },
+          },
         },
         indicator: {
           include: {
@@ -49,13 +59,20 @@ export async function GET(req: NextRequest) {
         },
       },
       orderBy: [
-        { submittedBy: { kecamatan: 'asc' } },
+        { submittedBy: { kecamatan: { nama: 'asc' } } },
         { indicator: { category: { order: 'asc' } } },
         { indicator: { number: 'asc' } },
       ],
     })
 
-    return NextResponse.json({ data: submissions })
+    return NextResponse.json({ data: submissions.map((s) => ({
+      ...s,
+      submittedBy: {
+        ...s.submittedBy,
+        kabupaten: s.submittedBy.kabupaten?.nama ?? null,
+        kecamatan: s.submittedBy.kecamatan?.nama ?? null,
+      },
+    })) })
   } catch (err) {
     console.error('[GET /api/assessment/validation]', err)
     return NextResponse.json({ error: 'Gagal mengambil data.' }, { status: 500 })
@@ -65,6 +82,11 @@ export async function GET(req: NextRequest) {
 // POST /api/assessment/validation — validasi satu self assessment
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth()
+    if (!session || !['ADMIN', 'VALIDATOR'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+    }
+
     const body = await req.json()
     const parsed = validateSchema.safeParse(body)
 

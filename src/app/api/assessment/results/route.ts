@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { auth } from '@/auth'
 import { getKlasifikasi, calcCategoryScore } from '@/lib/scoring'
 
 // GET /api/assessment/results?assessmentId=1&periode=2025
 export async function GET(req: NextRequest) {
   try {
+    const session = await auth()
+    if (!session || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(req.url)
     const assessmentId = searchParams.get('assessmentId')
     const periode      = searchParams.get('periode')
@@ -20,7 +26,13 @@ export async function GET(req: NextRequest) {
         }),
       },
       include: {
-        submittedBy: { select: { id: true, name: true, kecamatan: true, kabupaten: true } },
+        submittedBy: {
+          select: {
+            id: true, name: true,
+            kabupaten: { select: { nama: true } },
+            kecamatan: { select: { nama: true } },
+          },
+        },
         indicator: {
           include: {
             category: {
@@ -66,7 +78,11 @@ export async function GET(req: NextRequest) {
 
       if (!grouped[key]) {
         grouped[key] = {
-          user: r.submittedBy,
+          user: {
+            ...r.submittedBy,
+            kabupaten: r.submittedBy.kabupaten?.nama ?? null,
+            kecamatan: r.submittedBy.kecamatan?.nama ?? null,
+          },
           assessment: r.indicator.category.assessment,
           periode: r.periode,
           categories: {},

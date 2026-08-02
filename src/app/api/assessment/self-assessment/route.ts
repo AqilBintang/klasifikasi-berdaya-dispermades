@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { auth } from '@/auth'
 import { z } from 'zod'
 
 // ─── Input validation schema ───────────────────────────────────────────────
@@ -18,6 +19,9 @@ const createSchema = z.object({
 // GET /api/assessment/self-assessment?indicatorId=1&submittedById=1&periode=2025
 export async function GET(req: NextRequest) {
   try {
+    const session = await auth()
+    if (!session) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+
     const { searchParams } = new URL(req.url)
 
     // Parse & validate query params — prevent injection via input coercion
@@ -25,12 +29,18 @@ export async function GET(req: NextRequest) {
     const submittedById = parseInt(searchParams.get('submittedById') ?? '0', 10)
     const periode       = searchParams.get('periode') ?? ''
 
+    // Non-admin hanya boleh lihat data miliknya sendiri
+    const isAdmin = session.user.role === 'ADMIN'
+    const effectiveSubmittedById = isAdmin
+      ? (submittedById > 0 ? submittedById : undefined)
+      : parseInt(session.user.id, 10)
+
     // Prisma menggunakan parameterized queries — aman dari SQL injection
     const results = await prisma.selfAssessment.findMany({
       where: {
-        ...(indicatorId   > 0 && { indicatorId }),
-        ...(submittedById > 0 && { submittedById }),
-        ...(periode        && { periode }),
+        ...(indicatorId          > 0 && { indicatorId }),
+        ...(effectiveSubmittedById && { submittedById: effectiveSubmittedById }),
+        ...(periode               && { periode }),
       },
       include: {
         indicator: {
@@ -60,6 +70,9 @@ export async function GET(req: NextRequest) {
 // Buat atau update self assessment (upsert per indikator+user+periode)
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth()
+    if (!session) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+
     const body = await req.json()
 
     // Validasi input dengan Zod — reject data tidak valid sebelum menyentuh DB
@@ -72,6 +85,11 @@ export async function POST(req: NextRequest) {
     }
 
     const { indicatorId, submittedById, periode, description, score, supportingDoc } = parsed.data
+
+    // Non-admin hanya boleh submit atas nama dirinya sendiri
+    if (session.user.role !== 'ADMIN' && submittedById !== parseInt(session.user.id, 10)) {
+      return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
+    }
 
     // Verifikasi indicator ada
     const indicator = await prisma.assessmentIndicator.findUnique({

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { auth } from '@/auth'
 import { z } from 'zod'
 
 const indicatorSchema = z.object({
@@ -27,6 +28,11 @@ const createAssessmentSchema = z.object({
 // GET /api/assessment
 export async function GET() {
   try {
+    const session = await auth()
+    if (!session || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+    }
+
     const assessments = await prisma.assessment.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
@@ -48,6 +54,11 @@ export async function GET() {
 // POST /api/assessment
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth()
+    if (!session || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+    }
+
     const body = await req.json()
     const parsed = createAssessmentSchema.safeParse(body)
 
@@ -59,6 +70,15 @@ export async function POST(req: NextRequest) {
     }
 
     const { title, description, periode, status, categories } = parsed.data
+
+    // Cek: hanya 1 assessment per periode (tahun)
+    const existing = await prisma.assessment.findFirst({ where: { periode } })
+    if (existing) {
+      return NextResponse.json(
+        { error: `Assessment untuk periode "${periode}" sudah ada (${existing.title}). Hanya boleh 1 assessment per periode.` },
+        { status: 409 }
+      )
+    }
 
     const assessment = await prisma.$transaction(async (tx) => {
       return tx.assessment.create({

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { auth } from '@/auth'
 import { z } from 'zod'
 
 const indicatorSchema = z.object({
@@ -70,6 +71,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth()
+    if (!session || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+    }
+
     const { id } = await params
     const numId = parseInt(id, 10)
     if (isNaN(numId)) return NextResponse.json({ error: 'ID tidak valid.' }, { status: 400 })
@@ -178,6 +184,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth()
+    if (!session || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+    }
+
     const { id } = await params
     const numId = parseInt(id, 10)
     if (isNaN(numId)) return NextResponse.json({ error: 'ID tidak valid.' }, { status: 400 })

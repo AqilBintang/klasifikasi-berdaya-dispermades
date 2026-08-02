@@ -5,6 +5,7 @@ import { Search } from 'lucide-react'
 import { InfoBanner } from '@/components/shared/ui/InfoBanner'
 import type { BannerSlide } from '@/components/shared/ui/InfoBanner'
 
+
 import { cn } from '@/lib/utils'
 
 // ─── Page ─────────────────────────────────────────────────────────────────────

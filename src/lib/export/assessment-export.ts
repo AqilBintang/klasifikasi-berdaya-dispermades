@@ -54,8 +54,8 @@ function toYearFromPeriode(periode: string): number | null {
 export async function buildRekapStatusAkhir(filters?: {
   assessmentId?: number
   periode?: string
-  kecamatan?: string
-  kabupaten?: string
+  kecamatanId?: number
+  kabupatenId?: number
 }) {
   const entries = await prisma.selfAssessment.findMany({
     where: {
@@ -64,11 +64,17 @@ export async function buildRekapStatusAkhir(filters?: {
       ...(filters?.assessmentId
         ? { indicator: { category: { assessmentId: filters.assessmentId } } }
         : {}),
-      ...(filters?.kecamatan ? { submittedBy: { kecamatan: filters.kecamatan } } : {}),
-      ...(filters?.kabupaten ? { submittedBy: { kabupaten: filters.kabupaten } } : {}),
+      ...(filters?.kecamatanId ? { submittedBy: { kecamatanId: filters.kecamatanId } } : {}),
+      ...(filters?.kabupatenId ? { submittedBy: { kabupatenId: filters.kabupatenId } } : {}),
     },
     include: {
-      submittedBy: { select: { id: true, name: true, kabupaten: true, kecamatan: true } },
+      submittedBy: {
+        select: {
+          id: true, name: true,
+          kabupaten: { select: { nama: true } },
+          kecamatan: { select: { nama: true } },
+        },
+      },
       indicator: {
         select: {
           maxScore: true,
@@ -95,8 +101,8 @@ export async function buildRekapStatusAkhir(filters?: {
       map[key] = {
         userId: e.submittedById,
         userName: e.submittedBy.name,
-        kabupaten: e.submittedBy.kabupaten ?? null,
-        kecamatan: e.submittedBy.kecamatan ?? null,
+        kabupaten: e.submittedBy.kabupaten?.nama ?? null,
+        kecamatan: e.submittedBy.kecamatan?.nama ?? null,
         assessmentId,
         assessmentTitle: e.indicator.category.assessment.title,
         periode: e.periode,
@@ -116,16 +122,22 @@ export async function buildRekapStatusAkhir(filters?: {
   }))
 }
 
-export async function buildKecamatanDetail(filters: { kecamatan: string; assessmentId?: number; periode?: string }) {
+export async function buildKecamatanDetail(filters: { kecamatanId: number; assessmentId?: number; periode?: string }) {
   const entries = await prisma.selfAssessment.findMany({
     where: {
       ...(filters.periode ? { periode: filters.periode } : {}),
       ...(filters.assessmentId ? { indicator: { category: { assessmentId: filters.assessmentId } } } : {}),
       status: { in: ['DRAFT', 'SUBMITTED', 'VALIDATED', 'REJECTED'] },
-      submittedBy: { kecamatan: filters.kecamatan },
+      submittedBy: { kecamatanId: filters.kecamatanId },
     },
     include: {
-      submittedBy: { select: { id: true, name: true, kabupaten: true, kecamatan: true } },
+      submittedBy: {
+        select: {
+          id: true, name: true,
+          kabupaten: { select: { nama: true } },
+          kecamatan: { select: { nama: true } },
+        },
+      },
       indicator: {
         include: {
           category: { include: { assessment: { select: { id: true, title: true } } } },
@@ -149,8 +161,8 @@ export async function buildKecamatanDetail(filters: { kecamatan: string; assessm
     const validatedScore = v?.validatedScore ?? null
     const effectiveScore = validatedScore ?? e.score
     return {
-      kabupaten: e.submittedBy.kabupaten ?? null,
-      kecamatan: e.submittedBy.kecamatan ?? null,
+      kabupaten: e.submittedBy.kabupaten?.nama ?? null,
+      kecamatan: e.submittedBy.kecamatan?.nama ?? null,
       userId: e.submittedById,
       userName: e.submittedBy.name,
       assessmentId: e.indicator.category.assessment.id,
@@ -181,7 +193,7 @@ export async function buildKecamatanDetail(filters: { kecamatan: string; assessm
   const rekapRows = await buildRekapStatusAkhir({
     assessmentId: filters.assessmentId,
     periode: filters.periode,
-    kecamatan: filters.kecamatan,
+    kecamatanId: filters.kecamatanId,
   })
 
   return { detailRows, rekapRows }

@@ -13,6 +13,7 @@ export default async function KecamatanAssessmentDetailPage({
 }) {
   const session = await auth()
   if (!session?.user) redirect('/login')
+  if (session.user.role !== 'USER') redirect('/admin')
 
   const { id } = await params
   const userId = parseInt(session.user.id ?? '0', 10)

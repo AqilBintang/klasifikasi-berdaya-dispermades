@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { signOut } from 'next-auth/react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faBars,
@@ -82,7 +83,7 @@ export function AdminHeader({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={() => console.log('admin logout')}
+                onClick={() => signOut({ callbackUrl: '/login' })}
                 className="text-red-500 focus:text-red-500"
               >
                 <FontAwesomeIcon icon={faRightFromBracket} className="w-4 h-4 mr-2" />

@@ -50,4 +50,14 @@ AGENTS.md
 .windsurf/
 .agents/
 .claude/
+.claude-plugin/
 skills-lock.json
+
+# temporary scripts (one-off migration/check scripts)
+tmp-*.mjs
+
+# external reference data (not part of this codebase)
+wilayah/
+
+# prisma backup files
+prisma/*.backup

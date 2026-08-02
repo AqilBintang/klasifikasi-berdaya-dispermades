@@ -1,13 +1,26 @@
+import { prisma } from '@/lib/prisma'
 import { ManageUserClient } from '@/components/admin/ManageUserClient'
 
 async function getUsers() {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-    const res = await fetch(`${baseUrl}/api/users`, { cache: 'no-store' })
-    if (!res.ok) return []
-    const json = await res.json()
-    return json.data ?? []
-  } catch {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true, name: true, email: true, role: true,
+        isActive: true, createdAt: true,
+        kabupaten: { select: { nama: true } },
+        kecamatan: { select: { nama: true } },
+        _count: { select: { selfAssessments: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+    return users.map((u) => ({
+      ...u,
+      kabupaten: u.kabupaten?.nama ?? null,
+      kecamatan: u.kecamatan?.nama ?? null,
+      createdAt: u.createdAt.toISOString(),
+    }))
+  } catch (err) {
+    console.error('[ManageUsersPage] getUsers error:', err)
     return []
   }
 }

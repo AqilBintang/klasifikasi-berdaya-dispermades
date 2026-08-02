@@ -31,11 +31,21 @@ const STATUS_LABEL: Record<string, { label: string; icon: typeof faCheckCircle; 
 }
 
 async function getDetail(userId: number, assessmentId: number, periode: string) {
-  const user = await prisma.user.findUnique({
+  const userRaw = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, name: true, kecamatan: true, kabupaten: true },
+    select: {
+      id: true, name: true,
+      kabupaten: { select: { nama: true } },
+      kecamatan: { select: { nama: true } },
+    },
   })
-  if (!user) return null
+  if (!userRaw) return null
+  const user = {
+    id: userRaw.id,
+    name: userRaw.name,
+    kabupaten: userRaw.kabupaten?.nama ?? null,
+    kecamatan: userRaw.kecamatan?.nama ?? null,
+  }
 
   const assessment = await prisma.assessment.findUnique({
     where: { id: assessmentId },

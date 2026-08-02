@@ -3,40 +3,23 @@ import { notFound } from 'next/navigation'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { EditAssessmentForm } from '@/components/admin/EditAssessmentForm'
+import { prisma } from '@/lib/prisma'
 
-interface AssessmentDetail {
-  id: number
-  title: string
-  description: string | null
-  periode: string
-  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
-  isLocked: boolean
-  answerCount: number
-  categories: {
-    id: number
-    code: string
-    name: string
-    description: string | null
-    order: number
-    indicators: {
-      id: number
-      number: number
-      indicator: string
-      maxScore: number
-    }[]
-  }[]
-}
-
-async function getAssessment(id: string): Promise<AssessmentDetail | null> {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-    const res = await fetch(`${baseUrl}/api/assessment/${id}`, { cache: 'no-store' })
-    if (!res.ok) return null
-    const json = await res.json()
-    return json.data ?? null
-  } catch {
-    return null
-  }
+async function getAssessment(id: number) {
+  const assessment = await prisma.assessment.findUnique({
+    where: { id },
+    include: {
+      categories: {
+        orderBy: { order: 'asc' },
+        include: { indicators: { orderBy: { number: 'asc' } } },
+      },
+    },
+  })
+  if (!assessment) return null
+  const answerCount = await prisma.selfAssessment.count({
+    where: { indicator: { category: { assessmentId: id } } },
+  })
+  return { ...assessment, isLocked: answerCount > 0, answerCount }
 }
 
 export default async function AssessmentDetailPage({
@@ -45,8 +28,10 @@ export default async function AssessmentDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const assessment = await getAssessment(id)
+  const numId = parseInt(id, 10)
+  if (isNaN(numId)) notFound()
 
+  const assessment = await getAssessment(numId)
   if (!assessment) notFound()
 
   return (

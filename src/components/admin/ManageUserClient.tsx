@@ -1,19 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faPlus,
-  faToggleOn,
-  faToggleOff,
-  faSpinner,
-  faCheckCircle,
-  faTriangleExclamation,
-  faUser,
-  faShield,
-  faUserGear,
+  faPlus, faToggleOn, faToggleOff, faSpinner,
+  faCheckCircle, faTriangleExclamation, faUser, faShield, faUserGear,
 } from '@fortawesome/free-solid-svg-icons'
 import { cn } from '@/lib/utils'
+import type { KabKotaJateng, KecamatanJateng } from '@/types/wilayah'
 
 interface UserRow {
   id: number
@@ -34,37 +28,55 @@ const ROLE_CONFIG = {
 }
 
 function AddUserModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'USER' as 'ADMIN' | 'VALIDATOR' | 'USER', kabupaten: '', kecamatan: '' })
+  const [form, setForm] = useState({
+    name: '', email: '', password: '',
+    role: 'USER' as 'ADMIN' | 'VALIDATOR' | 'USER',
+    kabupatenKode: '', kecamatanKode: '',
+  })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  const [kabKotaList, setKabKotaList] = useState<KabKotaJateng[]>([])
+  const [kecamatanList, setKecamatanList] = useState<KecamatanJateng[]>([])
+  const [loadingKab, setLoadingKab] = useState(false)
+  const [loadingKec, setLoadingKec] = useState(false)
+
+  // Fetch kabupaten/kota saat modal dibuka
+  useEffect(() => {
+    setLoadingKab(true)
+    fetch('/api/wilayah/jateng/kabkota')
+      .then((r) => r.json())
+      .then((json) => setKabKotaList(json.data ?? []))
+      .catch(() => setError('Gagal memuat data kabupaten/kota.'))
+      .finally(() => setLoadingKab(false))
+  }, [])
+
+  // Fetch kecamatan saat kabupaten dipilih
+  useEffect(() => {
+    if (!form.kabupatenKode) { setKecamatanList([]); return }
+    setLoadingKec(true)
+    fetch(`/api/wilayah/jateng/kabkota/${form.kabupatenKode}/kecamatan`)
+      .then((r) => r.json())
+      .then((json) => setKecamatanList(json.data ?? []))
+      .catch(() => setError('Gagal memuat data kecamatan.'))
+      .finally(() => setLoadingKec(false))
+  }, [form.kabupatenKode])
+
   const handleSubmit = async () => {
-    if (!form.name || !form.email || !form.password) {
-      setError('Nama, email, dan password wajib diisi.')
-      return
-    }
-    if (form.password.length < 8) {
-      setError('Password minimal 8 karakter.')
-      return
-    }
-    if (form.role === 'USER' && !form.kecamatan.trim()) {
-      setError('Nama kecamatan wajib diisi untuk role User.')
-      return
-    }
-    if (form.role === 'USER' && !form.kabupaten.trim()) {
-      setError('Nama kabupaten/kota wajib diisi untuk role User.')
-      return
-    }
-    setSaving(true)
-    setError('')
+    if (!form.name || !form.email || !form.password) { setError('Nama, email, dan password wajib diisi.'); return }
+    if (form.password.length < 8) { setError('Password minimal 8 karakter.'); return }
+    if (form.role === 'USER' && !form.kabupatenKode) { setError('Pilih kabupaten/kota.'); return }
+    if (form.role === 'USER' && !form.kecamatanKode) { setError('Pilih kecamatan.'); return }
+
+    setSaving(true); setError('')
     try {
       const res = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...form,
-          kabupaten: form.role === 'USER' ? form.kabupaten.trim() : undefined,
-          kecamatan: form.role === 'USER' ? form.kecamatan.trim() : undefined,
+          name: form.name, email: form.email, password: form.password, role: form.role,
+          kabupatenKode: form.role === 'USER' ? form.kabupatenKode : undefined,
+          kecamatanKode: form.role === 'USER' ? form.kecamatanKode : undefined,
         }),
       })
       const json = await res.json()
@@ -72,76 +84,82 @@ function AddUserModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
       else setError(json.error ?? 'Gagal membuat user.')
     } catch {
       setError('Terjadi kesalahan jaringan.')
-    } finally {
-      setSaving(false)
-    }
+    } finally { setSaving(false) }
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
+      <div className="w-full max-w-md rounded-xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="border-b px-6 py-4">
-          <h3 className="font-semibold text-gray-900">Tambah Akun Kecamatan</h3>
+          <h3 className="font-semibold text-gray-900">Tambah User</h3>
         </div>
         <div className="px-6 py-4 space-y-4">
-          {[
+          {/* Fields dasar */}
+          {([
             { label: 'Nama', key: 'name', type: 'text', placeholder: 'Nama operator' },
             { label: 'Email', key: 'email', type: 'email', placeholder: 'email@kecamatan.go.id' },
             { label: 'Password', key: 'password', type: 'password', placeholder: 'Min. 8 karakter' },
-          ].map(({ label, key, type, placeholder }) => (
+          ] as const).map(({ label, key, type, placeholder }) => (
             <div key={key}>
               <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-              <input
-                type={type}
-                value={form[key as keyof typeof form]}
+              <input type={type} value={form[key]}
                 onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
                 placeholder={placeholder}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20"
-              />
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20" />
             </div>
           ))}
+
+          {/* Role */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-            <select
-              value={form.role}
-              onChange={(e) => setForm((p) => ({ ...p, role: e.target.value as 'ADMIN' | 'VALIDATOR' | 'USER' }))}
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none"
-            >
+            <select value={form.role}
+              onChange={(e) => setForm((p) => ({ ...p, role: e.target.value as typeof form.role, kabupatenKode: '', kecamatanKode: '' }))}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
               <option value="USER">User (Kecamatan)</option>
               <option value="VALIDATOR">Validator</option>
               <option value="ADMIN">Admin</option>
             </select>
           </div>
+
+          {/* Dropdown wilayah — hanya untuk role USER */}
           {form.role === 'USER' && (
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Kabupaten/Kota <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={form.kabupaten}
-                  onChange={(e) => setForm((p) => ({ ...p, kabupaten: e.target.value }))}
-                  placeholder="contoh: Kota Semarang"
-                  maxLength={100}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20"
-                />
+                <select value={form.kabupatenKode}
+                  onChange={(e) => setForm((p) => ({ ...p, kabupatenKode: e.target.value, kecamatanKode: '' }))}
+                  disabled={loadingKab}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400">
+                  <option value="">
+                    {loadingKab ? 'Memuat...' : '-- Pilih Kabupaten/Kota --'}
+                  </option>
+                  {kabKotaList.map((k) => (
+                    <option key={k.kode} value={k.kode}>{k.nama}</option>
+                  ))}
+                </select>
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Kecamatan <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={form.kecamatan}
-                  onChange={(e) => setForm((p) => ({ ...p, kecamatan: e.target.value }))}
-                  placeholder="contoh: Kecamatan Semarang Tengah"
-                  maxLength={100}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20"
-                />
+                <select value={form.kecamatanKode}
+                  onChange={(e) => setForm((p) => ({ ...p, kecamatanKode: e.target.value }))}
+                  disabled={!form.kabupatenKode || loadingKec}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400">
+                  <option value="">
+                    {loadingKec ? 'Memuat...' : form.kabupatenKode ? '-- Pilih Kecamatan --' : '-- Pilih kabupaten dulu --'}
+                  </option>
+                  {kecamatanList.map((k) => (
+                    <option key={k.kode} value={k.kode}>{k.nama}</option>
+                  ))}
+                </select>
               </div>
             </>
           )}
+
           {error && <p className="text-sm text-red-600">{error}</p>}
         </div>
         <div className="flex justify-end gap-2 border-t px-6 py-4">
@@ -159,7 +177,6 @@ function AddUserModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
     </div>
   )
 }
-
 export function ManageUserClient({ initialUsers }: { initialUsers: UserRow[] }) {
   const [users, setUsers] = useState<UserRow[]>(initialUsers)
   const [showAdd, setShowAdd] = useState(false)

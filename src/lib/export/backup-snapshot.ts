@@ -65,7 +65,13 @@ export async function upsertBackupIfComplete(input: { submittedById: number; per
       indicator: { category: { assessmentId: input.assessmentId } },
     },
     include: {
-      submittedBy: { select: { id: true, name: true, kabupaten: true, kecamatan: true } },
+      submittedBy: {
+        select: {
+          id: true, name: true,
+          kabupaten: { select: { nama: true } },
+          kecamatan: { select: { nama: true } },
+        },
+      },
       indicator: {
         include: {
           category: { include: { assessment: { select: { id: true, title: true } } } },
@@ -83,8 +89,8 @@ export async function upsertBackupIfComplete(input: { submittedById: number; per
   if (!first) return { ok: false as const }
 
   const assessmentTitle = first.indicator.category.assessment.title
-  const kecamatan = first.submittedBy.kecamatan ?? null
-  const kabupaten = first.submittedBy.kabupaten ?? null
+  const kecamatan = first.submittedBy.kecamatan?.nama ?? null
+  const kabupaten = first.submittedBy.kabupaten?.nama ?? null
   if (!kecamatan) return { ok: false as const }
 
   const categoryMap = new Map<number, SnapshotCategory>()
@@ -198,11 +204,14 @@ export async function upsertBackupsForSelfAssessmentIds(selfAssessmentIds: numbe
 
 export async function deleteBackupForGroup(input: { submittedById: number; periode: string; assessmentId: number }) {
   const [user, assessment] = await Promise.all([
-    prisma.user.findUnique({ where: { id: input.submittedById }, select: { kecamatan: true } }),
+    prisma.user.findUnique({
+      where: { id: input.submittedById },
+      select: { kecamatan: { select: { nama: true } } },
+    }),
     prisma.assessment.findUnique({ where: { id: input.assessmentId }, select: { title: true } }),
   ])
 
-  const kecamatan = user?.kecamatan ?? null
+  const kecamatan = user?.kecamatan?.nama ?? null
   const assessmentTitle = assessment?.title ?? null
   if (!kecamatan || !assessmentTitle) return
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
 import { auth } from '@/auth'
+import { prisma } from '@/lib/prisma'
 import { jsonToSheet, workbookToXlsxBuffer } from '@/lib/excel'
 import { buildKecamatanDetail } from '@/lib/export/assessment-export'
 
@@ -25,15 +26,31 @@ export async function GET(req: NextRequest) {
   const periode = searchParams.get('periode') ?? undefined
   const kecamatanParam = searchParams.get('kecamatan') ?? undefined
 
-  let kecamatan = kecamatanParam
+  // Untuk USER: kecamatan harus sesuai dengan akun mereka
+  let kecamatanNama: string | undefined = kecamatanParam
   if (session.user.role === 'USER') {
-    if (!session.user.kecamatan) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    kecamatan = session.user.kecamatan
+    const me = await prisma.user.findUnique({
+      where: { email: session.user.email! },
+      select: { kecamatan: { select: { id: true, nama: true } } },
+    })
+    if (!me?.kecamatan) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    kecamatanNama = me.kecamatan.nama
   }
 
-  if (!kecamatan) return NextResponse.json({ error: 'kecamatan wajib diisi' }, { status: 400 })
+  if (!kecamatanNama) return NextResponse.json({ error: 'kecamatan wajib diisi' }, { status: 400 })
 
-  const { detailRows, rekapRows } = await buildKecamatanDetail({ kecamatan, assessmentId, periode })
+  // Resolve kecamatanId dari nama
+  const wilayah = await prisma.wilayah.findFirst({
+    where: { nama: kecamatanNama, level: 3 },
+    select: { id: true },
+  })
+  if (!wilayah) return NextResponse.json({ error: 'Kecamatan tidak ditemukan' }, { status: 404 })
+
+  const { detailRows, rekapRows } = await buildKecamatanDetail({
+    kecamatanId: wilayah.id,
+    assessmentId,
+    periode,
+  })
 
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, jsonToSheet(rekapRows as any[], { freezeHeader: true }), 'rekap_status_akhir')
@@ -42,7 +59,7 @@ export async function GET(req: NextRequest) {
   const stamp = new Date().toISOString().slice(0, 10)
   const parts = [
     'kecamatan-detail',
-    safeName(kecamatan),
+    safeName(kecamatanNama),
     assessmentId ? `assessment-${assessmentId}` : '',
     periode ? safeName(periode) : '',
     stamp,

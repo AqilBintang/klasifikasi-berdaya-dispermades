@@ -1,21 +1,52 @@
+import { auth } from '@/auth'
+import { prisma } from '@/lib/prisma'
 import { ValidationTableClient } from '@/components/admin/ValidationTableClient'
 
 async function getSubmissions() {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-    const res = await fetch(`${baseUrl}/api/assessment/validation?status=SUBMITTED`, {
-      cache: 'no-store',
-    })
-    if (!res.ok) return []
-    const json = await res.json()
-    return json.data ?? []
-  } catch {
-    return []
-  }
+  const rows = await prisma.selfAssessment.findMany({
+    where: { status: 'SUBMITTED' },
+    include: {
+      submittedBy: {
+        select: {
+          id: true, name: true, email: true,
+          kabupaten: { select: { nama: true } },
+          kecamatan: { select: { nama: true } },
+        },
+      },
+      indicator: {
+        include: {
+          category: {
+            include: { assessment: { select: { id: true, title: true, periode: true } } },
+          },
+        },
+      },
+      validations: {
+        orderBy: { validatedAt: 'desc' },
+        take: 1,
+        include: { validator: { select: { id: true, name: true } } },
+      },
+    },
+    orderBy: [
+      { submittedBy: { kecamatan: { nama: 'asc' } } },
+      { indicator: { category: { order: 'asc' } } },
+      { indicator: { number: 'asc' } },
+    ],
+  })
+
+  // Normalize relasi wilayah (objek) → string agar sesuai type ValidationTable
+  return rows.map((r) => ({
+    ...r,
+    submittedBy: {
+      ...r.submittedBy,
+      kabupaten: r.submittedBy.kabupaten?.nama ?? null,
+      kecamatan: r.submittedBy.kecamatan?.nama ?? null,
+    },
+  }))
 }
 
 export default async function ValidationAssessmentPage() {
-  const submissions = await getSubmissions()
+  const [submissions, session] = await Promise.all([getSubmissions(), auth()])
+  const validatorId = parseInt(session?.user.id ?? '0', 10)
 
   return (
     <div className="space-y-6">
@@ -25,7 +56,7 @@ export default async function ValidationAssessmentPage() {
           Review dan validasi self assessment yang disubmit oleh kecamatan
         </p>
       </div>
-      <ValidationTableClient initialSubmissions={submissions} validatorId={1} />
+      <ValidationTableClient initialSubmissions={submissions} validatorId={validatorId} />
     </div>
   )
 }
