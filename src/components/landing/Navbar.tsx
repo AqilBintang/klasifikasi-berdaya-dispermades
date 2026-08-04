@@ -60,7 +60,7 @@ export function Navbar() {
         )}
       >
         {/* Logo */}
-        <Link href="/dashboard" className="flex items-center justify-center gap-1 shrink-0">
+        <div className="flex items-center justify-center gap-1 shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo/logo-kota.png"
@@ -73,7 +73,7 @@ export function Navbar() {
             alt="Klas Berdaya"
             className="h-11 w-auto object-contain translate-y-[1px]"
           />
-        </Link>
+        </div>
 
         {/* Desktop nav links */}
         <ul className="hidden md:flex items-center gap-6" role="list">

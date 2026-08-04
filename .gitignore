@@ -65,3 +65,6 @@ prisma/*.backup
 # uploaded banner images (generated at runtime, not versioned)
 /public/banners/*
 !/public/banners/.gitkeep
+
+# sample/reference excel files used during development (contains real data)
+/contoh_excel/

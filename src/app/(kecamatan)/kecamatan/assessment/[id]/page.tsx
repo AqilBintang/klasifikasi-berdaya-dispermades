@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { KecamatanAssessmentForm } from '@/components/kecamatan/KecamatanAssessmentForm'
+import { ExportAssessmentButton } from '@/components/kecamatan/ExportAssessmentButton'
 
 export default async function KecamatanAssessmentDetailPage({
   params,
@@ -57,8 +58,13 @@ export default async function KecamatanAssessmentDetailPage({
           <FontAwesomeIcon icon={faArrowLeft} className="w-3.5 h-3.5" />
           Kembali
         </Link>
-        <h2 className="text-2xl font-bold text-gray-900">{assessment.title}</h2>
-        <p className="mt-1 text-sm text-gray-500">Periode: {periode}</p>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">{assessment.title}</h2>
+            <p className="mt-1 text-sm text-gray-500">Periode: {periode}</p>
+          </div>
+          <ExportAssessmentButton assessmentId={assessment.id} periode={periode} />
+        </div>
       </div>
 
       <KecamatanAssessmentForm

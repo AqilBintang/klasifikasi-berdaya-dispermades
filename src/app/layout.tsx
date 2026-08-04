@@ -10,7 +10,7 @@ const robotoCondensed = Roboto_Condensed({
 });
 
 export const metadata: Metadata = {
-  title: "Klas Berdaya",
+  title: "Klasifikasi Berdaya",
   description: "Platform program dan kegiatan pemberdayaan masyarakat",
 };
 
