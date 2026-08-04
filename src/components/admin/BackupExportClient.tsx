@@ -26,10 +26,12 @@ export function BackupExportClient(props: { role: string | null; defaultKecamata
     if (periode.trim()) p1.set('periode', periode.trim())
     if (kecamatan.trim()) p1.set('kecamatan', kecamatan.trim())
 
+    const rekapParams = new URLSearchParams()
+    if (periode.trim()) rekapParams.set('periode', periode.trim())
+
     return {
-      full: '/api/export/backup/full',
       snapshot: `/api/export/backup/snapshot?${p1.toString()}`,
-      rekap: `/api/export/backup/rekap-status-akhir?${p1.toString()}`,
+      rekap: `/api/export/backup/rekap-status-akhir?${rekapParams.toString()}`,
     }
   }, [periode, kecamatan])
 
@@ -115,26 +117,7 @@ export function BackupExportClient(props: { role: string | null; defaultKecamata
 
       <div className="text-xs text-gray-600">{loadingOptions ? 'Memuat opsi periode & kecamatan…' : null}</div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Full Backup (Admin)</CardTitle>
-            <CardDescription>Export semua tabel utama + rekap status akhir.</CardDescription>
-          </CardHeader>
-          <CardFooter className="justify-end">
-            <a
-              href={props.role === 'ADMIN' ? urls.full : undefined}
-              aria-disabled={props.role !== 'ADMIN'}
-              className={cn(
-                buttonVariants({ variant: 'default', size: 'default' }),
-                props.role !== 'ADMIN' && 'pointer-events-none opacity-50'
-              )}
-            >
-              Download
-            </a>
-          </CardFooter>
-        </Card>
-
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Backup Data Lengkap</CardTitle>
@@ -157,15 +140,15 @@ export function BackupExportClient(props: { role: string | null; defaultKecamata
         <Card>
           <CardHeader>
             <CardTitle>Rekap Status Akhir</CardTitle>
-            <CardDescription>Ringkasan status akhir untuk periode & kecamatan terpilih.</CardDescription>
+            <CardDescription>Semua kecamatan dalam periode terpilih, dikelompokkan per kabupaten/kota dalam sheet terpisah.</CardDescription>
           </CardHeader>
           <CardFooter className="justify-end">
             <a
-              href={periode && kecamatan ? urls.rekap : undefined}
-              aria-disabled={!periode || !kecamatan}
+              href={props.role === 'ADMIN' && periode ? urls.rekap : undefined}
+              aria-disabled={props.role !== 'ADMIN' || !periode}
               className={cn(
                 buttonVariants({ variant: 'default', size: 'default' }),
-                (!periode || !kecamatan) && 'pointer-events-none opacity-50'
+                (props.role !== 'ADMIN' || !periode) && 'pointer-events-none opacity-50'
               )}
             >
               Download

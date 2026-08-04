@@ -240,14 +240,6 @@ export default async function KlasifikasiBerdayaPage({
               <p className="font-semibold text-gray-900">Distribusi per Kabupaten/Kota</p>
               <p className="text-xs text-gray-400 mt-0.5">Tahun {activeYear}</p>
             </div>
-            <div className="flex gap-3">
-              {STATUS_ORDER.map((s) => (
-                <div key={s} className="flex items-center gap-1 text-xs text-gray-500">
-                  <div className={`w-2.5 h-2.5 rounded-sm ${STATUS_BAR_COLOR[s]}`} />
-                  {KLASIFIKASI_CONFIG[s].emoji}
-                </div>
-              ))}
-            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

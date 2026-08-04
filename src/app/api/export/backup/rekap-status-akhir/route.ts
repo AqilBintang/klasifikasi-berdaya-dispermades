@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
 import { auth } from '@/auth'
-import { prisma } from '@/lib/prisma'
 import { jsonToSheet, workbookToXlsxBuffer } from '@/lib/excel'
 import { buildRekapStatusAkhir } from '@/lib/export/assessment-export'
 
@@ -11,56 +10,67 @@ function safeName(s: string) {
   return s.replace(/[^a-z0-9_-]+/gi, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').toLowerCase()
 }
 
+// Excel sheet name max 31 chars, strip invalid chars
+function sheetName(s: string) {
+  return s.replace(/[\\/*?[\]:]/g, '-').slice(0, 31)
+}
+
 export async function GET(req: NextRequest) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (session.user.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { searchParams } = new URL(req.url)
   const periode = searchParams.get('periode') ?? undefined
-  const kecamatanParam = searchParams.get('kecamatan') ?? undefined
 
-  let kecamatanNama: string | undefined = kecamatanParam
-  if (session.user.role === 'USER') {
-    const me = await prisma.user.findUnique({
-      where: { email: session.user.email! },
-      select: { kecamatan: { select: { id: true, nama: true } } },
-    })
-    if (!me?.kecamatan) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    kecamatanNama = me.kecamatan.nama
+  if (!periode) return NextResponse.json({ error: 'periode wajib diisi' }, { status: 400 })
+
+  const rows = await buildRekapStatusAkhir({ periode })
+
+  // Collect all category headers in order (union across all rows)
+  const catHeaders = new Map<string, string>() // code → display label
+  for (const r of rows) {
+    for (const c of r.categoryScores) {
+      if (!catHeaders.has(c.code)) catHeaders.set(c.code, `Skor ${c.code} - ${c.name}`)
+    }
   }
 
-  if (!periode || !kecamatanNama) return NextResponse.json({ error: 'periode dan kecamatan wajib diisi' }, { status: 400 })
-
-  // Resolve kecamatanId dari nama
-  const wilayah = await prisma.wilayah.findFirst({
-    where: { nama: kecamatanNama, level: 3 },
-    select: { id: true },
-  })
-  if (!wilayah) return NextResponse.json({ error: 'Kecamatan tidak ditemukan' }, { status: 404 })
-
-  const rows = await buildRekapStatusAkhir({ periode, kecamatanId: wilayah.id })
-  const exportRows = rows.map((r) => ({
-    'Judul Assessment': r.assessmentTitle,
-    'Periode': r.periode,
-    'Tahun': r.tahun,
-    'Kabupaten/Kota': r.kabupaten,
-    'Kecamatan': r.kecamatan,
-    'Total Skor': r.totalScore,
-    'Skor Maksimum': r.maxPossibleTotal,
-    'Klasifikasi Akhir': r.statusAkhir,
-  }))
+  // Group by kabupaten
+  const byKabupaten = new Map<string, typeof rows>()
+  for (const r of rows) {
+    const kab = r.kabupaten ?? 'Tidak Diketahui'
+    if (!byKabupaten.has(kab)) byKabupaten.set(kab, [])
+    byKabupaten.get(kab)!.push(r)
+  }
 
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, jsonToSheet(exportRows as any[], { freezeHeader: true }), 'rekap_status_akhir')
+
+  for (const [kab, kabRows] of byKabupaten) {
+    const exportRows = kabRows.map((r) => {
+      const catCols: Record<string, number> = {}
+      for (const [code, label] of catHeaders) {
+        catCols[label] = r.categoryScores.find((c) => c.code === code)?.score ?? 0
+      }
+      return {
+        'Judul Assessment': r.assessmentTitle,
+        'Periode': r.periode,
+        'Kecamatan': r.kecamatan,
+        ...catCols,
+        'Total Skor': r.totalScore,
+        'Skor Maksimum': r.maxPossibleTotal,
+        'Klasifikasi Akhir': r.statusAkhir,
+      }
+    })
+    XLSX.utils.book_append_sheet(wb, jsonToSheet(exportRows as any[], { freezeHeader: true }), sheetName(kab))
+  }
+
+  // Fallback: if no data at all
+  if (byKabupaten.size === 0) {
+    XLSX.utils.book_append_sheet(wb, jsonToSheet([], { freezeHeader: true }), 'Tidak Ada Data')
+  }
 
   const stamp = new Date().toISOString().slice(0, 10)
-  const parts = [
-    'rekap-status-akhir',
-    safeName(periode),
-    safeName(kecamatanNama),
-    stamp,
-  ].filter(Boolean)
-  const filename = `${parts.join('-')}.xlsx`
+  const filename = `rekap-status-akhir-${safeName(periode)}-${stamp}.xlsx`
 
   return new NextResponse(workbookToXlsxBuffer(wb), {
     headers: {

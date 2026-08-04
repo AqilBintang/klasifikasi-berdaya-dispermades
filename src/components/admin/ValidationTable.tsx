@@ -8,6 +8,7 @@ import {
   faMapMarkerAlt, faLink, faCheckDouble,
 } from '@fortawesome/free-solid-svg-icons'
 import { cn } from '@/lib/utils'
+import { Pagination } from '@/components/shared/ui/Pagination'
 
 interface SelfAssessmentRow {
   id: number; periode: string; status: string
@@ -414,6 +415,9 @@ function StatusPill({ status }: { status: string }) {
 // ─── Main ──────────────────────────────────────────────────────────────────
 
 export function ValidationTable({ submissions, validatorId, onValidated }: ValidationTableProps) {
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 10
+
   const groups: Record<number, {
     userId: number; name: string; kecamatan: string | null; kabupaten: string | null
     submissions: SelfAssessmentRow[]
@@ -432,6 +436,8 @@ export function ValidationTable({ submissions, validatorId, onValidated }: Valid
   )
 
   const totalPending = submissions.filter((s) => s.status === 'SUBMITTED').length
+  const totalPages = Math.ceil(groupList.length / PAGE_SIZE)
+  const pagedGroups = groupList.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <div className="space-y-4">
@@ -448,9 +454,12 @@ export function ValidationTable({ submissions, validatorId, onValidated }: Valid
           Tidak ada submission yang perlu divalidasi.
         </div>
       ) : (
-        groupList.map((g) => (
-          <KecamatanGroup key={g.userId} {...g} validatorId={validatorId} onValidated={onValidated} />
-        ))
+        <>
+          {pagedGroups.map((g) => (
+            <KecamatanGroup key={g.userId} {...g} validatorId={validatorId} onValidated={onValidated} />
+          ))}
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+        </>
       )}
     </div>
   )

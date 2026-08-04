@@ -24,6 +24,8 @@ export type KlasifikasiAggResult = {
   totalWithData: number
   years: string[]
   chartData: KlasifikasiBerdayaChartRow[]
+  // Hanya diisi saat filter ke satu kecamatan
+  skorPerTahun?: { year: string; totalScore: number; maxPossibleTotal: number; statusAkhir: KlasifikasiLevel | null }[]
   latest?: {
     status: KlasifikasiLevel | null
     periode: string | null
@@ -145,11 +147,14 @@ export async function getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFi
     let maju = 0
 
     for (const u of users) {
-      const status = latestByUserYear.get(`${u.id}_${y}`)?.statusAkhir ?? 'Belum Berdaya'
+      const g = latestByUserYear.get(`${u.id}_${y}`)
+      // Hanya hitung user yang punya data di tahun ini
+      if (!g) continue
+      const status = g.statusAkhir
       if (status === 'Belum Berdaya') belumBerdaya += 1
       else if (status === 'Rintisan') rintisan += 1
       else if (status === 'Berkembang') berkembang += 1
-      else maju += 1
+      else if (status === 'Maju') maju += 1
     }
 
     return { year, belumBerdaya, rintisan, berkembang, maju }
@@ -161,11 +166,28 @@ export async function getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFi
     if (!Number.isNaN(userId)) uniqueUsersWithAnyData.add(userId)
   }
 
+  // Skor per tahun — hanya relevan saat filter ke satu kecamatan (satu user)
+  const skorPerTahun =
+    users.length === 1
+      ? years.map((year) => {
+          const y = Number.parseInt(year, 10)
+          const u = users[0]!
+          const g = latestByUserYear.get(`${u.id}_${y}`) ?? null
+          return {
+            year,
+            totalScore: g?.totalScore ?? 0,
+            maxPossibleTotal: g?.maxPossibleTotal ?? 0,
+            statusAkhir: g?.statusAkhir ?? null,
+          }
+        })
+      : undefined
+
   return {
     totalRegistered: users.length,
     totalWithData: uniqueUsersWithAnyData.size,
     years,
     chartData,
+    skorPerTahun,
     latest:
       users.length === 1
         ? (() => {

@@ -61,3 +61,7 @@ wilayah/
 
 # prisma backup files
 prisma/*.backup
+
+# uploaded banner images (generated at runtime, not versioned)
+/public/banners/*
+!/public/banners/.gitkeep

@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faPlus, faToggleOn, faToggleOff, faSpinner,
   faCheckCircle, faTriangleExclamation, faUser, faShield, faUserGear,
 } from '@fortawesome/free-solid-svg-icons'
 import { cn } from '@/lib/utils'
+import { Pagination } from '@/components/shared/ui/Pagination'
 import type { KabKotaJateng, KecamatanJateng } from '@/types/wilayah'
 
 interface UserRow {
@@ -182,6 +183,14 @@ export function ManageUserClient({ initialUsers }: { initialUsers: UserRow[] }) 
   const [showAdd, setShowAdd] = useState(false)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [toggling, setToggling] = useState<number | null>(null)
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 15
+
+  const totalPages = Math.ceil(users.length / PAGE_SIZE)
+  const pagedUsers = useMemo(
+    () => users.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [users, page]
+  )
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message })
@@ -266,14 +275,14 @@ export function ManageUserClient({ initialUsers }: { initialUsers: UserRow[] }) 
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {users.length === 0 ? (
+            {pagedUsers.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
                   Belum ada user.
                 </td>
               </tr>
             ) : (
-              users.map((u) => {
+              pagedUsers.map((u) => {
                 const roleCfg = ROLE_CONFIG[u.role]
                 return (
                   <tr key={u.id} className={cn('hover:bg-gray-50', !u.isActive && 'opacity-50')}>
@@ -320,6 +329,8 @@ export function ManageUserClient({ initialUsers }: { initialUsers: UserRow[] }) 
           </tbody>
         </table>
       </div>
+
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </>
   )
 }

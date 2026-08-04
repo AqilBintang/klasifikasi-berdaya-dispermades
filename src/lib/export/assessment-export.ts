@@ -1,6 +1,14 @@
 import { prisma } from '@/lib/prisma'
 import { getStatusAkhir, type KlasifikasiLevel } from '@/lib/scoring'
 
+export type CategoryScore = {
+  code: string
+  name: string
+  order: number
+  score: number
+  maxScore: number
+}
+
 export type RekapStatusAkhirRow = {
   userId: number
   userName: string
@@ -12,6 +20,7 @@ export type RekapStatusAkhirRow = {
   tahun: number | null
   totalScore: number
   maxPossibleTotal: number
+  categoryScores: CategoryScore[]
   statusAkhir: KlasifikasiLevel | null
 }
 
@@ -78,7 +87,15 @@ export async function buildRekapStatusAkhir(filters?: {
       indicator: {
         select: {
           maxScore: true,
-          category: { select: { assessmentId: true, assessment: { select: { title: true } } } },
+          category: {
+            select: {
+              code: true,
+              name: true,
+              order: true,
+              assessmentId: true,
+              assessment: { select: { title: true } },
+            },
+          },
         },
       },
       validations: { orderBy: { validatedAt: 'desc' }, take: 1, select: { validatedScore: true } },
@@ -90,10 +107,12 @@ export async function buildRekapStatusAkhir(filters?: {
     ],
   })
 
-  const map: Record<string, Omit<RekapStatusAkhirRow, 'statusAkhir'>> = {}
+  // map key → row aggregator
+  const map: Record<string, Omit<RekapStatusAkhirRow, 'statusAkhir' | 'categoryScores'> & { catMap: Record<string, CategoryScore> }> = {}
 
   for (const e of entries) {
-    const assessmentId = e.indicator.category.assessmentId
+    const cat = e.indicator.category
+    const assessmentId = cat.assessmentId
     const key = `${e.submittedById}_${assessmentId}_${e.periode}`
     const effScore = e.validations[0]?.validatedScore ?? e.score
 
@@ -104,20 +123,29 @@ export async function buildRekapStatusAkhir(filters?: {
         kabupaten: e.submittedBy.kabupaten?.nama ?? null,
         kecamatan: e.submittedBy.kecamatan?.nama ?? null,
         assessmentId,
-        assessmentTitle: e.indicator.category.assessment.title,
+        assessmentTitle: cat.assessment.title,
         periode: e.periode,
         tahun: toYearFromPeriode(e.periode),
         totalScore: 0,
         maxPossibleTotal: 0,
+        catMap: {},
       }
     }
 
-    map[key].totalScore += effScore
-    map[key].maxPossibleTotal += e.indicator.maxScore
+    const row = map[key]!
+    row.totalScore += effScore
+    row.maxPossibleTotal += e.indicator.maxScore
+
+    if (!row.catMap[cat.code]) {
+      row.catMap[cat.code] = { code: cat.code, name: cat.name, order: cat.order, score: 0, maxScore: 0 }
+    }
+    row.catMap[cat.code]!.score += effScore
+    row.catMap[cat.code]!.maxScore += e.indicator.maxScore
   }
 
-  return Object.values(map).map((g) => ({
+  return Object.values(map).map(({ catMap, ...g }) => ({
     ...g,
+    categoryScores: Object.values(catMap).sort((a, b) => a.order - b.order),
     statusAkhir: getStatusAkhir(g.totalScore, g.maxPossibleTotal),
   }))
 }

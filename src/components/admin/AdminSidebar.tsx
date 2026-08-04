@@ -12,13 +12,13 @@ import {
   faCheckDouble,
   faAward,
   faChartBar,
-  faMapLocationDot,
   faFileArrowDown,
   faUsers,
   faChevronDown,
   faChevronRight,
   faRightFromBracket,
-  faBook
+  faBook,
+  faPhotoFilm
 } from '@fortawesome/free-solid-svg-icons'
 import { cn } from '@/lib/utils'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
@@ -79,6 +79,24 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
             >
               <FontAwesomeIcon icon={faGauge} className="w-4 h-4 shrink-0" />
               <span>Dashboard</span>
+            </Link>
+          </li>
+
+          {/* ── Landing Page ── */}
+          <li>
+            <Link
+              href="/admin/landing-page"
+              onClick={onClose}
+              aria-current={isActive('/admin/landing-page') ? 'page' : undefined}
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                isActive('/admin/landing-page')
+                  ? 'bg-sky-500/20 text-sky-300'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
+              )}
+            >
+              <FontAwesomeIcon icon={faPhotoFilm} className="w-4 h-4 shrink-0" />
+              <span>Landing Page</span>
             </Link>
           </li>
 
@@ -161,23 +179,6 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
             >
               <FontAwesomeIcon icon={faChartBar} className="w-4 h-4 shrink-0" />
               <span>Klasifikasi Berdaya</span>
-            </Link>
-          </li>
-
-          <li>
-            <Link
-              href="/admin/wilayah"
-              onClick={onClose}
-              aria-current={isActive('/admin/wilayah') ? 'page' : undefined}
-              className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                isActive('/admin/wilayah')
-                  ? 'bg-sky-500/20 text-sky-300'
-                  : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
-              )}
-            >
-              <FontAwesomeIcon icon={faMapLocationDot} className="w-4 h-4 shrink-0" />
-              <span>Wilayah</span>
             </Link>
           </li>
 
