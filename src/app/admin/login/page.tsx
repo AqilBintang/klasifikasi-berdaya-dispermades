@@ -29,16 +29,22 @@ function AdminLoginForm() {
         setError('Email atau password salah.')
       } else {
         const session = await getSession()
-        // Halaman ini khusus admin — tolak jika bukan ADMIN
-        if (session?.user.role !== 'ADMIN') {
+        const role = session?.user.role
+
+        if (role === 'ADMIN') {
+          const callbackUrl = searchParams.get('callbackUrl') ?? '/admin'
+          router.push(callbackUrl)
+          router.refresh()
+        } else if (role === 'VALIDATOR') {
+          const callbackUrl = searchParams.get('callbackUrl') ?? '/validator/validasi'
+          router.push(callbackUrl)
+          router.refresh()
+        } else {
           await signOut({ redirect: false })
-          setError('Akun ini tidak memiliki akses admin.')
+          setError('Akun ini tidak memiliki akses.')
           setLoading(false)
           return
         }
-        const callbackUrl = searchParams.get('callbackUrl') ?? '/admin'
-        router.push(callbackUrl)
-        router.refresh()
       }
     } catch {
       setError('Terjadi kesalahan. Coba lagi.')
