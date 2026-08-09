@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { auth } from '@/auth'
 import { z } from 'zod'
 
 const updateSchema = z.object({
@@ -15,6 +16,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth()
+    if (!session) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+
     const { id } = await params
     const numericId = parseInt(id, 10)
 
@@ -38,6 +42,11 @@ export async function PATCH(
     })
     if (!existing) {
       return NextResponse.json({ error: 'Self assessment tidak ditemukan.' }, { status: 404 })
+    }
+
+    // Ownership check: USER hanya boleh edit miliknya sendiri; ADMIN boleh edit semua
+    if (session.user.role !== 'ADMIN' && existing.submittedById !== parseInt(session.user.id, 10)) {
+      return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
     }
 
     // Cegah edit jika sudah VALIDATED
@@ -79,6 +88,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth()
+    if (!session) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+
     const { id } = await params
     const numericId = parseInt(id, 10)
 
@@ -91,6 +103,11 @@ export async function DELETE(
     })
     if (!existing) {
       return NextResponse.json({ error: 'Self assessment tidak ditemukan.' }, { status: 404 })
+    }
+
+    // Ownership check: USER hanya boleh hapus miliknya sendiri; ADMIN boleh hapus semua
+    if (session.user.role !== 'ADMIN' && existing.submittedById !== parseInt(session.user.id, 10)) {
+      return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
     }
 
     if (existing.status !== 'DRAFT') {

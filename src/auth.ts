@@ -35,13 +35,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
+        // Initial sign-in: populate token from user object
         token.id        = user.id
         token.role      = user.role
         token.kabupaten = user.kabupaten
         token.kecamatan = user.kecamatan
+        return token
       }
+
+      // Subsequent requests: re-validate isActive against database.
+      // If the DB query fails (transient error), keep the session alive rather
+      // than logging out the user — a brief DB hiccup shouldn't kill a valid session.
+      if (token.id) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: Number(token.id) },
+            select: { isActive: true },
+          })
+          // Only invalidate if we got a clear answer that the user is deactivated
+          if (dbUser && !dbUser.isActive) return null
+        } catch {
+          // DB error — keep session, will be checked on next request
+        }
+      }
+
       return token
     },
     session({ session, token }) {

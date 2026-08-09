@@ -56,6 +56,15 @@ skills-lock.json
 # temporary scripts (one-off migration/check scripts)
 tmp-*.mjs
 
+# security/performance audit reports (internal, not for repo)
+SECURITY-PERFORMANCE-*.md
+
+# generated data files (built from db/ SQL files at build time)
+src/data/wilayah-jateng.json
+
+# runtime export output
+/exports/
+
 # external reference data (not part of this codebase)
 /wilayah/
 

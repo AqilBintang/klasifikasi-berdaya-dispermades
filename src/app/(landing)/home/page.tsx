@@ -270,6 +270,7 @@ export default async function LandingPage() {
           <LandingDataSection
             kabKota={kabKota}
             kecamatanByKabKota={kecamatanByKabKota}
+            initialChartData={stats.chartData}
           />
         </div>
       </section>

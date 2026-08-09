@@ -27,14 +27,13 @@ interface SelfAssessmentRow {
 
 interface ValidationTableProps {
   submissions: SelfAssessmentRow[]
-  validatorId: number
   onValidated: () => void
 }
 
 // ─── Validation Modal (single) ─────────────────────────────────────────────
 
-function ValidationModal({ submission, validatorId, onClose, onSuccess }: {
-  submission: SelfAssessmentRow; validatorId: number
+function ValidationModal({ submission, onClose, onSuccess }: {
+  submission: SelfAssessmentRow
   onClose: () => void; onSuccess: () => void
 }) {
   const [decision, setDecision] = useState<'APPROVED' | 'REJECTED' | 'REVISION_NEEDED'>('APPROVED')
@@ -51,7 +50,6 @@ function ValidationModal({ submission, validatorId, onClose, onSuccess }: {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           selfAssessmentId: submission.id,
-          validatorId,
           status: decision,
           validatedScore: validatedScore ? parseInt(validatedScore, 10) : null,
           notes: notes.trim() || null,
@@ -145,8 +143,8 @@ function ValidationModal({ submission, validatorId, onClose, onSuccess }: {
 
 // ─── Bulk Validate Modal ───────────────────────────────────────────────────
 
-function BulkValidateModal({ pendingIds, validatorId, kecamatanName, onClose, onSuccess }: {
-  pendingIds: number[]; validatorId: number; kecamatanName: string
+function BulkValidateModal({ pendingIds, kecamatanName, onClose, onSuccess }: {
+  pendingIds: number[]; kecamatanName: string
   onClose: () => void; onSuccess: () => void
 }) {
   const [decision, setDecision] = useState<'APPROVED' | 'REJECTED' | 'REVISION_NEEDED'>('APPROVED')
@@ -160,7 +158,7 @@ function BulkValidateModal({ pendingIds, validatorId, kecamatanName, onClose, on
       const res = await fetch('/api/assessment/validation/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ selfAssessmentIds: pendingIds, validatorId, status: decision, notes: notes.trim() || null }),
+        body: JSON.stringify({ selfAssessmentIds: pendingIds, status: decision, notes: notes.trim() || null }),
       })
       const json = await res.json()
       if (res.ok) { onSuccess(); onClose() }
@@ -220,9 +218,9 @@ function BulkValidateModal({ pendingIds, validatorId, kecamatanName, onClose, on
 
 // ─── Kecamatan Group ───────────────────────────────────────────────────────
 
-function KecamatanGroup({ userId, name, kecamatan, kabupaten, submissions, validatorId, onValidated }: {
+function KecamatanGroup({ userId, name, kecamatan, kabupaten, submissions, onValidated }: {
   userId: number; name: string; kecamatan: string | null; kabupaten: string | null
-  submissions: SelfAssessmentRow[]; validatorId: number; onValidated: () => void
+  submissions: SelfAssessmentRow[]; onValidated: () => void
 }) {
   const [expanded, setExpanded] = useState(true)
   const [selected, setSelected] = useState<SelfAssessmentRow | null>(null)
@@ -243,11 +241,11 @@ function KecamatanGroup({ userId, name, kecamatan, kabupaten, submissions, valid
   return (
     <>
       {selected && (
-        <ValidationModal submission={selected} validatorId={validatorId}
+        <ValidationModal submission={selected}
           onClose={() => setSelected(null)} onSuccess={() => { setSelected(null); onValidated() }} />
       )}
       {bulkOpen && (
-        <BulkValidateModal pendingIds={pendingIds} validatorId={validatorId}
+        <BulkValidateModal pendingIds={pendingIds}
           kecamatanName={kecamatan ?? name}
           onClose={() => setBulkOpen(false)} onSuccess={() => { setBulkOpen(false); onValidated() }} />
       )}
@@ -414,7 +412,7 @@ function StatusPill({ status }: { status: string }) {
 
 // ─── Main ──────────────────────────────────────────────────────────────────
 
-export function ValidationTable({ submissions, validatorId, onValidated }: ValidationTableProps) {
+export function ValidationTable({ submissions, onValidated }: ValidationTableProps) {
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 10
 
@@ -456,7 +454,7 @@ export function ValidationTable({ submissions, validatorId, onValidated }: Valid
       ) : (
         <>
           {pagedGroups.map((g) => (
-            <KecamatanGroup key={g.userId} {...g} validatorId={validatorId} onValidated={onValidated} />
+            <KecamatanGroup key={g.userId} {...g} onValidated={onValidated} />
           ))}
           <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </>

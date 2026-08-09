@@ -21,6 +21,9 @@ const createRubricSchema = z.object({
 // GET /api/rubric?assessmentId=1
 export async function GET(req: NextRequest) {
   try {
+    const session = await auth()
+    if (!session) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+
     const { searchParams } = new URL(req.url)
     const assessmentId = searchParams.get('assessmentId')
 

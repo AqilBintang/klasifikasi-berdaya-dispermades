@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { WilayahJatengExplorer } from '@/components/landing/WilayahJatengExplorer'
 import { KlasifikasiBerdayaChart } from '@/components/admin/KlasifikasiBerdayaChart'
 import type { KlasifikasiBerdayaChartRow } from '@/components/admin/KlasifikasiBerdayaChart'
@@ -11,6 +11,8 @@ import type { KabKotaJateng, KecamatanJateng } from '@/types/wilayah'
 type Props = {
   kabKota: KabKotaJateng[]
   kecamatanByKabKota: Record<string, KecamatanJateng[]>
+  /** Initial chart data from SSR — avoids client-side waterfall on first load */
+  initialChartData?: KlasifikasiBerdayaChartRow[]
 }
 
 // Mode distribusi: banyak kecamatan
@@ -43,11 +45,22 @@ type KecamatanState = {
 
 type ChartState = DistribusiState | KecamatanState
 
-export function LandingDataSection({ kabKota, kecamatanByKabKota }: Props) {
-  const [chart, setChart] = useState<ChartState>({
-    mode: 'distribusi',
-    status: 'loading',
-    label: 'Jawa Tengah',
+export function LandingDataSection({ kabKota, kecamatanByKabKota, initialChartData }: Props) {
+  const [chart, setChart] = useState<ChartState>(() => {
+    // Use SSR data if available — avoids initial browser fetch waterfall
+    if (initialChartData && initialChartData.length >= 0) {
+      return {
+        mode: 'distribusi' as const,
+        status: 'ok' as const,
+        label: 'Jawa Tengah',
+        data: initialChartData,
+      }
+    }
+    return {
+      mode: 'distribusi' as const,
+      status: 'loading' as const,
+      label: 'Jawa Tengah',
+    }
   })
 
   const fetchChart = useCallback((
@@ -104,7 +117,8 @@ export function LandingDataSection({ kabKota, kecamatanByKabKota }: Props) {
       })
   }, [])
 
-  useEffect(() => { fetchChart(null, '', '', '') }, [fetchChart])
+  // No initial useEffect fetch — chart data is provided by SSR via initialChartData prop.
+  // fetchChart is only called when user interacts with the map (filter changes).
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">

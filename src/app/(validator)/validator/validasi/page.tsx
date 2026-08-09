@@ -1,4 +1,3 @@
-import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { ValidationTableClient } from '@/components/admin/ValidationTableClient'
 
@@ -44,8 +43,7 @@ async function getSubmissions() {
 }
 
 export default async function ValidatorValidasiPage() {
-  const [submissions, session] = await Promise.all([getSubmissions(), auth()])
-  const validatorId = parseInt(session?.user.id ?? '0', 10)
+  const submissions = await getSubmissions()
 
   return (
     <div className="space-y-6">
@@ -55,7 +53,7 @@ export default async function ValidatorValidasiPage() {
           Review dan validasi self assessment yang disubmit oleh kecamatan
         </p>
       </div>
-      <ValidationTableClient initialSubmissions={submissions} validatorId={validatorId} />
+      <ValidationTableClient initialSubmissions={submissions} />
     </div>
   )
 }

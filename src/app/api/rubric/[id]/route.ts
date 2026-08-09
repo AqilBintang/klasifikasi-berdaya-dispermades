@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { auth } from '@/auth'
 import { z } from 'zod'
 
 const rubricItemSchema = z.object({
@@ -22,6 +23,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth()
+    if (!session) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+
     const { id } = await params
     const rubric = await prisma.assessmentRubric.findUnique({
       where: { id: parseInt(id, 10) },
@@ -50,6 +54,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth()
+    if (!session) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+    if (session.user.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
+
     const { id } = await params
     const numId = parseInt(id, 10)
     const body = await req.json()
@@ -103,6 +111,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth()
+    if (!session) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+    if (session.user.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
+
     const { id } = await params
     await prisma.assessmentRubric.delete({ where: { id: parseInt(id, 10) } })
     return NextResponse.json({ message: 'Rubrik berhasil dihapus.' })

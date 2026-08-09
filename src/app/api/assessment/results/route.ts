@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
-import { getKlasifikasi, calcCategoryScore } from '@/lib/scoring'
+import { getKlasifikasi } from '@/lib/scoring'
 
-// GET /api/assessment/results?assessmentId=1&periode=2025
+// GET /api/assessment/results?assessmentId=1&periode=2025&page=1&limit=50
+//
+// Pagination di endpoint ini adalah per GROUP (kecamatan+assessment+periode),
+// bukan per row. Karena grouping dilakukan di application layer (Prisma tidak
+// mendukung GROUP BY + aggregasi dengan relasi kompleks tanpa raw SQL), kita
+// fetch semua rows untuk filter yang diberikan, lalu paginate groups di server.
+//
+// ponytail: ceiling — jika satu assessmentId bisa memiliki ribuan kecamatan,
+// fetch semua rows bisa berat. Upgrade path: raw SQL groupBy atau materialized
+// view. Untuk skala saat ini (puluhan kecamatan per assessment), ini acceptable.
+//
+// Wajib: assessmentId ATAU periode harus diberikan untuk membatasi query.
 export async function GET(req: NextRequest) {
   try {
     const session = await auth()
@@ -14,17 +25,30 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const assessmentId = searchParams.get('assessmentId')
     const periode      = searchParams.get('periode')
+    const page         = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
+    const limit        = Math.min(200, Math.max(1, parseInt(searchParams.get('limit') ?? '50', 10)))
 
-    const results = await prisma.selfAssessment.findMany({
-      where: {
-        status: { in: ['VALIDATED', 'SUBMITTED', 'REJECTED'] },
-        ...(periode && { periode }),
-        ...(assessmentId && {
-          indicator: {
-            category: { assessmentId: parseInt(assessmentId, 10) },
-          },
-        }),
-      },
+    // Wajib ada setidaknya satu filter untuk mencegah dump seluruh tabel
+    if (!assessmentId && !periode) {
+      return NextResponse.json(
+        { error: 'Filter assessmentId atau periode diperlukan.' },
+        { status: 400 }
+      )
+    }
+
+    const where = {
+      status: { in: ['VALIDATED', 'SUBMITTED', 'REJECTED'] as ('VALIDATED' | 'SUBMITTED' | 'REJECTED')[] },
+      ...(periode && { periode }),
+      ...(assessmentId && {
+        indicator: {
+          category: { assessmentId: parseInt(assessmentId, 10) },
+        },
+      }),
+    }
+
+    // Fetch semua rows yang cocok — grouping di app layer
+    const rows = await prisma.selfAssessment.findMany({
+      where,
       include: {
         submittedBy: {
           select: {
@@ -54,7 +78,7 @@ export async function GET(req: NextRequest) {
       ],
     })
 
-    // Group by kecamatan (submittedBy) + assessment + periode
+    // Group by (submittedById, assessmentId, periode)
     type GroupKey = string
     const grouped: Record<GroupKey, {
       user: { id: number; name: string; kecamatan: string | null; kabupaten: string | null }
@@ -67,13 +91,13 @@ export async function GET(req: NextRequest) {
         totalScore: number
         maxScore: number
         klasifikasi: string | null
-        entries: typeof results
+        entries: typeof rows
       }>
       totalScore: number
       maxTotalScore: number
     }> = {}
 
-    for (const r of results) {
+    for (const r of rows) {
       const key = `${r.submittedById}_${r.indicator.category.assessmentId}_${r.periode}`
 
       if (!grouped[key]) {
@@ -99,7 +123,7 @@ export async function GET(req: NextRequest) {
           name:       r.indicator.category.name,
           totalScore: 0,
           maxScore:   0,
-          klasifikasi: '',
+          klasifikasi: null,
           entries:    [],
         }
       }
@@ -112,20 +136,32 @@ export async function GET(req: NextRequest) {
       grouped[key].maxTotalScore += r.indicator.maxScore
     }
 
-    // Hitung klasifikasi per kategori — hanya jika maxScore >= 64
+    // Hitung klasifikasi per kategori
     for (const group of Object.values(grouped)) {
       for (const cat of Object.values(group.categories)) {
-        const klasifikasi = getKlasifikasi(cat.totalScore, cat.maxScore)
-        cat.klasifikasi = klasifikasi ?? null  // null = tidak berlaku
+        cat.klasifikasi = getKlasifikasi(cat.totalScore, cat.maxScore) ?? null
       }
     }
 
-    const data = Object.values(grouped).map((g) => ({
+    // Paginate groups (bukan rows)
+    const allGroups = Object.values(grouped).map((g) => ({
       ...g,
       categories: Object.values(g.categories),
     }))
 
-    return NextResponse.json({ data })
+    const totalGroups = allGroups.length
+    const skip        = (page - 1) * limit
+    const data        = allGroups.slice(skip, skip + limit)
+
+    return NextResponse.json({
+      data,
+      pagination: {
+        total:      totalGroups,
+        page,
+        limit,
+        totalPages: Math.ceil(totalGroups / limit),
+      },
+    })
   } catch (err) {
     console.error('[GET /api/assessment/results]', err)
     return NextResponse.json({ error: 'Gagal mengambil hasil.' }, { status: 500 })

@@ -6,10 +6,9 @@ import { ValidationTable } from './ValidationTable'
 interface ValidationTableClientProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   initialSubmissions: any[]
-  validatorId: number
 }
 
-export function ValidationTableClient({ initialSubmissions, validatorId }: ValidationTableClientProps) {
+export function ValidationTableClient({ initialSubmissions }: ValidationTableClientProps) {
   const [submissions, setSubmissions] = useState(initialSubmissions)
 
   const refresh = async () => {
@@ -25,7 +24,6 @@ export function ValidationTableClient({ initialSubmissions, validatorId }: Valid
   return (
     <ValidationTable
       submissions={submissions}
-      validatorId={validatorId}
       onValidated={refresh}
     />
   )

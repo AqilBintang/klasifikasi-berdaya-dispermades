@@ -99,8 +99,8 @@ export function KecamatanStatistikClient({ riwayat }: { riwayat: PeriodeStat[] }
               />
               <Tooltip
                 contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
-                formatter={(value: number, name: string) =>
-                  [value, name === 'skor' ? 'Total Skor' : 'Skor Maks']
+                formatter={(value: unknown, name: unknown) =>
+                  [typeof value === 'number' ? value : 0, name === 'skor' ? 'Total Skor' : 'Skor Maks'] as [number, string]
                 }
               />
               <Line

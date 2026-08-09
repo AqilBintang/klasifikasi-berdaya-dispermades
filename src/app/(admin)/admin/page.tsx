@@ -78,7 +78,7 @@ async function getActivityLog(): Promise<ActivityItem[]> {
   }))
 
   return [...submissions, ...validations]
-    .sort((a, b) => b.at.getTime() - a.at.getTime())
+    .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, 10)
 }
 

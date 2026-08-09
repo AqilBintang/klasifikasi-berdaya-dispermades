@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { getStatusAkhir, type KlasifikasiLevel } from '@/lib/scoring'
+import { unstable_cache } from 'next/cache'
 import type { KlasifikasiBerdayaChartRow } from '@/components/admin/KlasifikasiBerdayaChart'
 
 type RekapGroup = {
@@ -48,7 +49,7 @@ function isNewerPeriode(a: RekapGroup, b: RekapGroup) {
   return a.assessmentId > b.assessmentId
 }
 
-export async function getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFilter = {}): Promise<KlasifikasiAggResult> {
+async function _getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFilter = {}): Promise<KlasifikasiAggResult> {
   const users = await prisma.user.findMany({
     where: {
       role: 'USER',
@@ -202,4 +203,24 @@ export async function getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFi
           })()
         : undefined,
   }
+}
+
+
+/**
+ * Cached version of the aggregation function.
+ * unstable_cache is called at module level with a stable keyParts array containing only the
+ * static tag. The dynamic filter is passed as an argument to the cached function so Next.js
+ * can generate the per-call cache key by combining keyParts + serialised arguments.
+ *
+ * revalidate: 3600s (1 jam) — data klasifikasi jarang berubah.
+ * ponytail: unstable_cache is Next.js built-in, no new dependency needed.
+ */
+const _cachedAgg = unstable_cache(
+  _getKlasifikasiKecamatanAggPerYear,
+  ['klasifikasi-agg'],
+  { revalidate: 3600, tags: ['klasifikasi-agg'] },
+)
+
+export function getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFilter = {}): Promise<KlasifikasiAggResult> {
+  return _cachedAgg(filter)
 }

@@ -6,13 +6,13 @@ import { deleteBackupForGroup, upsertBackupIfComplete } from '@/lib/export/backu
 
 const validateSchema = z.object({
   selfAssessmentId: z.number().int().positive(),
-  validatorId:      z.number().int().positive(),
+  // validatorId diambil dari session, bukan dari body — cegah audit trail palsu
   status:           z.enum(['APPROVED', 'REJECTED', 'REVISION_NEEDED']),
   validatedScore:   z.number().int().min(0).max(10).optional().nullable(),
   notes:            z.string().max(2000).trim().optional().nullable(),
 })
 
-// GET /api/assessment/validation?status=SUBMITTED&assessmentId=1
+// GET /api/assessment/validation?status=SUBMITTED&assessmentId=1&page=1&limit=50
 export async function GET(req: NextRequest) {
   try {
     const session = await auth()
@@ -21,58 +21,75 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url)
-    const status      = searchParams.get('status')
+    const status       = searchParams.get('status')
     const assessmentId = searchParams.get('assessmentId')
+    const page         = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
+    // Default limit=1000: UI (ValidationTable) mengambil semua data sekaligus lalu
+    // melakukan client-side grouping + pagination per group. Limit 200 sebelumnya
+    // berisiko memotong group kecamatan saat refresh(). Untuk true server pagination
+    // perlu re-architect UI. Cap max=2000 untuk mencegah over-fetch.
+    const limit        = Math.min(2000, Math.max(1, parseInt(searchParams.get('limit') ?? '1000', 10)))
+    const skip         = (page - 1) * limit
 
-    const submissions = await prisma.selfAssessment.findMany({
-      where: {
-        ...(status && { status: status as 'DRAFT' | 'SUBMITTED' | 'VALIDATED' | 'REJECTED' }),
-        ...(assessmentId && {
-          indicator: {
-            category: {
-              assessmentId: parseInt(assessmentId, 10),
-            },
-          },
-        }),
-      },
-      include: {
-        submittedBy: {
-          select: {
-            id: true, name: true, email: true,
-            kabupaten: { select: { nama: true } },
-            kecamatan: { select: { nama: true } },
-          },
-        },
+    const where = {
+      ...(status && { status: status as 'DRAFT' | 'SUBMITTED' | 'VALIDATED' | 'REJECTED' }),
+      ...(assessmentId && {
         indicator: {
-          include: {
-            category: {
-              include: { assessment: { select: { id: true, title: true, periode: true } } },
+          category: {
+            assessmentId: parseInt(assessmentId, 10),
+          },
+        },
+      }),
+    }
+
+    const [total, submissions] = await Promise.all([
+      prisma.selfAssessment.count({ where }),
+      prisma.selfAssessment.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          submittedBy: {
+            select: {
+              id: true, name: true, email: true,
+              kabupaten: { select: { nama: true } },
+              kecamatan: { select: { nama: true } },
+            },
+          },
+          indicator: {
+            include: {
+              category: {
+                include: { assessment: { select: { id: true, title: true, periode: true } } },
+              },
+            },
+          },
+          validations: {
+            orderBy: { validatedAt: 'desc' },
+            take: 1,
+            include: {
+              validator: { select: { id: true, name: true } },
             },
           },
         },
-        validations: {
-          orderBy: { validatedAt: 'desc' },
-          take: 1,
-          include: {
-            validator: { select: { id: true, name: true } },
-          },
-        },
-      },
-      orderBy: [
-        { submittedBy: { kecamatan: { nama: 'asc' } } },
-        { indicator: { category: { order: 'asc' } } },
-        { indicator: { number: 'asc' } },
-      ],
-    })
+        orderBy: [
+          { submittedBy: { kecamatan: { nama: 'asc' } } },
+          { indicator: { category: { order: 'asc' } } },
+          { indicator: { number: 'asc' } },
+        ],
+      }),
+    ])
 
-    return NextResponse.json({ data: submissions.map((s) => ({
-      ...s,
-      submittedBy: {
-        ...s.submittedBy,
-        kabupaten: s.submittedBy.kabupaten?.nama ?? null,
-        kecamatan: s.submittedBy.kecamatan?.nama ?? null,
-      },
-    })) })
+    return NextResponse.json({
+      data: submissions.map((s) => ({
+        ...s,
+        submittedBy: {
+          ...s.submittedBy,
+          kabupaten: s.submittedBy.kabupaten?.nama ?? null,
+          kecamatan: s.submittedBy.kecamatan?.nama ?? null,
+        },
+      })),
+      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    })
   } catch (err) {
     console.error('[GET /api/assessment/validation]', err)
     return NextResponse.json({ error: 'Gagal mengambil data.' }, { status: 500 })
@@ -97,7 +114,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { selfAssessmentId, validatorId, status, validatedScore, notes } = parsed.data
+    // validatorId selalu dari session — tidak pernah dari request body
+    const validatorId = parseInt(session.user.id, 10)
+    const { selfAssessmentId, status, validatedScore, notes } = parsed.data
 
     // Cek self assessment ada dan statusnya SUBMITTED
     const sa = await prisma.selfAssessment.findUnique({

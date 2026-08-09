@@ -67,7 +67,7 @@ async function upsertBackupIfComplete(input: { submittedById: number; periode: s
       indicator: { category: { assessmentId: input.assessmentId } },
     },
     include: {
-      submittedBy: { select: { kabupaten: true, kecamatan: true } },
+      submittedBy: { select: { kabupatenName: true, kecamatanName: true } },
       indicator: {
         include: {
           category: { include: { assessment: { select: { title: true } } } },
@@ -85,8 +85,8 @@ async function upsertBackupIfComplete(input: { submittedById: number; periode: s
   if (!first) return { ok: false as const }
 
   const assessmentTitle = first.indicator.category.assessment.title
-  const kecamatan = first.submittedBy.kecamatan ?? null
-  const kabupaten = first.submittedBy.kabupaten ?? null
+  const kecamatan = first.submittedBy.kecamatanName ?? null
+  const kabupaten = first.submittedBy.kabupatenName ?? null
   if (!kecamatan) return { ok: false as const }
 
   const categoryMap = new Map<number, SnapshotCategory>()

@@ -35,7 +35,7 @@ async function buildRekapStatusAkhir(): Promise<RekapRow[]> {
   const entries = await prisma.selfAssessment.findMany({
     where: { status: { in: ['VALIDATED', 'SUBMITTED'] } },
     include: {
-      submittedBy: { select: { id: true, kecamatan: true } },
+      submittedBy: { select: { id: true, kecamatanName: true } },
       indicator: { select: { maxScore: true, category: { select: { assessmentId: true } } } },
       validations: { orderBy: { validatedAt: 'desc' }, take: 1, select: { validatedScore: true } },
     },
@@ -56,7 +56,7 @@ async function buildRekapStatusAkhir(): Promise<RekapRow[]> {
     if (!map[key]) {
       map[key] = {
         userId: e.submittedById,
-        kecamatan: e.submittedBy.kecamatan ?? null,
+        kecamatan: e.submittedBy.kecamatanName ?? null,
         assessmentId,
         periode: e.periode,
         tahun: toYearFromPeriode(e.periode),

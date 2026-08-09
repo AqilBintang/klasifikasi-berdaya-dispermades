@@ -7,30 +7,114 @@ import { buildRekapStatusAkhir } from '@/lib/export/assessment-export'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (session.user.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { searchParams } = new URL(req.url)
-  const includeSensitive = searchParams.get('includeSensitive') === '1'
-
-  const [usersRaw, assessments, categories, indicators, rubrics, rubricItems, selfAssessments, validations, rekapStatusAkhir] =
+  const [users, assessments, categories, indicators, rubrics, rubricItems, selfAssessments, validations, rekapStatusAkhir] =
     await Promise.all([
-      prisma.user.findMany(),
-      prisma.assessment.findMany(),
-      prisma.assessmentCategory.findMany(),
-      prisma.assessmentIndicator.findMany(),
-      prisma.assessmentRubric.findMany(),
-      prisma.rubricItem.findMany(),
-      prisma.selfAssessment.findMany(),
-      prisma.assessmentValidation.findMany(),
+      // passwordHash selalu dikecualikan — tidak boleh keluar dari database
+      prisma.user.findMany({
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          isActive: true,
+          kabupatenName: true,
+          kecamatanName: true,
+          kabupatenId: true,
+          kecamatanId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+      prisma.assessment.findMany({
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          periode: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+      prisma.assessmentCategory.findMany({
+        select: {
+          id: true,
+          assessmentId: true,
+          code: true,
+          name: true,
+          description: true,
+          order: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+      prisma.assessmentIndicator.findMany({
+        select: {
+          id: true,
+          categoryId: true,
+          number: true,
+          indicator: true,
+          maxScore: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+      prisma.assessmentRubric.findMany({
+        select: {
+          id: true,
+          assessmentId: true,
+          title: true,
+          description: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+      prisma.rubricItem.findMany({
+        select: {
+          id: true,
+          rubricId: true,
+          indicatorId: true,
+          score1: true,
+          score2: true,
+          score3: true,
+          score4: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+      prisma.selfAssessment.findMany({
+        select: {
+          id: true,
+          indicatorId: true,
+          submittedById: true,
+          periode: true,
+          description: true,
+          score: true,
+          supportingDoc: true,
+          status: true,
+          submittedAt: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+      prisma.assessmentValidation.findMany({
+        select: {
+          id: true,
+          selfAssessmentId: true,
+          validatorId: true,
+          status: true,
+          validatedScore: true,
+          notes: true,
+          validatedAt: true,
+        },
+      }),
       buildRekapStatusAkhir(),
     ])
-
-  const users = includeSensitive
-    ? usersRaw
-    : usersRaw.map(({ passwordHash, ...rest }) => rest)
 
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, jsonToSheet(users as any[], { freezeHeader: true }), '01_users')

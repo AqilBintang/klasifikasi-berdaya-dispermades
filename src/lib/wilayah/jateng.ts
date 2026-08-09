@@ -11,6 +11,20 @@ type ParsedJateng = {
 
 let parsedPromise: Promise<ParsedJateng> | null = null
 
+// Coba load dari pre-built JSON dulu (generated via scripts/generate-wilayah-json.ts).
+// Jika tidak tersedia, fallback ke SQL parsing. JSON jauh lebih cepat karena tidak
+// perlu parse line-by-line, terutama saat cold start di serverless.
+function tryLoadFromJson(): ParsedJateng | null {
+  const jsonPath = path.join(process.cwd(), 'src', 'data', 'wilayah-jateng.json')
+  try {
+    if (!fs.existsSync(jsonPath)) return null
+    const raw = fs.readFileSync(jsonPath, 'utf8')
+    return JSON.parse(raw) as ParsedJateng
+  } catch {
+    return null
+  }
+}
+
 function parseNullableNumber(value: string | undefined): number | null {
   if (!value) return null
   if (value.toUpperCase() === 'NULL') return null
@@ -154,7 +168,16 @@ async function parseJatengFromSql(): Promise<ParsedJateng> {
 }
 
 async function getParsedJateng(): Promise<ParsedJateng> {
-  if (!parsedPromise) parsedPromise = parseJatengFromSql()
+  if (!parsedPromise) {
+    // Coba JSON dulu — synchronous dan cepat
+    const fromJson = tryLoadFromJson()
+    if (fromJson) {
+      parsedPromise = Promise.resolve(fromJson)
+    } else {
+      // Fallback: parse SQL files (dibutuhkan saat JSON belum di-generate)
+      parsedPromise = parseJatengFromSql()
+    }
+  }
   return parsedPromise
 }
 

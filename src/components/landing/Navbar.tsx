@@ -30,10 +30,8 @@ export function Navbar() {
 
   // Close mobile menu on route change
   useEffect(() => {
-    if (!mobileOpen) return
-    const id = window.requestAnimationFrame(() => setMobileOpen(false))
-    return () => window.cancelAnimationFrame(id)
-  }, [pathname, mobileOpen])
+    setMobileOpen(false)
+  }, [pathname])
 
   // Prevent body scroll when mobile menu is open
   useEffect(() => {

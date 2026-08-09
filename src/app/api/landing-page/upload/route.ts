@@ -37,8 +37,14 @@ export async function POST(request: Request) {
   // Pastikan direktori ada
   await fs.mkdir(UPLOAD_DIR, { recursive: true })
 
-  // Nama file: timestamp + nama asli (sanitized)
-  const ext = file.name.split('.').pop() ?? 'jpg'
+  // Derive extension from MIME type, not filename (prevents "malware.php.jpg" tricks)
+  const EXT_MAP: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png':  'png',
+    'image/webp': 'webp',
+    'image/gif':  'gif',
+  }
+  const ext = EXT_MAP[file.type] ?? 'jpg'
   const safeName = `banner-${Date.now()}.${ext}`
   const filePath = path.join(UPLOAD_DIR, safeName)
 

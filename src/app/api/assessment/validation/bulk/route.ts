@@ -6,7 +6,7 @@ import { deleteBackupsForSelfAssessmentIds, upsertBackupsForSelfAssessmentIds } 
 
 const bulkSchema = z.object({
   selfAssessmentIds: z.array(z.number().int().positive()).min(1),
-  validatorId:       z.number().int().positive(),
+  // validatorId diambil dari session, bukan dari body — cegah audit trail palsu
   status:            z.enum(['APPROVED', 'REJECTED', 'REVISION_NEEDED']),
   notes:             z.string().max(2000).trim().optional().nullable(),
 })
@@ -27,7 +27,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Input tidak valid.', details: parsed.error.flatten() }, { status: 400 })
     }
 
-    const { selfAssessmentIds, validatorId, status, notes } = parsed.data
+    const { selfAssessmentIds, status, notes } = parsed.data
+    // validatorId selalu dari session — tidak pernah dari request body
+    const validatorId = parseInt(session.user.id, 10)
 
     // Hanya proses yang berstatus SUBMITTED
     const submissions = await prisma.selfAssessment.findMany({
