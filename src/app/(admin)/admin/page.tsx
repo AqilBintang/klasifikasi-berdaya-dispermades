@@ -71,23 +71,23 @@ async function getActivityLog(): Promise<ActivityItem[]> {
     assessmentTitle: string
   }[]>`
     SELECT
-      sa.submitted_at   AS submittedAt,
+      MAX(sa.submittedAt)  AS submittedAt,
       sa.periode,
-      u.kecamatan       AS kecamatanName,
-      u.kabupaten       AS kabupatenName,
-      a.title           AS assessmentTitle
+      u.kecamatan          AS kecamatanName,
+      u.kabupaten          AS kabupatenName,
+      a.title              AS assessmentTitle
     FROM self_assessments sa
-    JOIN users u ON u.id = sa.submitted_by_id
-    JOIN assessment_indicators ai ON ai.id = sa.indicator_id
-    JOIN assessment_categories ac ON ac.id = ai.category_id
-    JOIN assessments a ON a.id = ac.assessment_id
-    WHERE sa.submitted_at IS NOT NULL
-    GROUP BY sa.submitted_by_id, sa.periode
-    ORDER BY MAX(sa.submitted_at) DESC
+    JOIN users u  ON u.id  = sa.submittedById
+    JOIN assessment_indicators ai ON ai.id = sa.indicatorId
+    JOIN assessment_categories ac ON ac.id = ai.categoryId
+    JOIN assessments a ON a.id = ac.assessmentId
+    WHERE sa.submittedAt IS NOT NULL
+    GROUP BY sa.submittedById, sa.periode, u.kecamatan, u.kabupaten, a.title
+    ORDER BY MAX(sa.submittedAt) DESC
     LIMIT 10
   `
 
-  // Satu validation event per (validator_id, submitted_by_id, periode) — aggregate MAX untuk strict mode.
+  // Satu validation event per (validatorId, submittedById, periode)
   const valRows = await prisma.$queryRaw<{
     validatedAt: Date
     status: string
@@ -95,16 +95,16 @@ async function getActivityLog(): Promise<ActivityItem[]> {
     kecamatanName: string | null
   }[]>`
     SELECT
-      MAX(av.validated_at)          AS validatedAt,
-      MAX(av.status)                AS status,
-      MAX(u.name)                   AS validatorName,
-      MAX(su.kecamatan)             AS kecamatanName
+      MAX(av.validatedAt)  AS validatedAt,
+      MAX(av.status)       AS status,
+      MAX(u.name)          AS validatorName,
+      MAX(su.kecamatan)    AS kecamatanName
     FROM assessment_validations av
-    JOIN users u  ON u.id  = av.validator_id
-    JOIN self_assessments sa ON sa.id = av.self_assessment_id
-    JOIN users su ON su.id = sa.submitted_by_id
-    GROUP BY av.validator_id, sa.submitted_by_id, sa.periode
-    ORDER BY MAX(av.validated_at) DESC
+    JOIN users u  ON u.id  = av.validatorId
+    JOIN self_assessments sa ON sa.id = av.selfAssessmentId
+    JOIN users su ON su.id = sa.submittedById
+    GROUP BY av.validatorId, sa.submittedById, sa.periode
+    ORDER BY MAX(av.validatedAt) DESC
     LIMIT 10
   `
 
