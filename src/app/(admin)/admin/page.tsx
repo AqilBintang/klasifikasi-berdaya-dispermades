@@ -2,14 +2,8 @@ import { prisma } from '@/lib/prisma'
 import { StatisticCard } from '@/components/shared/ui/StatisticCard'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faUsers,
-  faClipboardList,
-  faHourglass,
-  faCircleCheck,
-  faFileCircleCheck,
-  faShieldHalved,
-  faTimesCircle,
-  faExclamationCircle,
+  faUsers, faClipboardList, faHourglass, faCircleCheck,
+  faPenToSquare, faCheckDouble, faXmark, faRotateLeft,
 } from '@fortawesome/free-solid-svg-icons'
 
 const UsersIcon      = () => <FontAwesomeIcon icon={faUsers}         className="h-4 w-4" />
@@ -17,147 +11,183 @@ const AssessmentIcon = () => <FontAwesomeIcon icon={faClipboardList} className="
 const WaitingIcon    = () => <FontAwesomeIcon icon={faHourglass}     className="h-4 w-4" />
 const ValidatedIcon  = () => <FontAwesomeIcon icon={faCircleCheck}   className="h-4 w-4" />
 
-type ActivityItem =
-  | { type: 'submission'; at: Date; kecamatan: string; kabupaten: string | null; periode: string; assessmentTitle: string }
-  | { type: 'validation'; at: Date; validator: string; kecamatan: string; status: 'APPROVED' | 'REJECTED' | 'REVISION_NEEDED' }
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-const VALIDATION_CONFIG = {
-  APPROVED:        { label: 'Disetujui',     icon: faCircleCheck,      cls: 'text-green-600' },
-  REJECTED:        { label: 'Ditolak',       icon: faTimesCircle,      cls: 'text-red-500' },
-  REVISION_NEEDED: { label: 'Perlu Revisi',  icon: faExclamationCircle, cls: 'text-amber-500' },
+type SubmissionEvent = {
+  type: 'submission'
+  at: Date
+  kecamatan: string
+  kabupaten: string | null
+  periode: string
+  assessmentTitle: string
 }
 
-function relativeTime(date: Date): string {
-  const diff = Date.now() - date.getTime()
-  const minutes = Math.floor(diff / 60_000)
-  if (minutes < 1)   return 'Baru saja'
-  if (minutes < 60)  return `${minutes} menit lalu`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24)    return `${hours} jam lalu`
-  const days = Math.floor(hours / 24)
-  if (days < 7)      return `${days} hari lalu`
-  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+type ValidationEvent = {
+  type: 'validation'
+  at: Date
+  validator: string
+  kecamatan: string
+  status: 'APPROVED' | 'REJECTED' | 'REVISION_NEEDED'
 }
+
+type ActivityItem = SubmissionEvent | ValidationEvent
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function formatRelative(date: Date, now: Date): string {
+  const diff = now.getTime() - date.getTime()
+  const m = Math.floor(diff / 60_000)
+  if (m < 1)  return 'Baru saja'
+  if (m < 60) return `${m} mnt lalu`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h} jam lalu`
+  const d = Math.floor(h / 24)
+  if (d < 7)  return `${d} hari lalu`
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+}
+
+const VALIDATION_CFG = {
+  APPROVED:        { label: 'Disetujui',    icon: faCircleCheck, dot: 'bg-green-500' },
+  REJECTED:        { label: 'Ditolak',      icon: faXmark,       dot: 'bg-red-500'   },
+  REVISION_NEEDED: { label: 'Perlu Revisi', icon: faRotateLeft,  dot: 'bg-amber-500' },
+} as const
+
+const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
+  DRAFT:     { label: 'Draft',     cls: 'bg-gray-100 text-gray-600'   },
+  PUBLISHED: { label: 'Published', cls: 'bg-green-100 text-green-700' },
+  ARCHIVED:  { label: 'Arsip',     cls: 'bg-slate-100 text-slate-600' },
+}
+
+// ─── Data ─────────────────────────────────────────────────────────────────────
+
+async function getActivityLog(): Promise<ActivityItem[]> {
+  // Satu submission event per (submittedById, periode) — ambil submittedAt terbaru per group.
+  // Prisma tidak support groupBy + take, jadi pakai raw yang ringkas.
+  const subRows = await prisma.$queryRaw<{
+    submittedAt: Date
+    periode: string
+    kecamatanName: string | null
+    kabupatenName: string | null
+    assessmentTitle: string
+  }[]>`
+    SELECT
+      sa.submitted_at   AS submittedAt,
+      sa.periode,
+      u.kecamatan       AS kecamatanName,
+      u.kabupaten       AS kabupatenName,
+      a.title           AS assessmentTitle
+    FROM self_assessments sa
+    JOIN users u ON u.id = sa.submitted_by_id
+    JOIN assessment_indicators ai ON ai.id = sa.indicator_id
+    JOIN assessment_categories ac ON ac.id = ai.category_id
+    JOIN assessments a ON a.id = ac.assessment_id
+    WHERE sa.submitted_at IS NOT NULL
+    GROUP BY sa.submitted_by_id, sa.periode
+    ORDER BY MAX(sa.submitted_at) DESC
+    LIMIT 10
+  `
+
+  // Satu validation event per (validator_id, submitted_by_id, periode) — aggregate MAX untuk strict mode.
+  const valRows = await prisma.$queryRaw<{
+    validatedAt: Date
+    status: string
+    validatorName: string
+    kecamatanName: string | null
+  }[]>`
+    SELECT
+      MAX(av.validated_at)          AS validatedAt,
+      MAX(av.status)                AS status,
+      MAX(u.name)                   AS validatorName,
+      MAX(su.kecamatan)             AS kecamatanName
+    FROM assessment_validations av
+    JOIN users u  ON u.id  = av.validator_id
+    JOIN self_assessments sa ON sa.id = av.self_assessment_id
+    JOIN users su ON su.id = sa.submitted_by_id
+    GROUP BY av.validator_id, sa.submitted_by_id, sa.periode
+    ORDER BY MAX(av.validated_at) DESC
+    LIMIT 10
+  `
+
+  const submissions: ActivityItem[] = subRows.map((r) => ({
+    type: 'submission',
+    at: r.submittedAt,
+    kecamatan: r.kecamatanName ?? 'Tidak diketahui',
+    kabupaten: r.kabupatenName ?? null,
+    periode: r.periode,
+    assessmentTitle: r.assessmentTitle,
+  }))
+
+  const validations: ActivityItem[] = valRows.map((r) => ({
+    type: 'validation',
+    at: r.validatedAt,
+    validator: r.validatorName,
+    kecamatan: r.kecamatanName ?? 'Tidak diketahui',
+    status: r.status as 'APPROVED' | 'REJECTED' | 'REVISION_NEEDED',
+  }))
+
+  return [...submissions, ...validations]
+    .sort((a, b) => b.at.getTime() - a.at.getTime())
+    .slice(0, 10)
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function AdminDashboardPage() {
+  const now = new Date()
+
   const [
     totalKecamatan,
     totalAssessmentPublished,
     totalMenunggu,
     totalDivalidasi,
     assessmentTerbaru,
-    recentSubmissions,
-    recentValidations,
+    activityLog,
   ] = await Promise.all([
     prisma.user.count({ where: { role: 'USER', isActive: true } }),
     prisma.assessment.count({ where: { status: 'PUBLISHED' } }),
     prisma.selfAssessment.count({ where: { status: 'SUBMITTED' } }),
     prisma.selfAssessment.count({ where: { status: 'VALIDATED' } }),
-    // 5 assessment terbaru
     prisma.assessment.findMany({
       orderBy: { createdAt: 'desc' },
       take: 5,
       select: {
-        id: true, title: true, periode: true, status: true, createdAt: true,
+        id: true, title: true, periode: true, status: true,
         _count: { select: { categories: true } },
       },
     }),
-    // Submission terbaru — distinct per kecamatan+periode agar tidak duplikat per indikator
-    prisma.selfAssessment.findMany({
-      where: { submittedAt: { not: null } },
-      orderBy: { submittedAt: 'desc' },
-      take: 30,
-      select: {
-        submittedAt: true, periode: true,
-        submittedById: true,
-        submittedBy: { select: { kecamatanName: true, kabupatenName: true } },
-        indicator: {
-          select: { category: { select: { assessment: { select: { title: true } } } } },
-        },
-      },
-    }),
-    // Validasi terbaru
-    prisma.assessmentValidation.findMany({
-      orderBy: { validatedAt: 'desc' },
-      take: 15,
-      select: {
-        validatedAt: true,
-        status: true,
-        validator: { select: { name: true } },
-        selfAssessment: {
-          select: { submittedBy: { select: { kecamatanName: true } } },
-        },
-      },
-    }),
+    getActivityLog(),
   ])
-
-  // Deduplicate submissions: satu entry per (submittedById, periode)
-  const seenSubmission = new Set<string>()
-  const submissionItems: ActivityItem[] = []
-  for (const s of recentSubmissions) {
-    const key = `${s.submittedById}_${s.periode}`
-    if (seenSubmission.has(key)) continue
-    seenSubmission.add(key)
-    submissionItems.push({
-      type: 'submission',
-      at: s.submittedAt!,
-      kecamatan: s.submittedBy.kecamatanName ?? 'Tidak diketahui',
-      kabupaten: s.submittedBy.kabupatenName ?? null,
-      periode: s.periode,
-      assessmentTitle: s.indicator.category.assessment.title,
-    })
-  }
-
-  const validationItems: ActivityItem[] = recentValidations.map((v) => ({
-    type: 'validation',
-    at: v.validatedAt,
-    validator: v.validator.name,
-    kecamatan: v.selfAssessment.submittedBy.kecamatanName ?? 'Tidak diketahui',
-    status: v.status as 'APPROVED' | 'REJECTED' | 'REVISION_NEEDED',
-  }))
-
-  // Gabung dan urutkan terbaru di atas, ambil 10
-  const activityLog = [...submissionItems, ...validationItems]
-    .sort((a, b) => b.at.getTime() - a.at.getTime())
-    .slice(0, 10)
-
-  const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
-    DRAFT:     { label: 'Draft',     cls: 'bg-gray-100 text-gray-600' },
-    PUBLISHED: { label: 'Published', cls: 'bg-green-100 text-green-700' },
-    ARCHIVED:  { label: 'Arsip',     cls: 'bg-slate-100 text-slate-600' },
-  }
 
   return (
     <div className="space-y-8">
 
-      {/* Heading */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900">Overview</h2>
         <p className="mt-1 text-sm text-gray-500">Ringkasan data platform klasifikasi kecamatan berdaya</p>
       </div>
 
-      {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatisticCard title="Total Kecamatan"      value={totalKecamatan}           icon={UsersIcon} />
-        <StatisticCard title="Assessment Published"  value={totalAssessmentPublished}  icon={AssessmentIcon} />
-        <StatisticCard title="Menunggu Validasi"     value={totalMenunggu}             icon={WaitingIcon} />
-        <StatisticCard title="Sudah Divalidasi"      value={totalDivalidasi}           icon={ValidatedIcon} />
+        <StatisticCard title="Total Kecamatan"     value={totalKecamatan}          icon={UsersIcon} />
+        <StatisticCard title="Assessment Published" value={totalAssessmentPublished} icon={AssessmentIcon} />
+        <StatisticCard title="Menunggu Validasi"    value={totalMenunggu}            icon={WaitingIcon} />
+        <StatisticCard title="Sudah Divalidasi"     value={totalDivalidasi}          icon={ValidatedIcon} />
       </div>
 
-      {/* Tabel bawah */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Assessment terbaru */}
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <h3 className="font-semibold text-gray-800 mb-4">Assessment Terbaru</h3>
+        <div className="rounded-xl border bg-white shadow-sm">
+          <div className="px-5 py-4 border-b">
+            <h3 className="font-semibold text-gray-800">Assessment Terbaru</h3>
+          </div>
           {assessmentTerbaru.length === 0 ? (
-            <p className="text-sm text-gray-400">Belum ada assessment.</p>
+            <p className="px-5 py-6 text-sm text-gray-400">Belum ada assessment.</p>
           ) : (
             <ul className="divide-y divide-gray-100">
               {assessmentTerbaru.map((a) => {
                 const s = STATUS_LABEL[a.status] ?? STATUS_LABEL.DRAFT
                 return (
-                  <li key={a.id} className="py-3 flex items-center justify-between gap-3">
+                  <li key={a.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-800 truncate">{a.title}</p>
                       <p className="text-xs text-gray-400 mt-0.5">
@@ -175,56 +205,64 @@ export default async function AdminDashboardPage() {
         </div>
 
         {/* Log Aktivitas */}
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <h3 className="font-semibold text-gray-800 mb-4">Log Aktivitas</h3>
+        <div className="rounded-xl border bg-white shadow-sm">
+          <div className="px-5 py-4 border-b">
+            <h3 className="font-semibold text-gray-800">Log Aktivitas</h3>
+          </div>
+
           {activityLog.length === 0 ? (
-            <p className="text-sm text-gray-400">Belum ada aktivitas.</p>
+            <p className="px-5 py-6 text-sm text-gray-400">Belum ada aktivitas.</p>
           ) : (
-            <ul className="space-y-3">
+            <ul className="divide-y divide-gray-100">
               {activityLog.map((item, i) => {
+                const timeStr = formatRelative(item.at, now)
+
                 if (item.type === 'submission') {
                   return (
-                    <li key={i} className="flex items-start gap-3">
+                    <li key={i} className="flex items-start gap-3 px-5 py-3.5">
+                      {/* Icon */}
                       <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-100">
-                        <FontAwesomeIcon icon={faFileCircleCheck} className="w-3.5 h-3.5 text-sky-600" />
+                        <FontAwesomeIcon icon={faPenToSquare} className="w-3 h-3 text-sky-600" />
                       </div>
+                      {/* Text */}
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm text-gray-800">
-                          <span className="font-medium">{item.kecamatan}</span>
-                          {item.kabupaten && <span className="text-gray-500"> · {item.kabupaten}</span>}
-                          <span className="text-gray-600"> mengisi assessment</span>
+                        <p className="text-sm text-gray-800 leading-snug">
+                          <span className="font-semibold">{item.kecamatan}</span>
+                          <span className="text-gray-500"> mengisi assessment</span>
                         </p>
                         <p className="text-xs text-gray-400 mt-0.5 truncate">
-                          {item.assessmentTitle} · Periode {item.periode}
+                          {item.assessmentTitle}
+                          {item.kabupaten ? ` · ${item.kabupaten}` : ''}
+                          {' · '}Periode {item.periode}
                         </p>
                       </div>
-                      <span className="shrink-0 text-xs text-gray-400 mt-0.5 whitespace-nowrap">
-                        {relativeTime(item.at)}
-                      </span>
+                      {/* Time */}
+                      <span className="shrink-0 text-xs text-gray-400 whitespace-nowrap pt-0.5">{timeStr}</span>
                     </li>
                   )
                 }
 
-                const cfg = VALIDATION_CONFIG[item.status]
+                const cfg = VALIDATION_CFG[item.status]
                 return (
-                  <li key={i} className="flex items-start gap-3">
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-purple-100">
-                      <FontAwesomeIcon icon={faShieldHalved} className="w-3.5 h-3.5 text-purple-600" />
+                  <li key={i} className="flex items-start gap-3 px-5 py-3.5">
+                    {/* Icon */}
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100">
+                      <FontAwesomeIcon icon={faCheckDouble} className="w-3 h-3 text-violet-600" />
                     </div>
+                    {/* Text */}
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm text-gray-800">
-                        <span className="font-medium">{item.validator}</span>
-                        <span className="text-gray-600"> memvalidasi </span>
-                        <span className="font-medium">{item.kecamatan}</span>
+                      <p className="text-sm text-gray-800 leading-snug">
+                        <span className="font-semibold">{item.validator}</span>
+                        <span className="text-gray-500"> memvalidasi </span>
+                        <span className="font-semibold">{item.kecamatan}</span>
                       </p>
-                      <p className="text-xs mt-0.5">
-                        <FontAwesomeIcon icon={cfg.icon} className={`w-3 h-3 mr-1 ${cfg.cls}`} />
-                        <span className={cfg.cls}>{cfg.label}</span>
+                      <p className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-500">
+                        <span className={`inline-block h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                        {cfg.label}
                       </p>
                     </div>
-                    <span className="shrink-0 text-xs text-gray-400 mt-0.5 whitespace-nowrap">
-                      {relativeTime(item.at)}
-                    </span>
+                    {/* Time */}
+                    <span className="shrink-0 text-xs text-gray-400 whitespace-nowrap pt-0.5">{timeStr}</span>
                   </li>
                 )
               })}
