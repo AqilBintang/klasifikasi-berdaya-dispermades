@@ -57,7 +57,7 @@ skills-lock.json
 tmp-*.mjs
 
 # external reference data (not part of this codebase)
-wilayah/
+/wilayah/
 
 # prisma backup files
 prisma/*.backup
