@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { auth } from '@/auth'
 import { z } from 'zod'
 import { deleteBackupsForSelfAssessmentIds, upsertBackupsForSelfAssessmentIds } from '@/lib/export/backup-snapshot'
 
@@ -14,6 +15,11 @@ const bulkSchema = z.object({
 // Validasi banyak self assessment sekaligus dengan keputusan yang sama
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth()
+    if (!session || !['ADMIN', 'VALIDATOR'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+    }
+
     const body   = await req.json()
     const parsed = bulkSchema.safeParse(body)
 
