@@ -34,10 +34,40 @@ export async function POST(req: NextRequest) {
     // Hanya proses yang berstatus SUBMITTED
     const submissions = await prisma.selfAssessment.findMany({
       where: { id: { in: selfAssessmentIds }, status: 'SUBMITTED' },
+      select: {
+        id: true,
+        submittedById: true,
+        periode: true,
+        indicator: { select: { category: { select: { assessmentId: true } } } },
+      },
     })
 
     if (submissions.length === 0) {
       return NextResponse.json({ error: 'Tidak ada submission yang bisa divalidasi.' }, { status: 400 })
+    }
+
+    // Saring: buang submission milik kecamatan yang sedang NEEDS_REVISION —
+    // jawaban mereka sudah outdated karena admin baru update indikator.
+    const userIds = [...new Set(submissions.map((s) => s.submittedById))]
+    const outdatedStatuses = await prisma.userAssessmentStatus.findMany({
+      where: {
+        userId: { in: userIds },
+        status: 'NEEDS_REVISION',
+      },
+      select: { userId: true },
+    })
+    const outdatedUserIds = new Set(outdatedStatuses.map((u) => u.userId))
+
+    const validSubmissions = submissions.filter((s) => !outdatedUserIds.has(s.submittedById))
+    const skippedCount = submissions.length - validSubmissions.length
+
+    if (validSubmissions.length === 0) {
+      return NextResponse.json({
+        error:
+          'Semua kecamatan dalam batch ini sedang diminta revisi. Validasi ditangguhkan hingga revisi selesai.',
+        outdated: true,
+        skippedCount,
+      }, { status: 409 })
     }
 
     const newStatus =
@@ -47,7 +77,7 @@ export async function POST(req: NextRequest) {
     await prisma.$transaction(async (tx) => {
       // Buat validation record untuk setiap submission
       await tx.assessmentValidation.createMany({
-        data: submissions.map((sa) => ({
+        data: validSubmissions.map((sa) => ({
           selfAssessmentId: sa.id,
           validatorId,
           status,
@@ -57,18 +87,19 @@ export async function POST(req: NextRequest) {
 
       // Update status self assessment
       await tx.selfAssessment.updateMany({
-        where: { id: { in: submissions.map((s) => s.id) } },
+        where: { id: { in: validSubmissions.map((s) => s.id) } },
         data:  { status: newStatus },
       })
     })
 
-    const ids = submissions.map((s) => s.id)
+    const ids = validSubmissions.map((s) => s.id)
     if (newStatus === 'VALIDATED') await upsertBackupsForSelfAssessmentIds(ids)
     else await deleteBackupsForSelfAssessmentIds(ids)
 
     return NextResponse.json({
-      message: `${submissions.length} submission berhasil divalidasi.`,
-      count:   submissions.length,
+      message: `${validSubmissions.length} submission berhasil divalidasi.${skippedCount > 0 ? ` ${skippedCount} dilewati karena kecamatan sedang revisi.` : ''}`,
+      count:   validSubmissions.length,
+      skippedCount,
     }, { status: 201 })
   } catch (err) {
     console.error('[POST /api/assessment/validation/bulk]', err)

@@ -11,7 +11,7 @@ import {
 import { Loader2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type AssessmentStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+type AssessmentStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | 'REVISION'
 
 interface AssessmentItem {
   id: number
@@ -30,6 +30,7 @@ const STATUS_CONFIG = {
   DRAFT:     { label: 'Draft',     icon: Circle,   cls: 'bg-gray-100 text-gray-600' },
   PUBLISHED: { label: 'Published', icon: CheckCircle, cls: 'bg-green-100 text-green-700' },
   ARCHIVED:  { label: 'Archived',  icon: Archive,  cls: 'bg-amber-100 text-amber-700' },
+  REVISION:  { label: 'Revision',  icon: Pencil,   cls: 'bg-orange-100 text-orange-700' },
 }
 
 const inputCls = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-400 transition-colors'

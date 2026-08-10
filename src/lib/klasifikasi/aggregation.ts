@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { getStatusAkhir, type KlasifikasiLevel } from '@/lib/scoring'
+import { getStatusAkhir, calculateWeightedScore, type KlasifikasiLevel } from '@/lib/scoring'
 import { unstable_cache } from 'next/cache'
 import type { KlasifikasiBerdayaChartRow } from '@/components/admin/KlasifikasiBerdayaChart'
 
@@ -26,7 +26,7 @@ export type KlasifikasiAggResult = {
   years: string[]
   chartData: KlasifikasiBerdayaChartRow[]
   // Hanya diisi saat filter ke satu kecamatan
-  skorPerTahun?: { year: string; totalScore: number; maxPossibleTotal: number; statusAkhir: KlasifikasiLevel | null }[]
+  skorPerTahun?: { year: string; weightedScore: number; maxWeightedScore: number; statusAkhir: KlasifikasiLevel | null }[]
   latest?: {
     status: KlasifikasiLevel | null
     periode: string | null
@@ -78,7 +78,7 @@ async function _getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFilter =
       submittedById: { in: userIds },
     },
     include: {
-      indicator: { select: { maxScore: true, category: { select: { assessmentId: true } } } },
+      indicator: { select: { maxScore: true, category: { select: { assessmentId: true, code: true } } } },
       validations: { orderBy: { validatedAt: 'desc' }, take: 1, select: { validatedScore: true } },
     },
     orderBy: [
@@ -88,7 +88,7 @@ async function _getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFilter =
     ],
   })
 
-  const groupsMap: Record<string, Omit<RekapGroup, 'statusAkhir'>> = {}
+  const groupsMap: Record<string, Omit<RekapGroup, 'statusAkhir'> & { catMap: Record<string, { code: string; score: number; maxScore: number }> }> = {}
   for (const e of entries) {
     const assessmentId = e.indicator.category.assessmentId
     const key = `${e.submittedById}_${assessmentId}_${e.periode}`
@@ -101,16 +101,26 @@ async function _getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFilter =
         periode: e.periode,
         totalScore: 0,
         maxPossibleTotal: 0,
+        catMap: {},
       }
     }
 
-    groupsMap[key].totalScore += effScore
-    groupsMap[key].maxPossibleTotal += e.indicator.maxScore
+    const g = groupsMap[key]!
+    g.totalScore += effScore
+    g.maxPossibleTotal += e.indicator.maxScore
+
+    // Track category scores for weighted calculation
+    const catCode = e.indicator.category.code
+    if (!g.catMap[catCode]) {
+      g.catMap[catCode] = { code: catCode, score: 0, maxScore: 0 }
+    }
+    g.catMap[catCode].score += effScore
+    g.catMap[catCode].maxScore += e.indicator.maxScore
   }
 
-  const groups: RekapGroup[] = Object.values(groupsMap).map((g) => ({
+  const groups: RekapGroup[] = Object.values(groupsMap).map(({ catMap, ...g }) => ({
     ...g,
-    statusAkhir: getStatusAkhir(g.totalScore, g.maxPossibleTotal),
+    statusAkhir: getStatusAkhir(g.totalScore, g.maxPossibleTotal, Object.values(catMap)),
   }))
 
   const latestOverallByUser = new Map<number, RekapGroup>()
@@ -119,8 +129,9 @@ async function _getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFilter =
     if (!current || isNewerPeriode(g, current)) latestOverallByUser.set(g.userId, g)
   }
 
-  const latestByUserYear = new Map<string, RekapGroup>()
-  for (const g of groups) {
+  const latestByUserYear = new Map<string, RekapGroup & { catMap: Record<string, { code: string; score: number; maxScore: number }> }>()
+  for (const gRaw of Object.values(groupsMap)) {
+    const g = { ...gRaw, statusAkhir: getStatusAkhir(gRaw.totalScore, gRaw.maxPossibleTotal, Object.values(gRaw.catMap)) }
     const year = getPeriodeYear(g.periode)
     if (!year) continue
 
@@ -170,17 +181,26 @@ async function _getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFilter =
   // Skor per tahun — hanya relevan saat filter ke satu kecamatan (satu user)
   const skorPerTahun =
     users.length === 1
-      ? years.map((year) => {
-          const y = Number.parseInt(year, 10)
-          const u = users[0]!
-          const g = latestByUserYear.get(`${u.id}_${y}`) ?? null
-          return {
-            year,
-            totalScore: g?.totalScore ?? 0,
-            maxPossibleTotal: g?.maxPossibleTotal ?? 0,
-            statusAkhir: g?.statusAkhir ?? null,
-          }
-        })
+      ? years
+          .map((year) => {
+            const y = Number.parseInt(year, 10)
+            const u = users[0]!
+            const g = latestByUserYear.get(`${u.id}_${y}`) ?? null
+
+            // Kecamatan tidak punya data di tahun ini — skip
+            if (!g) return null
+
+            const categoryScores = Object.values(g.catMap)
+            const { weightedScore, maxWeightedScore } = calculateWeightedScore(categoryScores)
+
+            return {
+              year,
+              weightedScore,
+              maxWeightedScore,
+              statusAkhir: g.statusAkhir,
+            }
+          })
+          .filter((r): r is NonNullable<typeof r> => r !== null)
       : undefined
 
   return {

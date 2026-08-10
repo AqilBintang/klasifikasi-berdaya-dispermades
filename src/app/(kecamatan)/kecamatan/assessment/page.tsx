@@ -6,22 +6,24 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faClipboardList, faCalendarDays, faArrowRight,
   faCircleExclamation, faHourglass, faCircleCheck,
+  faClock,
 } from '@fortawesome/free-solid-svg-icons'
 
 // ─── Status badge ──────────────────────────────────────────────────────────
 
-type AssessmentStatus = 'BELUM_DIISI' | 'DRAFT' | 'SUBMITTED' | 'VALIDATED' | 'PARTIAL'
+type AssessmentStatus = 'BELUM_DIISI' | 'DRAFT' | 'SUBMITTED' | 'VALIDATED' | 'PARTIAL' | 'NEEDS_REVISION'
 
 const STATUS_CONFIG: Record<AssessmentStatus, {
   label: string
   icon: typeof faCircleExclamation
   cls: string
 }> = {
-  BELUM_DIISI: { label: 'Belum Diisi',      icon: faCircleExclamation, cls: 'bg-slate-100 text-slate-600 border-slate-200' },
-  DRAFT:       { label: 'Draft',             icon: faCircleExclamation, cls: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
-  PARTIAL:     { label: 'Diisi Sebagian',    icon: faCircleExclamation, cls: 'bg-orange-50 text-orange-700 border-orange-200' },
-  SUBMITTED:   { label: 'Menunggu Validasi', icon: faHourglass,         cls: 'bg-amber-50 text-amber-700 border-amber-200' },
-  VALIDATED:   { label: 'Disetujui',         icon: faCircleCheck,       cls: 'bg-green-50 text-green-700 border-green-200' },
+  BELUM_DIISI:    { label: 'Belum Diisi',      icon: faCircleExclamation, cls: 'bg-slate-100 text-slate-600 border-slate-200' },
+  DRAFT:          { label: 'Draft',             icon: faCircleExclamation, cls: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
+  PARTIAL:        { label: 'Diisi Sebagian',    icon: faCircleExclamation, cls: 'bg-orange-50 text-orange-700 border-orange-200' },
+  SUBMITTED:      { label: 'Menunggu Validasi', icon: faHourglass,         cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+  VALIDATED:      { label: 'Disetujui',         icon: faCircleCheck,       cls: 'bg-green-50 text-green-700 border-green-200' },
+  NEEDS_REVISION: { label: 'Perlu Revisi',      icon: faCircleExclamation, cls: 'bg-red-50 text-red-700 border-red-200' },
 }
 
 function StatusBadge({ status }: { status: AssessmentStatus }) {
@@ -36,7 +38,12 @@ function StatusBadge({ status }: { status: AssessmentStatus }) {
 
 // ─── Derive status ─────────────────────────────────────────────────────────
 
-function deriveStatus(totalIndicators: number, entries: { status: string }[]): AssessmentStatus {
+function deriveStatus(
+  totalIndicators: number,
+  entries: { status: string }[],
+  needsRevision: boolean
+): AssessmentStatus {
+  if (needsRevision) return 'NEEDS_REVISION'
   if (entries.length === 0) return 'BELUM_DIISI'
   if (entries.every((e) => e.status === 'VALIDATED')) return 'VALIDATED'
   const allDone = entries.every((e) => e.status === 'SUBMITTED' || e.status === 'VALIDATED')
@@ -49,12 +56,13 @@ function deriveStatus(totalIndicators: number, entries: { status: string }[]): A
 
 export default async function KecamatanAssessmentPage() {
   const session = await auth()
-  if (!session?.user) redirect('/login')
+  if (!session?.user) redirect('/kecamatan/login')
   if (session.user.role !== 'USER') redirect('/admin')
   const userId = parseInt(session.user.id ?? '0', 10)
 
+  // Ambil semua assessment termasuk REVISION (untuk ditampilkan sebagai "sedang diperbarui")
   const assessments = await prisma.assessment.findMany({
-    where: { status: 'PUBLISHED' },
+    where: { status: { in: ['PUBLISHED', 'REVISION'] } },
     orderBy: { createdAt: 'desc' },
     include: {
       categories: { include: { indicators: { select: { id: true } } } },
@@ -80,6 +88,20 @@ export default async function KecamatanAssessmentPage() {
     entriesByAssessment[aId].push({ status: e.status })
   }
 
+  // Cek NEEDS_REVISION dari UserAssessmentStatus
+  const userStatuses = await prisma.userAssessmentStatus.findMany({
+    where: {
+      userId,
+      assessmentId: { in: assessments.map((a) => a.id) },
+    },
+    select: { assessmentId: true, status: true }
+  })
+  const needsRevisionSet = new Set(
+    userStatuses
+      .filter(s => s.status === 'NEEDS_REVISION')
+      .map(s => s.assessmentId)
+  )
+
   return (
     <div className="space-y-6">
       <div>
@@ -96,16 +118,50 @@ export default async function KecamatanAssessmentPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {assessments.map((a) => {
+            const isUpdating = a.status === 'REVISION'
             const totalInd = a.categories.reduce((s, c) => s + c.indicators.length, 0)
             const entries  = entriesByAssessment[a.id] ?? []
-            const status   = deriveStatus(totalInd, entries)
+            const needsRevision = needsRevisionSet.has(a.id)
+            const status = deriveStatus(totalInd, entries, needsRevision)
             const isLocked = status === 'VALIDATED'
+
+            // Assessment sedang diperbarui admin — tampilkan tapi disable link
+            if (isUpdating) {
+              return (
+                <div
+                  key={a.id}
+                  className="rounded-xl border border-slate-200 bg-white/60 p-5 opacity-75 cursor-not-allowed"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+                      <FontAwesomeIcon icon={faClock} className="w-3 h-3" />
+                      Sedang Diperbarui
+                    </span>
+                    <span className="flex items-center gap-1 text-xs text-slate-400">
+                      <FontAwesomeIcon icon={faCalendarDays} className="w-3 h-3" />
+                      {a.periode}
+                    </span>
+                  </div>
+                  <h3 className="font-semibold text-slate-500 leading-snug">{a.title}</h3>
+                  {a.description && (
+                    <p className="mt-1 text-sm text-gray-400 line-clamp-2">{a.description}</p>
+                  )}
+                  <p className="mt-3 text-xs text-amber-600">
+                    Assessment ini sedang dalam proses pembaruan oleh admin. Silakan coba beberapa saat lagi.
+                  </p>
+                </div>
+              )
+            }
 
             return (
               <Link
                 key={a.id}
                 href={`/kecamatan/assessment/${a.id}`}
-                className="rounded-xl border border-slate-200 bg-white p-5 hover:border-sky-300 hover:shadow-sm transition-all group"
+                className={`rounded-xl border bg-white p-5 transition-all group ${
+                  needsRevision
+                    ? 'border-red-300 hover:border-red-400 hover:shadow-sm'
+                    : 'border-slate-200 hover:border-sky-300 hover:shadow-sm'
+                }`}
               >
                 <div className="flex items-start justify-between mb-3">
                   <StatusBadge status={status} />
@@ -115,11 +171,21 @@ export default async function KecamatanAssessmentPage() {
                   </span>
                 </div>
 
-                <h3 className="font-semibold text-slate-900 leading-snug group-hover:text-sky-600 transition-colors">
+                <h3 className={`font-semibold leading-snug transition-colors ${
+                  needsRevision
+                    ? 'text-slate-900 group-hover:text-red-600'
+                    : 'text-slate-900 group-hover:text-sky-600'
+                }`}>
                   {a.title}
                 </h3>
                 {a.description && (
                   <p className="mt-1 text-sm text-gray-500 line-clamp-2">{a.description}</p>
+                )}
+
+                {needsRevision && (
+                  <p className="mt-2 text-xs text-red-600 font-medium">
+                    ⚠️ Ada perubahan dari admin. Silakan lengkapi indikator yang baru/diperbarui.
+                  </p>
                 )}
 
                 {entries.length > 0 && (
@@ -131,8 +197,9 @@ export default async function KecamatanAssessmentPage() {
                     <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all ${
-                          status === 'VALIDATED' ? 'bg-green-500' :
-                          status === 'SUBMITTED' ? 'bg-amber-400' : 'bg-sky-500'
+                          status === 'VALIDATED'    ? 'bg-green-500' :
+                          status === 'SUBMITTED'    ? 'bg-amber-400' :
+                          status === 'NEEDS_REVISION' ? 'bg-red-400'  : 'bg-sky-500'
                         }`}
                         style={{ width: `${(entries.length / totalInd) * 100}%` }}
                       />
@@ -144,8 +211,13 @@ export default async function KecamatanAssessmentPage() {
                   <span className="text-xs text-slate-400">
                     {a.categories.length} kategori · {totalInd} indikator
                   </span>
-                  <span className={`flex items-center gap-1 text-sm font-medium ${isLocked ? 'text-green-600' : 'text-sky-600'}`}>
-                    {isLocked ? 'Lihat Detail' : status === 'BELUM_DIISI' ? 'Mulai Isi' : 'Lanjutkan'}
+                  <span className={`flex items-center gap-1 text-sm font-medium ${
+                    isLocked        ? 'text-green-600' :
+                    needsRevision   ? 'text-red-600'   : 'text-sky-600'
+                  }`}>
+                    {isLocked      ? 'Lihat Detail' :
+                     needsRevision ? 'Isi Revisi'   :
+                     status === 'BELUM_DIISI' ? 'Mulai Isi' : 'Lanjutkan'}
                     <FontAwesomeIcon icon={faArrowRight} className="w-3.5 h-3.5" />
                   </span>
                 </div>

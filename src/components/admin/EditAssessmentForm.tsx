@@ -12,8 +12,14 @@ import {
   FolderPlus,
   GripVertical,
   Archive,
+  Eye,
+  Lock,
+  Unlock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { AssessmentImpactPreview } from './AssessmentImpactPreview'
+import { IndicatorChangeType } from '@prisma/client'
+import type { MigrationImpact } from '@/lib/assessment-migration'
 
 interface IndicatorRow {
   tempId: string
@@ -36,7 +42,7 @@ interface AssessmentData {
   title: string
   description: string | null
   periode: string
-  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+  status: 'DRAFT' | 'PUBLISHED' | 'REVISION' | 'ARCHIVED'
   categories: {
     id: number
     code: string
@@ -82,12 +88,33 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
   const [title, setTitle] = useState(assessment.title)
   const [description, setDescription] = useState(assessment.description ?? '')
   const [periode, setPeriode] = useState(assessment.periode)
-  const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED' | 'ARCHIVED'>(assessment.status)
+  const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED' | 'ARCHIVED'>(
+    // REVISION bukan pilihan di dropdown — tampilkan sebagai PUBLISHED di form
+    assessment.status === 'REVISION' ? 'PUBLISHED' : assessment.status
+  )
   const [categories, setCategories] = useState<CategoryBlock[]>(
     assessment.categories.map(toBlock)
   )
   const [saving, setSaving] = useState(false)
   const [result, setResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  // REVISION mode: admin sudah klik "Mulai Edit", assessment sedang di-lock
+  const [isRevisionMode, setIsRevisionMode] = useState(assessment.status === 'REVISION')
+  const [lockingRevision, setLockingRevision] = useState(false)
+
+  // Impact Preview states
+  const [showImpactPreview, setShowImpactPreview] = useState(false)
+  const [calculatedChanges, setCalculatedChanges] = useState<Array<{
+    type: IndicatorChangeType
+    indicatorId?: number
+    oldValue?: any
+    newValue?: any
+    requiresResubmit?: boolean
+  }>>([])
+  const [isPublishing, setIsPublishing] = useState(false)
+
+  // Assessment PUBLISHED dengan jawaban masuk — harus lock dulu sebelum bisa edit
+  const needsLockBeforeEdit = isLocked && !isRevisionMode && assessment.status === 'PUBLISHED'
 
   const addCategory = () =>
     setCategories((p) => [...p, newCategory(p.length)])
@@ -125,7 +152,119 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
       })
     )
 
-  const handleSave = async () => {
+  // Lock assessment ke REVISION sebelum admin bisa edit
+  const handleStartEdit = async () => {
+    setLockingRevision(true)
+    setResult(null)
+    try {
+      const res = await fetch(`/api/assessment/${assessment.id}/revision`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'lock' }),
+      })
+      const json = await res.json()
+      if (res.ok) {
+        setIsRevisionMode(true)
+        if (json.activeUsers > 0) {
+          setResult({
+            type: 'success',
+            message: `Assessment dikunci untuk edit. Ada ${json.activeUsers} kecamatan yang sedang mengisi — mereka dapat menyelesaikan pengisian, lalu akan diminta revisi setelah Anda publish.`,
+          })
+        }
+      } else {
+        setResult({ type: 'error', message: json.error ?? 'Gagal mengunci assessment.' })
+      }
+    } catch {
+      setResult({ type: 'error', message: 'Terjadi kesalahan jaringan.' })
+    } finally {
+      setLockingRevision(false)
+    }
+  }
+
+  // Batalkan edit — unlock kembali ke PUBLISHED
+  const handleCancelEdit = async () => {
+    setLockingRevision(true)
+    setResult(null)
+    try {
+      const res = await fetch(`/api/assessment/${assessment.id}/revision`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'unlock' }),
+      })
+      const json = await res.json()
+      if (res.ok) {
+        setIsRevisionMode(false)
+        setResult({ type: 'success', message: 'Edit dibatalkan. Assessment kembali ke status Published.' })
+      } else {
+        setResult({ type: 'error', message: json.error ?? 'Gagal membatalkan edit.' })
+      }
+    } catch {
+      setResult({ type: 'error', message: 'Terjadi kesalahan jaringan.' })
+    } finally {
+      setLockingRevision(false)
+    }
+  }
+
+  // Calculate changes between original and current data
+  const calculateChanges = () => {
+    const changes: Array<{
+      type: IndicatorChangeType
+      indicatorId?: number
+      oldValue?: any
+      newValue?: any
+      requiresResubmit?: boolean
+    }> = []
+
+    const originalIndicators = new Map<number, { indicator: string; maxScore: number; categoryId: number }>()
+    assessment.categories.forEach(cat => {
+      cat.indicators.forEach(ind => {
+        originalIndicators.set(ind.id, {
+          indicator: ind.indicator,
+          maxScore: ind.maxScore,
+          categoryId: cat.id
+        })
+      })
+    })
+
+    const originalCount = originalIndicators.size
+    const currentCount = categories.reduce((s, c) => s + c.indicators.length, 0)
+
+    if (currentCount > originalCount) {
+      for (let i = originalCount; i < currentCount; i++) {
+        changes.push({ type: IndicatorChangeType.ADDED, requiresResubmit: true })
+      }
+    } else if (currentCount < originalCount) {
+      for (let i = currentCount; i < originalCount; i++) {
+        changes.push({ type: IndicatorChangeType.REMOVED, requiresResubmit: false })
+      }
+    }
+
+    if (title !== assessment.title || description !== (assessment.description ?? '')) {
+      changes.push({ type: IndicatorChangeType.MODIFIED, requiresResubmit: false })
+    }
+
+    return changes
+  }
+
+  const handlePreviewImpact = () => {
+    const changes = calculateChanges()
+    setCalculatedChanges(changes)
+    setShowImpactPreview(true)
+  }
+
+  const handleConfirmPublish = async (_impact: MigrationImpact) => {
+    setIsPublishing(true)
+    try {
+      await handleSave(true)
+      setShowImpactPreview(false)
+    } catch (error) {
+      console.error('Publish with migration failed:', error)
+    } finally {
+      setIsPublishing(false)
+    }
+  }
+
+  const handleSave = async (withMigration = false) => {
     if (!title.trim()) { setResult({ type: 'error', message: 'Judul wajib diisi.' }); return }
     for (const cat of categories) {
       if (!cat.name.trim()) { setResult({ type: 'error', message: `Nama kategori "${cat.code}" wajib diisi.` }); return }
@@ -134,33 +273,53 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
       }
     }
 
+    // Kalau assessment sedang di-lock (REVISION) dan mau publish, wajib pakai migration flow
+    if (isRevisionMode && status === 'PUBLISHED' && !withMigration && !showImpactPreview) {
+      handlePreviewImpact()
+      return
+    }
+
+    // Assessment baru (belum ada jawaban) publish biasa
+    if (status === 'PUBLISHED' && assessment.status !== 'PUBLISHED' && !isRevisionMode && !withMigration && !showImpactPreview) {
+      handlePreviewImpact()
+      return
+    }
+
     setSaving(true)
     setResult(null)
     try {
+      const payload = {
+        title: title.trim(),
+        description: description.trim() || null,
+        periode: periode.trim(),
+        status,
+        withMigration,
+        changes: withMigration ? calculatedChanges : undefined,
+        categories: categories.map((cat) => ({
+          code: cat.code,
+          name: cat.name.trim(),
+          description: cat.description.trim() || null,
+          order: cat.order,
+          indicators: cat.indicators.map((ind) => ({
+            number: ind.number,
+            indicator: ind.indicator.trim(),
+            maxScore: ind.maxScore,
+          })),
+        })),
+      }
+
       const res = await fetch(`/api/assessment/${assessment.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim() || null,
-          periode: periode.trim(),
-          status,
-          categories: categories.map((cat) => ({
-            code: cat.code,
-            name: cat.name.trim(),
-            description: cat.description.trim() || null,
-            order: cat.order,
-            indicators: cat.indicators.map((ind) => ({
-              number: ind.number,
-              indicator: ind.indicator.trim(),
-              maxScore: ind.maxScore,
-            })),
-          })),
-        }),
+        body: JSON.stringify(payload),
       })
+
       const json = await res.json()
       if (res.ok) {
-        setResult({ type: 'success', message: 'Assessment berhasil disimpan.' })
+        const message = withMigration
+          ? 'Assessment berhasil dipublish. Kecamatan yang sudah submit akan diminta revisi untuk indikator baru.'
+          : 'Assessment berhasil disimpan.'
+        setResult({ type: 'success', message })
         setTimeout(() => router.push('/admin/assessment/create'), 1500)
       } else {
         setResult({ type: 'error', message: json.error ?? 'Gagal menyimpan.' })
@@ -172,19 +331,52 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
     }
   }
 
+  // Form tidak bisa diedit kalau: (1) belum di-lock padahal ada jawaban, atau (2) ARCHIVED
+  const formDisabled = needsLockBeforeEdit || assessment.status === 'ARCHIVED'
+
   return (
     <div className="space-y-6">
-      {/* Locked banner */}
-      {isLocked && (
+      {/* Banner: perlu lock sebelum edit */}
+      {needsLockBeforeEdit && (
         <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-5 py-4">
           <span className="text-xl">🔒</span>
-          <div>
-            <p className="font-semibold text-amber-800 text-sm">Assessment Terkunci</p>
+          <div className="flex-1">
+            <p className="font-semibold text-amber-800 text-sm">Assessment Memiliki Jawaban Masuk</p>
             <p className="text-amber-700 text-sm mt-0.5">
-              Assessment ini tidak dapat diedit karena sudah ada kecamatan yang mengisi.
-              Untuk mengubah konten, arsipkan assessment ini dan buat yang baru.
+              Ada kecamatan yang sudah mengisi assessment ini. Untuk mengedit, klik tombol di bawah — assessment akan dikunci sementara agar tidak ada pengisian baru yang dimulai, dan kecamatan yang sudah submit akan diminta revisi setelah Anda publish.
             </p>
           </div>
+          <button
+            type="button"
+            onClick={handleStartEdit}
+            disabled={lockingRevision}
+            className="flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50 shrink-0"
+          >
+            {lockingRevision ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+            Mulai Edit
+          </button>
+        </div>
+      )}
+
+      {/* Banner: sedang dalam mode revision */}
+      {isRevisionMode && !needsLockBeforeEdit && (
+        <div className="flex items-start gap-3 rounded-xl border border-sky-300 bg-sky-50 px-5 py-4">
+          <span className="text-xl">✏️</span>
+          <div className="flex-1">
+            <p className="font-semibold text-sky-800 text-sm">Mode Edit Aktif</p>
+            <p className="text-sky-700 text-sm mt-0.5">
+              Assessment sedang dikunci. Kecamatan yang baru tidak dapat memulai pengisian. Kecamatan yang sedang mengisi dapat menyelesaikan pengisian dengan versi lama, lalu akan diminta revisi setelah Anda publish.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleCancelEdit}
+            disabled={lockingRevision || saving}
+            className="flex items-center gap-2 rounded-lg border border-sky-300 px-3 py-2 text-sm text-sky-700 hover:bg-sky-100 disabled:opacity-50 shrink-0"
+          >
+            {lockingRevision ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlock className="w-4 h-4" />}
+            Batalkan Edit
+          </button>
         </div>
       )}
 
@@ -209,19 +401,19 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Judul <span className="text-red-500">*</span></label>
             <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={255}
-              disabled={isLocked}
+              disabled={formDisabled}
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Periode <span className="text-red-500">*</span></label>
             <input type="text" value={periode} onChange={(e) => setPeriode(e.target.value)} maxLength={20}
-              disabled={isLocked}
+              disabled={formDisabled}
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
             <select value={status} onChange={(e) => setStatus(e.target.value as typeof status)}
-              disabled={isLocked}
+              disabled={formDisabled}
               className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none disabled:bg-gray-50 disabled:cursor-not-allowed">
               <option value="DRAFT">Draft</option>
               <option value="PUBLISHED">Published</option>
@@ -231,7 +423,7 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi <span className="text-gray-400 font-normal">(opsional)</span></label>
             <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000}
-              disabled={isLocked}
+              disabled={formDisabled}
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed" />
           </div>
         </div>
@@ -245,9 +437,10 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
               <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-sm font-bold text-white">{cat.code}</span>
               <input type="text" value={cat.name} onChange={(e) => updateCategory(cat.tempId, 'name', e.target.value)}
                 placeholder="Nama kategori..." maxLength={255}
-                className="bg-transparent border-b border-white/40 text-white placeholder:text-white/60 text-sm font-medium focus:outline-none focus:border-white w-72" />
+                disabled={formDisabled}
+                className="bg-transparent border-b border-white/40 text-white placeholder:text-white/60 text-sm font-medium focus:outline-none focus:border-white w-72 disabled:cursor-not-allowed disabled:opacity-70" />
             </div>
-            <button type="button" onClick={() => removeCategory(cat.tempId)} disabled={categories.length === 1 || isLocked}
+            <button type="button" onClick={() => removeCategory(cat.tempId)} disabled={categories.length === 1 || formDisabled}
               className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed">
               <Trash2 className="w-3 h-3" /> Hapus
             </button>
@@ -263,17 +456,17 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
                 </div>
                 <textarea value={ind.indicator} onChange={(e) => updateIndicator(cat.tempId, ind.tempId, 'indicator', e.target.value)}
                   placeholder="Tuliskan indikator penilaian..." rows={2} maxLength={2000}
-                  disabled={isLocked}
+                  disabled={formDisabled}
                   className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed" />
                 <button type="button" onClick={() => removeIndicator(cat.tempId, ind.tempId)}
-                  disabled={cat.indicators.length === 1 || isLocked}
+                  disabled={cat.indicators.length === 1 || formDisabled}
                   className="mt-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             ))}
             <button type="button" onClick={() => addIndicator(cat.tempId)}
-              disabled={isLocked}
+              disabled={formDisabled}
               className="mt-1 flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-sky-400 hover:text-sky-600 w-full justify-center disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:text-gray-500">
               <Plus className="w-3.5 h-3.5" /> Tambah Indikator
             </button>
@@ -281,28 +474,90 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
         </div>
       ))}
 
-      {!isLocked && (
+      {!formDisabled && (
         <button type="button" onClick={addCategory}
           className="flex items-center gap-2 rounded-xl border-2 border-dashed border-gray-300 px-6 py-4 text-sm font-medium text-gray-500 hover:border-sky-400 hover:text-sky-600 w-full justify-center">
           <FolderPlus className="w-4 h-4" /> Tambah Kategori Baru
         </button>
       )}
 
-      {!isLocked && (
+      {/* Impact Preview */}
+      {showImpactPreview && !formDisabled && (
+        <AssessmentImpactPreview
+          assessmentId={assessment.id}
+          currentVersion={1}
+          changes={calculatedChanges}
+          onConfirm={handleConfirmPublish}
+          onCancel={() => {
+            setShowImpactPreview(false)
+            setCalculatedChanges([])
+          }}
+        />
+      )}
+
+      {!formDisabled && (
         <div className="flex flex-col sm:flex-row items-center justify-end gap-3 rounded-xl border bg-white px-6 py-4 shadow-sm">
-          {status === 'PUBLISHED' && (
+          {status === 'PUBLISHED' && !showImpactPreview && (
             <button type="button" onClick={() => { setStatus('ARCHIVED') }}
               className="flex items-center gap-2 rounded-lg border border-amber-300 px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 mr-auto">
               <Archive className="w-3.5 h-3.5" /> Archive
             </button>
           )}
-          <button type="button" disabled={saving} onClick={handleSave}
-            className="flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Simpan Perubahan
+
+          {status === 'PUBLISHED' && !showImpactPreview && (
+            <button
+              type="button"
+              onClick={handlePreviewImpact}
+              disabled={saving}
+              className="flex items-center gap-2 rounded-lg border border-sky-300 px-4 py-2.5 text-sm text-sky-700 hover:bg-sky-50 disabled:opacity-50"
+            >
+              <Eye className="w-3.5 h-3.5" /> Preview Impact
+            </button>
+          )}
+
+          <button
+            type="button"
+            disabled={saving || isPublishing || showImpactPreview}
+            onClick={() => handleSave()}
+            className="flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+          >
+            {(saving || isPublishing) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {isPublishing ? 'Publishing...' : showImpactPreview ? 'Simpan Draft' : 'Simpan Perubahan'}
           </button>
         </div>
       )}
     </div>
   )
+}
+
+interface IndicatorRow {
+  tempId: string
+  number: number
+  indicator: string
+  maxScore: number
+}
+
+interface CategoryBlock {
+  tempId: string
+  code: string
+  name: string
+  description: string
+  order: number
+  indicators: IndicatorRow[]
+}
+
+interface AssessmentData {
+  id: number
+  title: string
+  description: string | null
+  periode: string
+  status: 'DRAFT' | 'PUBLISHED' | 'REVISION' | 'ARCHIVED'
+  categories: {
+    id: number
+    code: string
+    name: string
+    description: string | null
+    order: number
+    indicators: { id: number; number: number; indicator: string; maxScore: number }[]
+  }[]
 }

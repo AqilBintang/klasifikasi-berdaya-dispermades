@@ -73,7 +73,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session
     },
   },
-  pages: { signIn: '/login' },
+  pages: { signIn: '/kecamatan/login' },
   session: {
     strategy: 'jwt',
     maxAge: 60 * 60,       // waktu session (1 jam)

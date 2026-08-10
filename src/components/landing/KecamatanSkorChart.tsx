@@ -14,8 +14,8 @@ import type { KlasifikasiLevel } from '@/lib/scoring'
 
 export type SkorPerTahunRow = {
   year: string
-  totalScore: number
-  maxPossibleTotal: number
+  weightedScore: number
+  maxWeightedScore: number
   statusAkhir: KlasifikasiLevel | null
 }
 
@@ -49,7 +49,7 @@ function CustomTooltip({ active, payload, label, kabupaten, kecamatan }: Tooltip
       </div>
       <div className="flex items-center justify-between gap-4 mb-1">
         <span className="text-gray-500">Skor</span>
-        <span className="font-medium">{row.totalScore} / {row.maxPossibleTotal}</span>
+        <span className="font-medium">{row.weightedScore.toFixed(2)} / {row.maxWeightedScore.toFixed(2)}</span>
       </div>
       <div className="flex items-center justify-between gap-4">
         <span className="text-gray-500">Klasifikasi</span>
@@ -80,7 +80,7 @@ export function KecamatanSkorChart({ data, kabupaten, kecamatan }: Props) {
             <XAxis dataKey="year" tickLine={false} axisLine={false} />
             <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
             <Tooltip content={<CustomTooltip kabupaten={kabupaten} kecamatan={kecamatan} />} />
-            <Bar dataKey="totalScore" name="Skor" radius={[6, 6, 0, 0]} maxBarSize={60}>
+            <Bar dataKey="weightedScore" name="Skor" radius={[6, 6, 0, 0]} maxBarSize={60}>
               {data.map((row) => (
                 <Cell
                   key={row.year}

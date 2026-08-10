@@ -114,12 +114,19 @@ async function getDetail(userId: number, assessmentId: number, periode: string) 
     cat.klasifikasi = getKlasifikasi(cat.totalScore, cat.maxPossible)
   }
 
+  // Prepare category data for weighted scoring
+  const categoryScores = Object.values(catMap).map(cat => ({
+    code: cat.code,
+    score: cat.totalScore,
+    maxScore: cat.maxPossible
+  }))
+
   return {
     user,
     assessment: { ...assessment, periode },
     categories: Object.values(catMap),
     totalScore, maxScore,
-    statusAkhir: getStatusAkhir(totalScore, maxPossible),
+    statusAkhir: getStatusAkhir(totalScore, maxPossible, categoryScores),
   }
 }
 

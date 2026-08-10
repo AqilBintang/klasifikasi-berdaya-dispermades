@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useState } from 'react'
 import {
-  Gauge, ClipboardList, PlusCircle, CheckCheck, Award,
+  Gauge, ClipboardList, PlusCircle, Award,
   BarChart3, FileDown, Users, ChevronDown, ChevronRight,
   LogOut, BookOpen, Film, type LucideIcon,
 } from 'lucide-react'
@@ -17,8 +17,8 @@ import Image from 'next/image'
 
 const ASSESSMENT_ITEMS: { label: string; href: string; icon: LucideIcon }[] = [
   { label: 'Create Assessment',       href: '/admin/assessment/create',     icon: PlusCircle },
-  { label: 'Validation Assessment',   href: '/admin/assessment/validation',  icon: CheckCheck },
-  { label: 'Rekapitulasi Assessment', href: '/admin/assessment/results',     icon: Award },]
+  { label: 'Rekapitulasi Assessment', href: '/admin/assessment/results',     icon: Award },
+]
 
 // ─── SidebarContent ───────────────────────────────────────────────────────────
 
@@ -215,7 +215,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
         <button
           type="button"
           aria-label="Keluar dari admin"
-          onClick={() => signOut({ callbackUrl: '/login' })}
+          onClick={() => signOut({ callbackUrl: '/admin/login' })}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-gray-100 transition-colors"
         >
           <LogOut className="w-4 h-4 shrink-0" />

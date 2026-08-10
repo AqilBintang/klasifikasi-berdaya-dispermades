@@ -63,7 +63,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
       <div className="px-3 py-4 border-t border-slate-700/60">
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: '/login' })}
+          onClick={() => signOut({ callbackUrl: '/kecamatan/login' })}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition-colors"
         >
           <LogOut className="w-4 h-4 shrink-0" />

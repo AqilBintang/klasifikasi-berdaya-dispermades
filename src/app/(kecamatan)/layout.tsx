@@ -8,7 +8,7 @@ export default async function KecamatanLayout({
   children: React.ReactNode
 }) {
   const session = await auth()
-  if (!session) redirect('/login')
+  if (!session) redirect('/kecamatan/login')
   if (session.user.role !== 'USER') redirect('/admin')
 
   return (

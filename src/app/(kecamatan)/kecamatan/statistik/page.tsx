@@ -8,7 +8,7 @@ import { KecamatanStatistikClient, type PeriodeStat } from '@/components/kecamat
 
 export default async function KecamatanStatistikPage() {
   const session = await auth()
-  if (!session?.user) redirect('/login')
+  if (!session?.user) redirect('/kecamatan/login')
   if (session.user.role !== 'USER') redirect('/admin')
 
   const userId = parseInt(session.user.id ?? '0', 10)
@@ -58,12 +58,8 @@ export default async function KecamatanStatistikPage() {
 
   const riwayat: PeriodeStat[] = Object.entries(periodeMap)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([periode, { total, max, cats }]) => ({
-      periode,
-      totalScore: total,
-      maxScore: max,
-      statusAkhir: getStatusAkhir(total, max),
-      categories: Object.entries(cats)
+    .map(([periode, { total, max, cats }]) => {
+      const categories = Object.entries(cats)
         .map(([id, c]) => ({
           id: Number(id),
           code: c.code,
@@ -73,8 +69,22 @@ export default async function KecamatanStatistikPage() {
           maxScore: c.max,
           klasifikasi: getKlasifikasi(c.total, c.max),
         }))
-        .sort((a, b) => a.order - b.order),
-    }))
+
+      // Prepare category data for weighted scoring
+      const categoryScores = categories.map(cat => ({
+        code: cat.code,
+        score: cat.totalScore,
+        maxScore: cat.maxScore
+      }))
+
+      return {
+        periode,
+        totalScore: total,
+        maxScore: max,
+        statusAkhir: getStatusAkhir(total, max, categoryScores),
+        categories: categories.sort((a, b) => a.order - b.order),
+      }
+    })
 
   return (
     <div className="space-y-6">

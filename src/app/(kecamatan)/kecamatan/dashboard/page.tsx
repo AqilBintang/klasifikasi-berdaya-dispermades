@@ -12,7 +12,7 @@ import {
 
 export default async function KecamatanDashboardPage() {
   const session = await auth()
-  if (!session?.user) redirect('/login')
+  if (!session?.user) redirect('/kecamatan/login')
   if (session.user.role !== 'USER') redirect('/admin')
 
   const userId    = parseInt(session.user.id ?? '0', 10)

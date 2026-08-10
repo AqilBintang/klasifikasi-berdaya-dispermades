@@ -79,6 +79,21 @@ export async function GET(req: NextRequest) {
       }),
     ])
 
+    // Ambil UserAssessmentStatus per (userId, assessmentId) untuk info outdated
+    const pairs = [...new Map(submissions.map((s) => {
+      const aid = s.indicator.category.assessment.id
+      return [`${s.submittedById}:${aid}`, { userId: s.submittedById, assessmentId: aid }]
+    })).values()]
+
+    const userStatuses = pairs.length > 0
+      ? await prisma.userAssessmentStatus.findMany({
+          where: { OR: pairs.map((p) => ({ userId: p.userId, assessmentId: p.assessmentId })) },
+          select: { userId: true, assessmentId: true, status: true },
+        })
+      : []
+
+    const statusMap = new Map(userStatuses.map((u) => [`${u.userId}:${u.assessmentId}`, u.status]))
+
     return NextResponse.json({
       data: submissions.map((s) => ({
         ...s,
@@ -87,6 +102,7 @@ export async function GET(req: NextRequest) {
           kabupaten: s.submittedBy.kabupaten?.nama ?? null,
           kecamatan: s.submittedBy.kecamatan?.nama ?? null,
         },
+        submitterAssessmentStatus: statusMap.get(`${s.submittedById}:${s.indicator.category.assessment.id}`) ?? null,
       })),
       pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
     })
@@ -139,6 +155,27 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Blokir validasi jika kecamatan sedang NEEDS_REVISION — artinya admin baru
+    // update indikator dan jawaban ini sudah tidak relevan. Validator harus
+    // menunggu kecamatan menyelesaikan revisi terlebih dahulu.
+    const assessmentId = sa.indicator.category.assessmentId
+    const userAssessmentStatus = await prisma.userAssessmentStatus.findUnique({
+      where: {
+        userId_assessmentId: { userId: sa.submittedById, assessmentId },
+      },
+      select: { status: true },
+    })
+    if (userAssessmentStatus?.status === 'NEEDS_REVISION') {
+      return NextResponse.json(
+        {
+          error:
+            'Kecamatan ini sedang diminta revisi akibat pembaruan assessment oleh admin. Validasi ditangguhkan hingga kecamatan menyelesaikan revisi.',
+          outdated: true,
+        },
+        { status: 409 }
+      )
+    }
+
     // Simpan validasi + update status self assessment dalam satu transaksi
     const result = await prisma.$transaction(async (tx) => {
       const validation = await tx.assessmentValidation.create({
@@ -164,7 +201,6 @@ export async function POST(req: NextRequest) {
       return validation
     })
 
-    const assessmentId = sa.indicator.category.assessmentId
     if (status === 'APPROVED') await upsertBackupIfComplete({ submittedById: sa.submittedById, periode: sa.periode, assessmentId })
     else await deleteBackupForGroup({ submittedById: sa.submittedById, periode: sa.periode, assessmentId })
 

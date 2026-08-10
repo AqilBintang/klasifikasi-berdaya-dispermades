@@ -80,8 +80,8 @@ export function JatengKabKotaMap({ items, selectedKode, onSelect, focusPoint }: 
   }, [focusPoint, prepared])
 
   return (
-    <div className="w-full overflow-hidden rounded-lg border bg-white">
-      <svg viewBox={prepared.viewBox} className="w-full h-[420px] md:h-[520px]" role="img" aria-label="Peta kabupaten/kota Jawa Tengah">
+    <div className="w-full overflow-hidden">
+      <svg viewBox={prepared.viewBox} className="w-full h-[300px] md:h-[360px]" role="img" aria-label="Peta kabupaten/kota Jawa Tengah">
         {focus && (
           <g>
             <line

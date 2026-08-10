@@ -39,6 +39,9 @@ model User {
 
   selfAssessments SelfAssessment[]
   validations     AssessmentValidation[]
+  assessmentVersionsCreated AssessmentVersion[] @relation("AssessmentVersionCreator")
+  assessmentStatuses UserAssessmentStatus[] @relation("UserAssessmentStatuses")
+  draftBackups    AssessmentDraftBackup[]
 
   // Relations
   kabupaten     Wilayah?  @relation("UserKabupaten", fields: [kabupatenId], references: [id])
@@ -81,6 +84,7 @@ model Wilayah {
 enum AssessmentTemplateStatus {
   DRAFT
   PUBLISHED
+  REVISION    // Admin sedang update, kecamatan tidak bisa mengisi
   ARCHIVED
 }
 
@@ -90,11 +94,16 @@ model Assessment {
   description String?                  @db.Text
   periode     String                   @db.VarChar(20)
   status      AssessmentTemplateStatus @default(DRAFT)
+  currentVersion Int                   @default(1) @map("current_version")
+  lastMajorUpdateAt DateTime?          @map("last_major_update_at")
   createdAt   DateTime                 @default(now())
   updatedAt   DateTime                 @updatedAt
 
   categories  AssessmentCategory[]
   rubrics     AssessmentRubric[]
+  versions    AssessmentVersion[]
+  userStatuses UserAssessmentStatus[]
+  draftBackups AssessmentDraftBackup[]
 
   @@map("assessments")
 }
@@ -136,6 +145,7 @@ model AssessmentIndicator {
   category        AssessmentCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   selfAssessments SelfAssessment[]
   rubricItems     RubricItem[]
+  changes         IndicatorChange[]
 
   @@unique([categoryId, number])
   @@map("assessment_indicators")
@@ -179,6 +189,84 @@ model RubricItem {
 
 // ─────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────
+// ASSESSMENT UPDATE TRACKING
+// ─────────────────────────────────────────────────────────────
+
+model AssessmentVersion {
+  id               Int      @id @default(autoincrement())
+  assessmentId     Int      @map("assessment_id")
+  versionNumber    Int      @default(1) @map("version_number")
+  title            String?  @db.VarChar(255)
+  description      String?  @db.Text
+  changesSummary   String?  @db.Text @map("changes_summary")
+  createdAt        DateTime @default(now()) @map("created_at")
+  createdById      Int      @map("created_by")
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  createdBy  User       @relation("AssessmentVersionCreator", fields: [createdById], references: [id])
+  
+  // Relasi ke perubahan indikator
+  indicatorChanges IndicatorChange[]
+
+  @@unique([assessmentId, versionNumber])
+  @@map("assessment_versions")
+}
+
+enum IndicatorChangeType {
+  ADDED     // Indikator baru ditambah
+  MODIFIED  // Indikator existing diubah
+  REMOVED   // Indikator dihapus
+}
+
+model IndicatorChange {
+  id               Int                   @id @default(autoincrement())
+  versionId        Int                   @map("version_id")
+  indicatorId      Int?                  @map("indicator_id")  // Null jika indikator dihapus
+  changeType       IndicatorChangeType   @map("change_type")
+  oldValue         Json?                 @map("old_value")     // Snapshot nilai lama (untuk MODIFIED/REMOVED)
+  newValue         Json?                 @map("new_value")     // Snapshot nilai baru (untuk ADDED/MODIFIED)
+  requiresResubmit Boolean               @default(true) @map("requires_resubmit")
+  createdAt        DateTime              @default(now()) @map("created_at")
+
+  version   AssessmentVersion    @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  indicator AssessmentIndicator? @relation(fields: [indicatorId], references: [id], onDelete: SetNull)
+
+  @@map("indicator_changes")
+}
+
+enum UserAssessmentStatusEnum {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  HAS_UPDATE      // Template ada update tapi belum perlu action
+  NEEDS_REVISION  // User harus mengisi ulang indikator yang berubah
+  RESUBMITTED     // User sudah lengkapi revisi
+}
+
+model UserAssessmentStatus {
+  id               Int                      @id @default(autoincrement())
+  userId           Int                      @map("user_id")
+  assessmentId     Int                      @map("assessment_id")
+  currentVersion   Int                      @default(1) @map("current_version")
+  latestVersion    Int                      @default(1) @map("latest_version")
+  status           UserAssessmentStatusEnum @default(NOT_STARTED)
+  lastViewedAt     DateTime?                @map("last_viewed_at")
+  lastActivityAt   DateTime?                @map("last_activity_at")
+  createdAt        DateTime                 @default(now()) @map("created_at")
+  updatedAt        DateTime                 @updatedAt @map("updated_at")
+
+  user       User       @relation("UserAssessmentStatuses", fields: [userId], references: [id], onDelete: Cascade)
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, assessmentId])
+  @@map("user_assessment_status")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SELF ASSESSMENT (jawaban kecamatan)
+// ─────────────────────────────────────────────────────────────
+
 enum AssessmentStatus {
   DRAFT
   SUBMITTED
@@ -205,6 +293,27 @@ model SelfAssessment {
 
   @@unique([indicatorId, submittedById, periode])
   @@map("self_assessments")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ASSESSMENT DRAFT BACKUP (untuk migration)
+// ─────────────────────────────────────────────────────────────
+
+model AssessmentDraftBackup {
+  id              String   @id @db.VarChar(36)   // UUID
+  userId          Int      @map("user_id")
+  assessmentId    Int      @map("assessment_id")  
+  versionNumber   Int      @map("version_number")
+  answersJson     Json     @map("answers_json")   // Backup jawaban dalam JSON
+  reason          String?  @db.VarChar(100)      // Alasan backup (migration, manual, etc)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([userId, assessmentId])
+  @@index([createdAt])
+  @@map("assessment_draft_backups")
 }
 
 // ─────────────────────────────────────────────────────────────

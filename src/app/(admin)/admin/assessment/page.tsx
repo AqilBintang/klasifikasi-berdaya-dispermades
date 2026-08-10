@@ -7,7 +7,13 @@ import { AssessmentListClient } from '@/components/admin/AssessmentListClient'
 async function getAssessments() {
   return prisma.assessment.findMany({
     orderBy: { createdAt: 'desc' },
-    include: {
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      periode: true,
+      status: true,
+      currentVersion: true,
       categories: {
         select: {
           id: true,

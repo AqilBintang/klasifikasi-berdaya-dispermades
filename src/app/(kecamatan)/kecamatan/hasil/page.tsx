@@ -48,7 +48,7 @@ const STATUS_ENTRY: Record<string, { label: string; icon: typeof faCheckCircle; 
 
 export default async function KecamatanHasilPage() {
   const session = await auth()
-  if (!session?.user) redirect('/login')
+  if (!session?.user) redirect('/kecamatan/login')
   if (session.user.role !== 'USER') redirect('/admin')
 
   const userId = parseInt(session.user.id ?? '0', 10)
@@ -134,7 +134,13 @@ export default async function KecamatanHasilPage() {
     for (const cat of ag.categories) {
       cat.klasifikasi = getKlasifikasi(cat.totalScore, cat.maxPossibleScore)
     }
-    ag.statusAkhir = getStatusAkhir(ag.totalScore, ag.maxPossibleTotal)
+    // Konversi categories untuk weighted scoring
+    const categoryScores = ag.categories.map(cat => ({
+      code: cat.code,
+      score: cat.totalScore,
+      maxScore: cat.maxScore
+    }))
+    ag.statusAkhir = getStatusAkhir(ag.totalScore, ag.maxPossibleTotal, categoryScores)
   }
 
   const groups = Object.values(assessmentMap)

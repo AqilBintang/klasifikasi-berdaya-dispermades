@@ -95,11 +95,19 @@ async function getRekapitulasi(periodeFilter?: string) {
 
   const data = Object.entries(map).map(([key, g]) => {
     const [userId, assessmentId] = key.split('_')
+    
+    // Prepare category data for weighted scoring
+    const categoryScores = Object.values(g.catScores).map(c => ({
+      code: c.code,
+      score: c.totalScore,
+      maxScore: c.maxScore
+    }))
+    
     return {
       ...g, key,
       userId:       parseInt(userId, 10),
       assessmentId: parseInt(assessmentId, 10),
-      statusAkhir:  getStatusAkhir(g.totalScore, g.maxPossibleTotal),
+      statusAkhir:  getStatusAkhir(g.totalScore, g.maxPossibleTotal, categoryScores),
       categories:   Object.values(g.catScores).map((c) => ({
         ...c, klasifikasi: getKlasifikasi(c.totalScore, c.maxPossible),
       })),

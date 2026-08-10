@@ -46,25 +46,25 @@ async function getLandingContent() {
 const LEVEL_CONFIG = [
   {
     level: 'Rintisan',
-    range: 'Skor ≤ 16',
+    range: 'Skor ≤ 14,41',
     accent: 'bg-red-400',
     desc: 'Mulai menunjukkan inisiatif pemberdayaan namun masih memerlukan pendampingan intensif.',
   },
   {
     level: 'Berkembang',
-    range: 'Skor 17–32',
+    range: 'Skor ≤ 29,13',
     accent: 'bg-amber-400',
     desc: 'Telah memiliki sistem pemberdayaan dasar dan mulai menjalankan program secara konsisten.',
   },
   {
     level: 'Maju',
-    range: 'Skor 33–48',
+    range: 'Skor ≤ 43,23',
     accent: 'bg-blue-400',
     desc: 'Telah memiliki sistem dan program pemberdayaan yang berjalan dengan baik dan terstruktur.',
   },
   {
     level: 'Berdaya',
-    range: 'Skor ≥ 49',
+    range: 'Skor ≥ 43,24',
     accent: 'bg-green-400',
     desc: 'Mencapai tingkat pemberdayaan optimal dan menjadi percontohan bagi wilayah lain.',
   },
@@ -253,8 +253,8 @@ export default async function LandingPage() {
 
       {/* ── ⑤ DATA KLASIFIKASI (peta + chart) ─────────────────────────────── */}
       <section id="data" aria-labelledby="data-heading" className="bg-white">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-20">
-          <div className="text-center mb-10">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-12">
+          <div className="text-center mb-6">
             <div className="inline-flex items-center rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700 mb-3">
               Data Publik
             </div>
@@ -262,8 +262,7 @@ export default async function LandingPage() {
               Data Klasifikasi Kecamatan
             </h2>
             <p className="mt-3 text-sm md:text-base text-gray-600 max-w-xl mx-auto">
-              Pilih kabupaten/kota di peta untuk melihat distribusi klasifikasi kecamatan
-              dari waktu ke waktu.
+              Cek hasil klasifikasi kotamu!
             </p>
           </div>
 

@@ -13,6 +13,8 @@ interface SelfAssessmentRow {
   id: number; periode: string; status: string
   score: number; description: string; supportingDoc: string | null
   submittedAt: string | null
+  // null jika belum ada UserAssessmentStatus record (sebelum fitur ini)
+  submitterAssessmentStatus: string | null
   submittedBy: { id: number; name: string; email: string; kecamatan: string | null; kabupaten: string | null }
   indicator: {
     number: number; indicator: string; maxScore: number
@@ -237,6 +239,9 @@ function KecamatanGroup({ userId, name, kecamatan, kabupaten, submissions, onVal
   const pendingIds = submissions.filter((s) => s.status === 'SUBMITTED').map((s) => s.id)
   const totalPending = pendingIds.length
 
+  // Kecamatan ini sedang NEEDS_REVISION — jawaban sudah outdated, validasi diblokir
+  const isOutdated = submissions.some((s) => s.submitterAssessmentStatus === 'NEEDS_REVISION')
+
   return (
     <>
       {selected && (
@@ -249,26 +254,38 @@ function KecamatanGroup({ userId, name, kecamatan, kabupaten, submissions, onVal
           onClose={() => setBulkOpen(false)} onSuccess={() => { setBulkOpen(false); onValidated() }} />
       )}
 
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <div className={cn(
+        "rounded-xl border bg-white shadow-sm overflow-hidden",
+        isOutdated ? "border-orange-300" : "border-gray-200"
+      )}>
         {/* Group header */}
-        <div className="flex items-center justify-between px-5 py-4 bg-gray-50 border-b">
+        <div className={cn(
+          "flex items-center justify-between px-5 py-4 border-b",
+          isOutdated ? "bg-orange-50" : "bg-gray-50"
+        )}>
           <button type="button" onClick={() => setExpanded((p) => !p)}
             className="flex items-center gap-3 flex-1 text-left hover:opacity-80">
-            <div className="rounded-lg bg-sky-100 p-2">
-              <MapPin className="w-4 h-4 text-sky-600" />
+            <div className={cn("rounded-lg p-2", isOutdated ? "bg-orange-100" : "bg-sky-100")}>
+              <MapPin className={cn("w-4 h-4", isOutdated ? "text-orange-600" : "text-sky-600")} />
             </div>
             <div>
               <p className="font-semibold text-gray-900">{kecamatan ?? name}</p>
               {kabupaten && <p className="text-xs text-gray-500">{kabupaten}</p>}
             </div>
-            {totalPending > 0 && (
+            {isOutdated ? (
+              <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-700 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                Menunggu Revisi Kecamatan
+              </span>
+            ) : totalPending > 0 ? (
               <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
                 {totalPending} menunggu
               </span>
-            )}
+            ) : null}
             <ChevronDown className={cn("w-4 h-4 text-gray-400 ml-auto transition-transform", !expanded && "rotate-180")} />
           </button>
-          {totalPending > 0 && (
+          {/* Tombol bulk hanya tampil jika kecamatan tidak sedang revisi */}
+          {totalPending > 0 && !isOutdated && (
             <button type="button" onClick={() => setBulkOpen(true)}
               className="ml-4 flex items-center gap-2 rounded-lg bg-sky-600 px-3 py-2 text-xs font-medium text-white hover:bg-sky-700 shrink-0">
               <CheckCheck className="w-3.5 h-3.5" />
@@ -277,11 +294,21 @@ function KecamatanGroup({ userId, name, kecamatan, kabupaten, submissions, onVal
           )}
         </div>
 
+        {/* Outdated notice */}
+        {isOutdated && expanded && (
+          <div className="px-5 py-3 bg-orange-50 border-b border-orange-200 text-xs text-orange-800 flex items-start gap-2">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            <span>
+              Admin telah memperbarui template assessment. Kecamatan ini perlu menyelesaikan revisi sebelum jawaban dapat divalidasi.
+            </span>
+          </div>
+        )}
+
         {/* Categories */}
         {expanded && (
           <div className="divide-y divide-gray-100">
             {categories.map((cat) => (
-              <CategorySection key={cat.code} cat={cat} onValidate={setSelected} />
+              <CategorySection key={cat.code} cat={cat} onValidate={setSelected} isOutdated={isOutdated} />
             ))}
           </div>
         )}
@@ -292,9 +319,10 @@ function KecamatanGroup({ userId, name, kecamatan, kabupaten, submissions, onVal
 
 // ─── Category Section ──────────────────────────────────────────────────────
 
-function CategorySection({ cat, onValidate }: {
+function CategorySection({ cat, onValidate, isOutdated }: {
   cat: { code: string; name: string; items: SelfAssessmentRow[] }
   onValidate: (s: SelfAssessmentRow) => void
+  isOutdated: boolean
 }) {
   const [expanded, setExpanded] = useState(true)
   const pendingCount = cat.items.filter((s) => s.status === 'SUBMITTED').length
@@ -318,7 +346,7 @@ function CategorySection({ cat, onValidate }: {
       {expanded && (
         <div className="px-5 pb-4 space-y-2">
           {cat.items.map((s) => (
-            <IndicatorRow key={s.id} submission={s} onValidate={onValidate} />
+            <IndicatorRow key={s.id} submission={s} onValidate={onValidate} isOutdated={isOutdated} />
           ))}
         </div>
       )}
@@ -328,8 +356,9 @@ function CategorySection({ cat, onValidate }: {
 
 // ─── Indicator Row ─────────────────────────────────────────────────────────
 
-function IndicatorRow({ submission: s, onValidate }: {
+function IndicatorRow({ submission: s, onValidate, isOutdated }: {
   submission: SelfAssessmentRow; onValidate: (s: SelfAssessmentRow) => void
+  isOutdated: boolean
 }) {
   const isPending  = s.status === 'SUBMITTED'
   const validated  = s.validations[0]
@@ -337,22 +366,39 @@ function IndicatorRow({ submission: s, onValidate }: {
   return (
     <div className={cn(
       'rounded-lg border p-4 transition-colors',
-      isPending ? 'border-amber-200 bg-amber-50/40' : 'border-gray-200 bg-white',
+      isOutdated && isPending ? 'border-orange-200 bg-orange-50/30' :
+      isPending               ? 'border-amber-200 bg-amber-50/40'   : 'border-gray-200 bg-white',
     )}>
       <div className="flex items-start justify-between gap-4">
         {/* Left: indikator info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <span className="text-xs font-semibold text-gray-500">No. {s.indicator.number}</span>
             <StatusPill status={s.status} />
+            {isOutdated && isPending && (
+              <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                Perlu Revisi
+              </span>
+            )}
           </div>
           <p className="text-sm font-medium text-gray-800 leading-snug">{s.indicator.indicator}</p>
         </div>
 
-        {/* Right: action */}
+        {/* Right: action — disabled jika kecamatan sedang revisi */}
         {isPending && (
-          <button type="button" onClick={() => onValidate(s)}
-            className="shrink-0 rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-700">
+          <button
+            type="button"
+            onClick={() => !isOutdated && onValidate(s)}
+            disabled={isOutdated}
+            title={isOutdated ? 'Kecamatan sedang diminta revisi. Tunggu hingga selesai.' : undefined}
+            className={cn(
+              'shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium',
+              isOutdated
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-sky-600 text-white hover:bg-sky-700'
+            )}
+          >
             Validasi
           </button>
         )}

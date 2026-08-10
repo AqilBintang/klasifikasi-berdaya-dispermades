@@ -146,7 +146,7 @@ export async function buildRekapStatusAkhir(filters?: {
   return Object.values(map).map(({ catMap, ...g }) => ({
     ...g,
     categoryScores: Object.values(catMap).sort((a, b) => a.order - b.order),
-    statusAkhir: getStatusAkhir(g.totalScore, g.maxPossibleTotal),
+    statusAkhir: getStatusAkhir(g.totalScore, g.maxPossibleTotal, Object.values(catMap)),
   }))
 }
 

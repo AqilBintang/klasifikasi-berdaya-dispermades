@@ -1,11 +1,64 @@
 /**
- * Klasifikasi tingkat kecamatan berdasarkan total skor per kategori.
- * Formula: IF(total<=16;"Rintisan";IF(total<=32;"Berkembang";IF(total<=48;"Maju";IF(total>=49;"Berdaya"))))
- *
- * Jika maxScore kategori < 49, maka klasifikasi tidak berlaku (null).
+ * Klasifikasi tingkat kecamatan berdasarkan weighted score dari kategori.
+ * Formula weighted: A*0.31 + B*0.255 + C*0.16 + D*0.22 + E*0.01 + F*0.045
+ * Threshold: ≤14.41 (Rintisan), ≤29.13 (Berkembang), ≤43.23 (Maju), ≥43.24 (Berdaya)
  */
 export type KlasifikasiLevel = 'Rintisan' | 'Berkembang' | 'Maju' | 'Berdaya'
 
+// Bobot per kategori untuk weighted scoring
+export const CATEGORY_WEIGHTS: Record<string, number> = {
+  'A': 0.31,
+  'B': 0.255,
+  'C': 0.16,
+  'D': 0.22,
+  'E': 0.01,
+  'F': 0.045,
+}
+
+// Total bobot maksimum untuk normalisasi (sum of all weights)
+const MAX_WEIGHTED_SCORE = Object.values(CATEGORY_WEIGHTS).reduce((sum, weight) => sum + weight, 0)
+
+/**
+ * Hitung weighted score dari array category scores
+ * Formula: (Jumlah skor kategori A*0,31) + (Jumlah skor kategori B*0,255) + ... dst
+ * Menggunakan jumlah skor mentah, bukan dinormalisasi
+ */
+export function calculateWeightedScore(categoryScores: Array<{ code: string; score: number; maxScore: number }>): {
+  weightedScore: number
+  maxWeightedScore: number
+} {
+  let weightedScore = 0
+  let maxWeightedScore = 0
+  
+  for (const cat of categoryScores) {
+    const weight = CATEGORY_WEIGHTS[cat.code] ?? 0
+    if (weight > 0) {
+      // Gunakan jumlah skor mentah sesuai formula dari tim teknis
+      weightedScore += cat.score * weight
+      maxWeightedScore += cat.maxScore * weight
+    }
+  }
+  
+  return { weightedScore, maxWeightedScore }
+}
+
+/**
+ * Klasifikasi berdasarkan weighted score dengan threshold baru
+ */
+export function getKlasifikasiFromWeighted(weightedScore: number): KlasifikasiLevel | null {
+  // Minimum weighted score yang diperlukan agar semua kategori tersedia
+  if (weightedScore < 0) return null
+
+  if (weightedScore <= 14.41) return 'Rintisan'
+  if (weightedScore <= 29.13) return 'Berkembang'  
+  if (weightedScore <= 43.23) return 'Maju'
+  return 'Berdaya'
+}
+
+/**
+ * Legacy function untuk backward compatibility dengan sistem lama
+ * Untuk sementara masih menggunakan logic lama sampai semua data migrasi
+ */
 const MIN_SCORE_FOR_CLASSIFICATION = 49  // skor minimum agar semua threshold terpenuhi
 
 export function getKlasifikasi(totalScore: number, maxScore: number): KlasifikasiLevel | null {
@@ -33,9 +86,20 @@ export function calcCategoryScore(entries: { score: number; validatedScore?: num
 }
 
 /**
- * Status akhir kecamatan = klasifikasi dari total skor semua kategori digabung.
- * Hanya menampilkan klasifikasi jika maxPossibleTotal >= 49.
+ * Status akhir kecamatan menggunakan weighted scoring jika data kategori tersedia,
+ * fallback ke total score jika tidak ada data kategori.
  */
-export function getStatusAkhir(totalScore: number, maxPossibleTotal: number): KlasifikasiLevel | null {
+export function getStatusAkhir(
+  totalScore: number, 
+  maxPossibleTotal: number,
+  categoryScores?: Array<{ code: string; score: number; maxScore: number }>
+): KlasifikasiLevel | null {
+  // Prioritas 1: Gunakan weighted scoring jika ada data kategori
+  if (categoryScores && categoryScores.length > 0) {
+    const { weightedScore } = calculateWeightedScore(categoryScores)
+    return getKlasifikasiFromWeighted(weightedScore)
+  }
+  
+  // Prioritas 2: Fallback ke sistem lama untuk backward compatibility
   return getKlasifikasi(totalScore, maxPossibleTotal)
 }

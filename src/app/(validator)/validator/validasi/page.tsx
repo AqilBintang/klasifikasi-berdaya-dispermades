@@ -32,14 +32,36 @@ async function getSubmissions() {
     ],
   })
 
-  return rows.map((r) => ({
-    ...r,
-    submittedBy: {
-      ...r.submittedBy,
-      kabupaten: r.submittedBy.kabupaten?.nama ?? null,
-      kecamatan: r.submittedBy.kecamatan?.nama ?? null,
-    },
-  }))
+  // Kumpulkan userAssessmentStatus per (userId, assessmentId) dalam satu query
+  const pairs = [...new Map(rows.map((r) => {
+    const key = `${r.submittedById}:${r.indicator.category.assessment.id}`
+    return [key, { userId: r.submittedById, assessmentId: r.indicator.category.assessment.id }]
+  })).values()]
+
+  const statuses = pairs.length > 0
+    ? await prisma.userAssessmentStatus.findMany({
+        where: {
+          OR: pairs.map((p) => ({ userId: p.userId, assessmentId: p.assessmentId })),
+        },
+        select: { userId: true, assessmentId: true, status: true },
+      })
+    : []
+
+  const statusMap = new Map(statuses.map((s) => [`${s.userId}:${s.assessmentId}`, s.status]))
+
+  return rows.map((r) => {
+    const key = `${r.submittedById}:${r.indicator.category.assessment.id}`
+    return {
+      ...r,
+      submittedBy: {
+        ...r.submittedBy,
+        kabupaten: r.submittedBy.kabupaten?.nama ?? null,
+        kecamatan: r.submittedBy.kecamatan?.nama ?? null,
+      },
+      // null jika belum ada record status (belum pernah mulai)
+      submitterAssessmentStatus: statusMap.get(key) ?? null,
+    }
+  })
 }
 
 export default async function ValidatorValidasiPage() {

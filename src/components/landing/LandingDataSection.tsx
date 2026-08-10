@@ -1,67 +1,44 @@
 'use client'
 
-import { useCallback, useState } from 'react'
-import { WilayahJatengExplorer } from '@/components/landing/WilayahJatengExplorer'
-import { KlasifikasiBerdayaChart } from '@/components/admin/KlasifikasiBerdayaChart'
-import type { KlasifikasiBerdayaChartRow } from '@/components/admin/KlasifikasiBerdayaChart'
-import { KecamatanSkorChart } from '@/components/landing/KecamatanSkorChart'
-import type { SkorPerTahunRow } from '@/components/landing/KecamatanSkorChart'
+import { useCallback } from 'react'
+import {
+  WilayahFilter,
+  WilayahMap,
+  useWilayahState,
+} from '@/components/landing/WilayahJatengExplorer'
+import {
+  LandingDistribusiChart,
+  LandingKecamatanChart,
+  type DistribusiChartRow,
+  type SkorPerTahunRow,
+} from '@/components/landing/LandingDistribusiChart'
 import type { KabKotaJateng, KecamatanJateng } from '@/types/wilayah'
+import { useState } from 'react'
 
 type Props = {
   kabKota: KabKotaJateng[]
   kecamatanByKabKota: Record<string, KecamatanJateng[]>
-  /** Initial chart data from SSR — avoids client-side waterfall on first load */
-  initialChartData?: KlasifikasiBerdayaChartRow[]
+  initialChartData?: DistribusiChartRow[]
 }
 
-// Mode distribusi: banyak kecamatan
-type DistribusiState = {
-  mode: 'distribusi'
-  status: 'loading' | 'error'
-  label: string
-} | {
-  mode: 'distribusi'
-  status: 'ok'
-  label: string
-  data: KlasifikasiBerdayaChartRow[]
-}
+type DistribusiState =
+  | { mode: 'distribusi'; status: 'loading' | 'error'; label: string }
+  | { mode: 'distribusi'; status: 'ok'; label: string; data: DistribusiChartRow[] }
 
-// Mode kecamatan: satu kecamatan
-type KecamatanState = {
-  mode: 'kecamatan'
-  status: 'loading' | 'error'
-  label: string
-  kabupaten: string
-  kecamatan: string
-} | {
-  mode: 'kecamatan'
-  status: 'ok'
-  label: string
-  kabupaten: string
-  kecamatan: string
-  data: SkorPerTahunRow[]
-}
+type KecamatanState =
+  | { mode: 'kecamatan'; status: 'loading' | 'error'; label: string; kabupaten: string; kecamatan: string }
+  | { mode: 'kecamatan'; status: 'ok'; label: string; kabupaten: string; kecamatan: string; data: SkorPerTahunRow[] }
 
 type ChartState = DistribusiState | KecamatanState
 
 export function LandingDataSection({ kabKota, kecamatanByKabKota, initialChartData }: Props) {
-  const [chart, setChart] = useState<ChartState>(() => {
-    // Use SSR data if available — avoids initial browser fetch waterfall
-    if (initialChartData && initialChartData.length >= 0) {
-      return {
-        mode: 'distribusi' as const,
-        status: 'ok' as const,
-        label: 'Jawa Tengah',
-        data: initialChartData,
-      }
-    }
-    return {
-      mode: 'distribusi' as const,
-      status: 'loading' as const,
-      label: 'Jawa Tengah',
-    }
-  })
+  const { state, setKabKota, setKecamatan } = useWilayahState(true)
+
+  const [chart, setChart] = useState<ChartState>(() =>
+    initialChartData != null
+      ? { mode: 'distribusi', status: 'ok', label: 'Jawa Tengah', data: initialChartData }
+      : { mode: 'distribusi', status: 'loading', label: 'Jawa Tengah' }
+  )
 
   const fetchChart = useCallback((
     kabKotaKode: string | null,
@@ -73,12 +50,12 @@ export function LandingDataSection({ kabKota, kecamatanByKabKota, initialChartDa
     if (kabKotaKode) params.set('kabKotaKode', kabKotaKode)
     if (kecamatanKode) params.set('kecamatanKode', kecamatanKode)
 
-    const isKecamatanMode = Boolean(kecamatanKode)
+    const isKecamatan = Boolean(kecamatanKode)
     const label = kecamatanNama
       ? `${kabupatenNama} › ${kecamatanNama}`
-      : (kabupatenNama || 'Jawa Tengah')
+      : kabupatenNama || 'Jawa Tengah'
 
-    if (isKecamatanMode) {
+    if (isKecamatan) {
       setChart({ mode: 'kecamatan', status: 'loading', label, kabupaten: kabupatenNama, kecamatan: kecamatanNama })
     } else {
       setChart({ mode: 'distribusi', status: 'loading', label })
@@ -89,27 +66,14 @@ export function LandingDataSection({ kabKota, kecamatanByKabKota, initialChartDa
       .then((json) => {
         const d = json?.data
         const responseLabel = d?.label ?? label
-
-        if (isKecamatanMode) {
-          setChart({
-            mode: 'kecamatan',
-            status: 'ok',
-            label: responseLabel,
-            kabupaten: kabupatenNama,
-            kecamatan: kecamatanNama,
-            data: d?.skorPerTahun ?? [],
-          })
+        if (isKecamatan) {
+          setChart({ mode: 'kecamatan', status: 'ok', label: responseLabel, kabupaten: kabupatenNama, kecamatan: kecamatanNama, data: d?.skorPerTahun ?? [] })
         } else {
-          setChart({
-            mode: 'distribusi',
-            status: 'ok',
-            label: responseLabel,
-            data: d?.chartData ?? [],
-          })
+          setChart({ mode: 'distribusi', status: 'ok', label: responseLabel, data: d?.chartData ?? [] })
         }
       })
       .catch(() => {
-        if (isKecamatanMode) {
+        if (isKecamatan) {
           setChart({ mode: 'kecamatan', status: 'error', label, kabupaten: kabupatenNama, kecamatan: kecamatanNama })
         } else {
           setChart({ mode: 'distribusi', status: 'error', label })
@@ -117,78 +81,106 @@ export function LandingDataSection({ kabKota, kecamatanByKabKota, initialChartDa
       })
   }, [])
 
-  // No initial useEffect fetch — chart data is provided by SSR via initialChartData prop.
-  // fetchChart is only called when user interacts with the map (filter changes).
+  const handleKabKota = (kode: string | null) => {
+    setKabKota(kode)
+    const kabObj = kabKota.find((k) => k.kode === kode)
+    fetchChart(kode, '', kabObj?.nama ?? '', '')
+  }
+
+  const handleKecamatan = (kode: string) => {
+    setKecamatan(kode)
+    const kabObj = kabKota.find((k) => k.kode === state.selectedKabKotaKode)
+    const kabupatenNama = kabObj?.nama ?? ''
+    const kecList = state.selectedKabKotaKode ? (kecamatanByKabKota[state.selectedKabKotaKode] ?? []) : []
+    const kecObj = kecList.find((k) => k.kode === kode)
+    fetchChart(state.selectedKabKotaKode, kode, kabupatenNama, kecObj?.nama ?? '')
+  }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+    <div className="space-y-3">
 
-      {/* ── Kiri: Peta ──────────────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">Peta Wilayah</h3>
-        <WilayahJatengExplorer
+      {/* ── Filter: full width ──────────────────────────────────────────── */}
+      <div className="rounded-2xl border border-gray-100 bg-white px-5 py-4 shadow-sm">
+        <WilayahFilter
           kabKota={kabKota}
           kecamatanByKabKota={kecamatanByKabKota}
+          state={state}
           allowAll
-          onSelectionChange={({ kabKotaKode, kecamatanKode }) => {
-            const kabObj = kabKota.find((k) => k.kode === kabKotaKode)
-            const kabupatenNama = kabObj?.nama ?? ''
-            const kecList = kabKotaKode ? (kecamatanByKabKota[kabKotaKode] ?? []) : []
-            const kecObj = kecList.find((k) => k.kode === kecamatanKode)
-            const kecamatanNama = kecObj?.nama ?? ''
-            fetchChart(kabKotaKode, kecamatanKode, kabupatenNama, kecamatanNama)
-          }}
+          onKabKotaChange={handleKabKota}
+          onKecamatanChange={handleKecamatan}
         />
       </div>
 
-      {/* ── Kanan: Chart ─────────────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold text-gray-900">
-            {chart.mode === 'kecamatan' ? 'Skor Klasifikasi per Tahun' : 'Distribusi Klasifikasi per Tahun'}
-          </h3>
-          <p className="text-xs text-gray-400 mt-0.5 truncate">{chart.label}</p>
+      {/* ── Peta + Chart: satu card ─────────────────────────────────────── */}
+      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-100 items-stretch">
+
+          {/* Peta */}
+          <div className="p-3">
+            <WilayahMap
+              kabKota={kabKota}
+              kecamatanByKabKota={kecamatanByKabKota}
+              state={state}
+              onKabKotaChange={handleKabKota}
+            />
+          </div>
+
+          {/* Chart */}
+          <div className="p-4 flex flex-col justify-center">
+            {/* Header */}
+            <div className="mb-3">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                {chart.mode === 'kecamatan' ? 'Hasil Klasifikasi' : 'Distribusi Klasifikasi'}
+              </p>
+              <p className="mt-0.5 text-sm font-semibold text-gray-800 truncate">{chart.label}</p>
+            </div>
+
+            {/* Loading skeleton */}
+            {chart.status === 'loading' && (
+              <div className="flex flex-col gap-3 animate-pulse py-4">
+                <div className="h-40 rounded-lg bg-gray-100" />
+                <div className="h-3 w-40 rounded bg-gray-100" />
+                <div className="h-3 w-32 rounded bg-gray-100" />
+              </div>
+            )}
+
+            {/* Error */}
+            {chart.status === 'error' && (
+              <div className="flex flex-col items-center justify-center gap-1.5 py-10 rounded-xl bg-red-50">
+                <span className="text-sm font-medium text-red-500">Gagal memuat data</span>
+                <span className="text-xs text-red-400">Coba pilih wilayah lain</span>
+              </div>
+            )}
+
+            {/* Empty */}
+            {chart.status === 'ok' && chart.data.length === 0 && (
+              <div className="flex flex-col items-center justify-center gap-1.5 py-10 rounded-xl bg-gray-50">
+                <span className="text-sm font-medium text-gray-500">Belum ada data</span>
+                <span className="text-xs text-gray-400">
+                  {chart.mode === 'kecamatan'
+                    ? 'Kecamatan ini belum memiliki data tervalidasi.'
+                    : 'Wilayah ini belum memiliki data tervalidasi.'}
+                </span>
+              </div>
+            )}
+
+            {/* Distribusi */}
+            {chart.status === 'ok' && chart.mode === 'distribusi' && chart.data.length > 0 && (
+              <LandingDistribusiChart data={chart.data} />
+            )}
+
+            {/* Kecamatan */}
+            {chart.status === 'ok' && chart.mode === 'kecamatan' && chart.data.length > 0 && (
+              <LandingKecamatanChart
+                data={chart.data}
+                kabupaten={chart.kabupaten}
+                kecamatan={chart.kecamatan}
+              />
+            )}
+          </div>
+
         </div>
-
-        {chart.status === 'loading' && (
-          <div className="h-[360px] flex items-center justify-center">
-            <span className="text-sm text-gray-400">Memuat data…</span>
-          </div>
-        )}
-
-        {chart.status === 'error' && (
-          <div className="h-[360px] flex items-center justify-center rounded-xl bg-red-50">
-            <span className="text-sm text-red-500">Gagal memuat data.</span>
-          </div>
-        )}
-
-        {chart.status === 'ok' && chart.mode === 'distribusi' && chart.data.length === 0 && (
-          <div className="h-[360px] flex flex-col items-center justify-center gap-2 rounded-xl bg-gray-50">
-            <span className="text-sm text-gray-500 font-medium">Belum ada data</span>
-            <span className="text-xs text-gray-400">Wilayah ini belum memiliki data klasifikasi tervalidasi.</span>
-          </div>
-        )}
-
-        {chart.status === 'ok' && chart.mode === 'kecamatan' && chart.data.length === 0 && (
-          <div className="h-[360px] flex flex-col items-center justify-center gap-2 rounded-xl bg-gray-50">
-            <span className="text-sm text-gray-500 font-medium">Belum ada data</span>
-            <span className="text-xs text-gray-400">Kecamatan ini belum memiliki data klasifikasi tervalidasi.</span>
-          </div>
-        )}
-
-        {chart.status === 'ok' && chart.mode === 'distribusi' && chart.data.length > 0 && (
-          <KlasifikasiBerdayaChart data={chart.data} />
-        )}
-
-        {chart.status === 'ok' && chart.mode === 'kecamatan' && chart.data.length > 0 && (
-          <KecamatanSkorChart
-            data={chart.data}
-            kabupaten={chart.kabupaten}
-            kecamatan={chart.kecamatan}
-          />
-        )}
       </div>
-
     </div>
   )
 }

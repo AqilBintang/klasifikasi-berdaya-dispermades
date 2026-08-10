@@ -1,11 +1,9 @@
 'use client'
 
-import Link from 'next/link'
 import { signOut } from 'next-auth/react'
 import {
   Menu,
   Bell,
-  User,
   LogOut,
 } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -13,7 +11,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
@@ -74,15 +71,8 @@ export function AdminHeader({
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <Link href="/admin/profile" className="flex items-center gap-2 w-full">
-                  <User className="w-4 h-4" />
-                  Profile
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={() => signOut({ callbackUrl: '/login' })}
+                onClick={() => signOut({ callbackUrl: '/admin/login' })}
                 className="text-red-500 focus:text-red-500"
               >
                 <LogOut className="w-4 h-4 mr-2" />
