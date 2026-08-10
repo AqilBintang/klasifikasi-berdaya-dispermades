@@ -40,7 +40,7 @@ export function AdminHeader({
             aria-expanded={isSidebarOpen}
             onClick={onMenuToggle}
           >
-            <FontAwesomeIcon icon={faBars} className="w-5 h-5" />
+            <Menu className="w-5 h-5" />
           </button>
           <h1 className="text-lg font-bold text-gray-800">{pageTitle}</h1>
         </div>
@@ -53,7 +53,7 @@ export function AdminHeader({
             className="relative flex items-center justify-center rounded-md p-2 text-gray-600 hover:bg-gray-100 transition-colors"
             aria-label="Notifikasi"
           >
-            <FontAwesomeIcon icon={faBell} className="w-5 h-5" />
+            <Bell className="w-5 h-5" />
             <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-semibold text-white">
               3
             </span>
@@ -76,7 +76,7 @@ export function AdminHeader({
             <DropdownMenuContent align="end">
               <DropdownMenuItem>
                 <Link href="/admin/profile" className="flex items-center gap-2 w-full">
-                  <FontAwesomeIcon icon={faUser} className="w-4 h-4" />
+                  <User className="w-4 h-4" />
                   Profile
                 </Link>
               </DropdownMenuItem>
@@ -85,7 +85,7 @@ export function AdminHeader({
                 onClick={() => signOut({ callbackUrl: '/login' })}
                 className="text-red-500 focus:text-red-500"
               >
-                <FontAwesomeIcon icon={faRightFromBracket} className="w-4 h-4 mr-2" />
+                <LogOut className="w-4 h-4 mr-2" />
                 Logout
               </DropdownMenuItem>
             </DropdownMenuContent>

@@ -5,14 +5,14 @@ import { KlasifikasiBerdayaChart } from '@/components/admin/KlasifikasiBerdayaCh
 import { YearFilter } from '@/components/shared/ui/YearFilter'
 import type { KlasifikasiBerdayaChartRow } from '@/components/admin/KlasifikasiBerdayaChart'
 
-const STATUS_ORDER: KlasifikasiLevel[] = ['Belum Berdaya', 'Rintisan', 'Berkembang', 'Maju']
+const STATUS_ORDER: KlasifikasiLevel[] = ['Rintisan', 'Berkembang', 'Maju', 'Berdaya']
 
 // Warna untuk progress bar (tetap berwarna karena semantik klasifikasi)
 const STATUS_BAR_COLOR: Record<KlasifikasiLevel, string> = {
-  'Belum Berdaya': 'bg-red-400',
-  Rintisan:        'bg-amber-400',
-  Berkembang:      'bg-blue-400',
-  Maju:            'bg-green-500',
+  'Rintisan':    'bg-red-400',
+  'Berkembang':  'bg-amber-400',
+  'Maju':        'bg-blue-400',
+  'Berdaya':     'bg-green-500',
 }
 
 async function getStats(yearFilter?: string) {
@@ -81,19 +81,19 @@ async function getStats(yearFilter?: string) {
 
   // Chart data — selalu semua tahun agar tren terlihat
   const chartData: KlasifikasiBerdayaChartRow[] = years.map((year) => {
-    const counts = { belumBerdaya: 0, rintisan: 0, berkembang: 0, maju: 0 }
+    const counts = { rintisan: 0, berkembang: 0, maju: 0, berdaya: 0 }
     for (const u of users) {
-      const s = latestByUserYear.get(`${u.id}_${year}`)?.status ?? 'Belum Berdaya'
-      if (s === 'Belum Berdaya') counts.belumBerdaya++
-      else if (s === 'Rintisan')   counts.rintisan++
+      const s = latestByUserYear.get(`${u.id}_${year}`)?.status ?? 'Rintisan'
+      if (s === 'Rintisan') counts.rintisan++
       else if (s === 'Berkembang') counts.berkembang++
-      else                          counts.maju++
+      else if (s === 'Maju') counts.maju++
+      else counts.berdaya++
     }
     return { year, ...counts }
   })
 
   // Summary untuk tahun aktif
-  const summary = { 'Belum Berdaya': 0, Rintisan: 0, Berkembang: 0, Maju: 0, belumAda: 0 }
+  const summary = { 'Rintisan': 0, 'Berkembang': 0, 'Maju': 0, 'Berdaya': 0, belumAda: 0 }
   const validatedUserIds = new Set<number>()
   if (activeYear) {
     for (const u of users) {
@@ -110,7 +110,7 @@ async function getStats(yearFilter?: string) {
     const kabKey = u.kabupaten?.id?.toString() ?? 'unknown'
     if (!kabMap[kabKey]) kabMap[kabKey] = {
       id: u.kabupaten?.id ?? null, nama: u.kabupaten?.nama ?? 'Tidak Diketahui',
-      counts: { 'Belum Berdaya': 0, Rintisan: 0, Berkembang: 0, Maju: 0 }, total: 0,
+      counts: { 'Rintisan': 0, 'Berkembang': 0, 'Maju': 0, 'Berdaya': 0 }, total: 0,
     }
     const s = activeYear ? (latestByUserYear.get(`${u.id}_${activeYear}`)?.status ?? null) : null
     if (s) kabMap[kabKey].counts[s]++
@@ -170,10 +170,10 @@ export default async function KlasifikasiBerdayaPage({
         {[
           { label: 'Total Kecamatan', value: totalRegistered, sub: 'Terdaftar' },
           { label: 'Divalidasi',      value: totalValidated,  sub: activeYear ?? '—' },
-          { label: 'Maju',            value: summary['Maju'],           sub: 'Skor > 63' },
-          { label: 'Berkembang',      value: summary['Berkembang'],     sub: 'Skor 43–63' },
-          { label: 'Rintisan',        value: summary['Rintisan'],       sub: 'Skor 22–42' },
-          { label: 'Belum Berdaya',   value: summary['Belum Berdaya'],  sub: 'Skor ≤ 21' },
+          { label: 'Berdaya',         value: summary['Berdaya'],        sub: 'Skor ≥ 49' },
+          { label: 'Maju',            value: summary['Maju'],           sub: 'Skor 33–48' },
+          { label: 'Berkembang',      value: summary['Berkembang'],     sub: 'Skor 17–32' },
+          { label: 'Rintisan',        value: summary['Rintisan'],       sub: 'Skor ≤ 16' },
         ].map(({ label, value, sub }) => (
           <div key={label} className="rounded-xl border bg-white p-4 shadow-sm">
             <p className="text-xs text-gray-500 mb-1 leading-tight">{label}</p>

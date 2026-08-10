@@ -20,10 +20,10 @@ export type SkorPerTahunRow = {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  'Belum Berdaya': '#ef4444',
-  'Rintisan': '#f59e0b',
-  'Berkembang': '#3b82f6',
-  'Maju': '#22c55e',
+  'Rintisan': '#ef4444',
+  'Berkembang': '#f59e0b',
+  'Maju': '#3b82f6',
+  'Berdaya': '#22c55e',
 }
 
 type TooltipProps = {
@@ -95,10 +95,10 @@ export function KecamatanSkorChart({ data, kabupaten, kecamatan }: Props) {
       {/* Legend */}
       <div className="flex flex-wrap justify-center gap-3 text-xs text-gray-500">
         {[
-          { label: 'Belum Berdaya', color: '#ef4444' },
-          { label: 'Rintisan',      color: '#f59e0b' },
-          { label: 'Berkembang',    color: '#3b82f6' },
-          { label: 'Maju',          color: '#22c55e' },
+          { label: 'Rintisan',      color: '#ef4444' },
+          { label: 'Berkembang',    color: '#f59e0b' },
+          { label: 'Maju',          color: '#3b82f6' },
+          { label: 'Berdaya',       color: '#22c55e' },
         ].map((item) => (
           <span key={item.label} className="flex items-center gap-1.5">
             <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />

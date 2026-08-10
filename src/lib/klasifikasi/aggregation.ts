@@ -142,23 +142,23 @@ async function _getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFilter =
   const chartData: KlasifikasiBerdayaChartRow[] = years.map((year) => {
     const y = Number.parseInt(year, 10)
 
-    let belumBerdaya = 0
     let rintisan = 0
     let berkembang = 0
     let maju = 0
+    let berdaya = 0
 
     for (const u of users) {
       const g = latestByUserYear.get(`${u.id}_${y}`)
       // Hanya hitung user yang punya data di tahun ini
       if (!g) continue
       const status = g.statusAkhir
-      if (status === 'Belum Berdaya') belumBerdaya += 1
-      else if (status === 'Rintisan') rintisan += 1
+      if (status === 'Rintisan') rintisan += 1
       else if (status === 'Berkembang') berkembang += 1
       else if (status === 'Maju') maju += 1
+      else if (status === 'Berdaya') berdaya += 1
     }
 
-    return { year, belumBerdaya, rintisan, berkembang, maju }
+    return { year, rintisan, berkembang, maju, berdaya }
   })
 
   const uniqueUsersWithAnyData = new Set<number>()

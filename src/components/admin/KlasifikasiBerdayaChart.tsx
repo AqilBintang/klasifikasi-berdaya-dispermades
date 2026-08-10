@@ -12,17 +12,17 @@ import {
 
 export type KlasifikasiBerdayaChartRow = {
   year: string
-  belumBerdaya: number
   rintisan: number
   berkembang: number
   maju: number
+  berdaya: number
 }
 
 const SERIES = [
-  { key: 'belumBerdaya', label: 'Belum Berdaya', color: '#ef4444' },
-  { key: 'rintisan', label: 'Rintisan', color: '#f59e0b' },
-  { key: 'berkembang', label: 'Berkembang', color: '#3b82f6' },
-  { key: 'maju', label: 'Maju', color: '#22c55e' },
+  { key: 'rintisan', label: 'Rintisan', color: '#ef4444' },
+  { key: 'berkembang', label: 'Berkembang', color: '#f59e0b' },
+  { key: 'maju', label: 'Maju', color: '#3b82f6' },
+  { key: 'berdaya', label: 'Berdaya', color: '#22c55e' },
 ] as const
 
 export function KlasifikasiBerdayaChart({ data }: { data: KlasifikasiBerdayaChartRow[] }) {

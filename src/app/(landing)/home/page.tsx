@@ -45,26 +45,26 @@ async function getLandingContent() {
 
 const LEVEL_CONFIG = [
   {
-    level: 'Belum Berdaya',
-    range: 'Skor ≤ 21',
-    accent: 'bg-red-400',
-    desc: 'Belum memiliki kapasitas dasar untuk menjalankan program pemberdayaan secara mandiri.',
-  },
-  {
     level: 'Rintisan',
-    range: 'Skor 22–42',
-    accent: 'bg-amber-400',
+    range: 'Skor ≤ 16',
+    accent: 'bg-red-400',
     desc: 'Mulai menunjukkan inisiatif pemberdayaan namun masih memerlukan pendampingan intensif.',
   },
   {
     level: 'Berkembang',
-    range: 'Skor 43–63',
-    accent: 'bg-blue-400',
-    desc: 'Telah memiliki sistem dan program pemberdayaan yang berjalan dengan baik.',
+    range: 'Skor 17–32',
+    accent: 'bg-amber-400',
+    desc: 'Telah memiliki sistem pemberdayaan dasar dan mulai menjalankan program secara konsisten.',
   },
   {
     level: 'Maju',
-    range: 'Skor ≥ 64',
+    range: 'Skor 33–48',
+    accent: 'bg-blue-400',
+    desc: 'Telah memiliki sistem dan program pemberdayaan yang berjalan dengan baik dan terstruktur.',
+  },
+  {
+    level: 'Berdaya',
+    range: 'Skor ≥ 49',
     accent: 'bg-green-400',
     desc: 'Mencapai tingkat pemberdayaan optimal dan menjadi percontohan bagi wilayah lain.',
   },
@@ -82,7 +82,7 @@ export default async function LandingPage() {
 
   const latestYear = stats.years.at(-1) ?? '-'
   const latestChartRow = stats.chartData.at(-1)
-  const majuCount = latestChartRow?.maju ?? 0
+  const berdayaCount = latestChartRow?.berdaya ?? 0
 
   const bannerSlides: BannerSlide[] = landingContent.banner.slides
   const tentang = landingContent.tentangPlatform
@@ -161,8 +161,8 @@ export default async function LandingPage() {
             />
             <StatCard
               icon={<TrendingUp className="h-5 w-5" aria-hidden="true" />}
-              value={majuCount}
-              label="Kecamatan Maju"
+              value={berdayaCount}
+              label="Kecamatan Berdaya"
               sub={latestYear !== '-' ? `Per tahun ${latestYear}` : undefined}
             />
           </div>
