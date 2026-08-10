@@ -1,6 +1,5 @@
 import Link from 'next/link'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPlus } from '@fortawesome/free-solid-svg-icons'
+import { Plus } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { CreateAssessmentListClient } from '@/components/admin/CreateAssessmentListClient'
 
@@ -36,7 +35,7 @@ export default async function CreateAssessmentIndexPage() {
           href="/admin/assessment/create/new"
           className="flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-sky-700 transition-colors"
         >
-          <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
+          <Plus className="w-4 h-4" />
           Buat Assessment
         </Link>
       </div>

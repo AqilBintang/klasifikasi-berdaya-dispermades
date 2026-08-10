@@ -2,14 +2,13 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faClipboardList,
-  faChartBar,
-  faCircleCheck,
-  faClockRotateLeft,
-  faArrowRight,
-} from '@fortawesome/free-solid-svg-icons'
+  ClipboardList,
+  BarChart,
+  CheckCircle,
+  Clock,
+  ArrowRight,
+} from 'lucide-react'
 
 export default async function KecamatanDashboardPage() {
   const session = await auth()
@@ -51,7 +50,7 @@ export default async function KecamatanDashboardPage() {
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl border border-gray-200 bg-white p-5 flex items-center gap-4">
           <div className="rounded-lg bg-amber-50 p-3 shrink-0">
-            <FontAwesomeIcon icon={faClockRotateLeft} className="w-4 h-4 text-amber-500" />
+            <Clock className="w-4 h-4 text-amber-500" />
           </div>
           <div>
             <p className="text-2xl font-bold text-gray-900">{totalSubmitted}</p>
@@ -60,7 +59,7 @@ export default async function KecamatanDashboardPage() {
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-5 flex items-center gap-4">
           <div className="rounded-lg bg-green-50 p-3 shrink-0">
-            <FontAwesomeIcon icon={faCircleCheck} className="w-4 h-4 text-green-500" />
+            <CheckCircle className="w-4 h-4 text-green-500" />
           </div>
           <div>
             <p className="text-2xl font-bold text-gray-900">{totalValidated}</p>
@@ -73,11 +72,11 @@ export default async function KecamatanDashboardPage() {
       <section>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-            <FontAwesomeIcon icon={faClipboardList} className="w-3.5 h-3.5 text-sky-500" />
+            <ClipboardList className="w-3.5 h-3.5 text-sky-500" />
             Assessment Tersedia
           </h3>
           <Link href="/kecamatan/assessment" className="flex items-center gap-1 text-xs text-sky-600 hover:text-sky-700 font-medium">
-            Lihat Semua <FontAwesomeIcon icon={faArrowRight} className="w-3 h-3" />
+            Lihat Semua <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
 
@@ -118,7 +117,7 @@ export default async function KecamatanDashboardPage() {
       <div className="rounded-xl border border-gray-200 bg-white p-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <div className="rounded-lg bg-gray-100 p-2.5 shrink-0">
-            <FontAwesomeIcon icon={faChartBar} className="w-4 h-4 text-gray-600" />
+            <BarChart className="w-4 h-4 text-gray-600" />
           </div>
           <div>
             <p className="font-semibold text-gray-800 text-sm">Lihat Hasil Nilai</p>
@@ -129,7 +128,7 @@ export default async function KecamatanDashboardPage() {
           href="/kecamatan/hasil"
           className="shrink-0 flex items-center gap-1.5 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 transition-colors"
         >
-          Lihat <FontAwesomeIcon icon={faArrowRight} className="w-3.5 h-3.5" />
+          Lihat <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
 

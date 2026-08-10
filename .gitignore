@@ -77,3 +77,7 @@ prisma/*.backup
 
 # sample/reference excel files used during development (contains real data)
 /contoh_excel/
+
+
+# development documentation (local only)
+fontawesome-inventory.md

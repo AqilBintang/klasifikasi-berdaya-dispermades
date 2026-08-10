@@ -2,12 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faPlus, faTrash, faSpinner,
-  faTriangleExclamation, faFolderPlus,
-  faArrowRight, faArrowLeft, faEye, faShieldHalved,
-} from '@fortawesome/free-solid-svg-icons'
+  Plus, Trash2, Loader2,
+  AlertTriangle, FolderPlus,
+  ArrowRight, ArrowLeft, Eye, Shield,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from '@/components/ui/toast'
 
@@ -88,14 +87,14 @@ function IndicatorRows({ indicators, catTempId, onChange, onAdd, onRemove }: {
             <button type="button" onClick={() => onRemove(catTempId, ind.tempId)}
               disabled={indicators.length === 1}
               className="mt-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
-              <FontAwesomeIcon icon={faTrash} className="w-3.5 h-3.5" />
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
         ))}
       </div>
       <button type="button" onClick={() => onAdd(catTempId)}
         className="mt-3 flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-sky-400 hover:text-sky-600 transition-colors w-full justify-center">
-        <FontAwesomeIcon icon={faPlus} className="w-3.5 h-3.5" /> Tambah Indikator
+        <Plus className="w-3.5 h-3.5" /> Tambah Indikator
       </button>
     </div>
   )
@@ -175,7 +174,7 @@ function ConfirmModal({ titre, periode, onConfirm, onCancel, saving }: {
         <div className="px-6 pt-6 pb-4 border-b">
           <div className="flex items-center gap-3 mb-1">
             <div className="rounded-xl bg-amber-100 p-2">
-              <FontAwesomeIcon icon={faShieldHalved} className="w-5 h-5 text-amber-600" />
+              <Shield className="w-5 h-5 text-amber-600" />
             </div>
             <h3 className="font-bold text-gray-900">Konfirmasi Akhir</h3>
           </div>
@@ -207,7 +206,7 @@ function ConfirmModal({ titre, periode, onConfirm, onCancel, saving }: {
           {/* Peringatan publish */}
           {choice === 'PUBLISHED' && (
             <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800 leading-relaxed">
-              <FontAwesomeIcon icon={faTriangleExclamation} className="w-3.5 h-3.5 mr-1.5" />
+              <AlertTriangle className="w-3.5 h-3.5 mr-1.5" />
               Setelah assessment diisi oleh kecamatan, <strong>konten tidak dapat diubah</strong>. Pastikan semua indikator sudah benar.
             </div>
           )}
@@ -223,7 +222,7 @@ function ConfirmModal({ titre, periode, onConfirm, onCancel, saving }: {
               'flex-1 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-50',
               choice === 'PUBLISHED' ? 'bg-sky-600 hover:bg-sky-700' : 'bg-gray-700 hover:bg-gray-800'
             )}>
-            {saving && <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin" />}
+            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
             {choice === 'PUBLISHED' ? 'Ya, Publish Sekarang' : 'Simpan sebagai Draft'}
           </button>
         </div>
@@ -412,7 +411,7 @@ export function CreateAssessmentForm() {
                 </div>
                 <button type="button" onClick={() => removeCategory(cat.tempId)} disabled={categories.length === 1}
                   className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed">
-                  <FontAwesomeIcon icon={faTrash} className="w-3 h-3" /> Hapus Kategori
+                  <Trash2 className="w-3 h-3" /> Hapus Kategori
                 </button>
               </div>
               <div className="px-6 pt-4 pb-2">
@@ -429,7 +428,7 @@ export function CreateAssessmentForm() {
 
           <button type="button" onClick={addCategory}
             className="flex items-center gap-2 rounded-xl border-2 border-dashed border-gray-300 px-6 py-4 text-sm font-medium text-gray-500 hover:border-sky-400 hover:text-sky-600 transition-colors w-full justify-center">
-            <FontAwesomeIcon icon={faFolderPlus} className="w-4 h-4" /> Tambah Kategori Baru
+            <FolderPlus className="w-4 h-4" /> Tambah Kategori Baru
           </button>
 
           {/* Next */}
@@ -437,10 +436,10 @@ export function CreateAssessmentForm() {
             <button type="button" onClick={goToReview} disabled={checking}
               className="flex items-center gap-2 rounded-xl bg-sky-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-sky-700 transition-colors disabled:opacity-60">
               {checking
-                ? <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin" />
-                : <FontAwesomeIcon icon={faEye} className="w-4 h-4" />}
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <Eye className="w-4 h-4" />}
               {checking ? 'Mengecek...' : 'Review Assessment'}
-              {!checking && <FontAwesomeIcon icon={faArrowRight} className="w-3.5 h-3.5" />}
+              {!checking && <ArrowRight className="w-3.5 h-3.5" />}
             </button>
           </div>
         </>
@@ -450,7 +449,7 @@ export function CreateAssessmentForm() {
       {step === 2 && (
         <>
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800 flex items-start gap-3">
-            <FontAwesomeIcon icon={faTriangleExclamation} className="w-4 h-4 mt-0.5 shrink-0" />
+            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
             <div>
               <p className="font-semibold">Periksa kembali seluruh isi assessment.</p>
               <p className="mt-0.5 text-amber-700">Setelah diisi oleh kecamatan, assessment <strong>tidak dapat diubah</strong>. Pastikan semua indikator sudah benar sebelum melanjutkan.</p>
@@ -462,11 +461,11 @@ export function CreateAssessmentForm() {
           <div className="flex items-center justify-between rounded-xl border bg-white px-6 py-4 shadow-sm">
             <button type="button" onClick={() => { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
               className="flex items-center gap-2 rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              <FontAwesomeIcon icon={faArrowLeft} className="w-3.5 h-3.5" /> Kembali Edit
+              <ArrowLeft className="w-3.5 h-3.5" /> Kembali Edit
             </button>
             <button type="button" onClick={() => setShowConfirm(true)}
               className="flex items-center gap-2 rounded-xl bg-sky-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-sky-700 transition-colors">
-              <FontAwesomeIcon icon={faShieldHalved} className="w-4 h-4" />
+              <Shield className="w-4 h-4" />
               Konfirmasi & Simpan
             </button>
           </div>

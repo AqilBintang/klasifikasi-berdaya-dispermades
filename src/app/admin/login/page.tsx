@@ -3,8 +3,7 @@
 import { Suspense, useState } from 'react'
 import { signIn, signOut, getSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSpinner, faEye, faEyeSlash, faShield } from '@fortawesome/free-solid-svg-icons'
+import { Loader2, Eye, EyeOff, Shield } from 'lucide-react'
 
 function AdminLoginForm() {
   const router = useRouter()
@@ -90,7 +89,7 @@ function AdminLoginForm() {
             className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             aria-label={showPw ? 'Sembunyikan password' : 'Tampilkan password'}
           >
-            <FontAwesomeIcon icon={showPw ? faEyeSlash : faEye} className="w-4 h-4" />
+            {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
       </div>
@@ -106,7 +105,7 @@ function AdminLoginForm() {
         disabled={loading}
         className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors disabled:opacity-60"
       >
-        {loading && <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin" />}
+        {loading && <Loader2 className="w-4 h-4 animate-spin" />}
         {loading ? 'Masuk...' : 'Masuk sebagai Admin'}
       </button>
     </form>
@@ -119,7 +118,7 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 mb-4">
-            <FontAwesomeIcon icon={faShield} className="w-7 h-7 text-white" />
+            <Shield className="w-7 h-7 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
           <p className="mt-1 text-sm text-gray-500">

@@ -1,12 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-  faCheckCircle, faTimesCircle, faExclamationCircle,
-  faSpinner, faChevronDown, faChevronRight,
-  faMapMarkerAlt, faLink, faCheckDouble,
-} from '@fortawesome/free-solid-svg-icons'
+import { 
+  CheckCircle, XCircle, AlertCircle, 
+  Loader2, ChevronDown, ChevronRight,
+  MapPin, Link as LinkIcon, CheckCheck 
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Pagination } from '@/components/shared/ui/Pagination'
 
@@ -87,7 +86,7 @@ function ValidationModal({ submission, onClose, onSuccess }: {
                   <p className="text-xs font-semibold text-gray-500 mb-1">Dokumen</p>
                   <a href={submission.supportingDoc} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-1 text-sky-600 hover:underline text-sm">
-                    <FontAwesomeIcon icon={faLink} className="w-3 h-3" /> Buka Dokumen
+                    <LinkIcon className="w-3 h-3" /> Buka Dokumen
                   </a>
                 </div>
               )}
@@ -97,14 +96,14 @@ function ValidationModal({ submission, onClose, onSuccess }: {
             <p className="text-sm font-medium text-gray-700 mb-2">Keputusan</p>
             <div className="flex gap-2">
               {([
-                { value: 'APPROVED', label: 'Setujui', icon: faCheckCircle, c: 'border-green-500 bg-green-50 text-green-700' },
-                { value: 'REJECTED', label: 'Tolak', icon: faTimesCircle, c: 'border-red-500 bg-red-50 text-red-700' },
-                { value: 'REVISION_NEEDED', label: 'Revisi', icon: faExclamationCircle, c: 'border-amber-500 bg-amber-50 text-amber-700' },
+                { value: 'APPROVED', label: 'Setujui', Icon: CheckCircle, c: 'border-green-500 bg-green-50 text-green-700' },
+                { value: 'REJECTED', label: 'Tolak', Icon: XCircle, c: 'border-red-500 bg-red-50 text-red-700' },
+                { value: 'REVISION_NEEDED', label: 'Revisi', Icon: AlertCircle, c: 'border-amber-500 bg-amber-50 text-amber-700' },
               ] as const).map((opt) => (
                 <button key={opt.value} type="button" onClick={() => setDecision(opt.value)}
                   className={cn('flex-1 flex items-center justify-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm font-medium transition-colors',
                     decision === opt.value ? opt.c : 'border-gray-200 text-gray-500 hover:border-gray-300')}>
-                  <FontAwesomeIcon icon={opt.icon} className="w-3.5 h-3.5" />{opt.label}
+                  <opt.Icon className="w-3.5 h-3.5" />{opt.label}
                 </button>
               ))}
             </div>
@@ -132,7 +131,7 @@ function ValidationModal({ submission, onClose, onSuccess }: {
           <button type="button" onClick={onClose} className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Batal</button>
           <button type="button" onClick={handleSubmit} disabled={saving}
             className="flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50">
-            {saving && <FontAwesomeIcon icon={faSpinner} className="w-3.5 h-3.5 animate-spin" />}
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             Simpan Validasi
           </button>
         </div>
@@ -176,21 +175,21 @@ function BulkValidateModal({ pendingIds, kecamatanName, onClose, onSuccess }: {
         </div>
         <div className="px-6 py-5 space-y-4">
           <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-            <FontAwesomeIcon icon={faExclamationCircle} className="w-4 h-4 mr-2" />
+            <AlertCircle className="w-4 h-4 mr-2 inline" />
             Keputusan ini akan diterapkan ke <strong>semua {pendingIds.length} indikator</strong> yang belum divalidasi.
           </div>
           <div>
             <p className="text-sm font-medium text-gray-700 mb-2">Keputusan</p>
             <div className="flex gap-2">
               {([
-                { value: 'APPROVED', label: 'Setujui Semua', icon: faCheckCircle, c: 'border-green-500 bg-green-50 text-green-700' },
-                { value: 'REJECTED', label: 'Tolak Semua', icon: faTimesCircle, c: 'border-red-500 bg-red-50 text-red-700' },
-                { value: 'REVISION_NEEDED', label: 'Revisi Semua', icon: faExclamationCircle, c: 'border-amber-500 bg-amber-50 text-amber-700' },
+                { value: 'APPROVED', label: 'Setujui Semua', Icon: CheckCircle, c: 'border-green-500 bg-green-50 text-green-700' },
+                { value: 'REJECTED', label: 'Tolak Semua', Icon: XCircle, c: 'border-red-500 bg-red-50 text-red-700' },
+                { value: 'REVISION_NEEDED', label: 'Revisi Semua', Icon: AlertCircle, c: 'border-amber-500 bg-amber-50 text-amber-700' },
               ] as const).map((opt) => (
                 <button key={opt.value} type="button" onClick={() => setDecision(opt.value)}
                   className={cn('flex-1 flex flex-col items-center gap-1 rounded-lg border-2 px-2 py-2.5 text-xs font-medium transition-colors',
                     decision === opt.value ? opt.c : 'border-gray-200 text-gray-500')}>
-                  <FontAwesomeIcon icon={opt.icon} className="w-4 h-4" />{opt.label}
+                  <opt.Icon className="w-4 h-4" />{opt.label}
                 </button>
               ))}
             </div>
@@ -207,7 +206,7 @@ function BulkValidateModal({ pendingIds, kecamatanName, onClose, onSuccess }: {
           <button type="button" onClick={onClose} className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Batal</button>
           <button type="button" onClick={handleSubmit} disabled={saving}
             className="flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50">
-            {saving && <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin" />}
+            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
             Terapkan ke Semua
           </button>
         </div>
@@ -256,7 +255,7 @@ function KecamatanGroup({ userId, name, kecamatan, kabupaten, submissions, onVal
           <button type="button" onClick={() => setExpanded((p) => !p)}
             className="flex items-center gap-3 flex-1 text-left hover:opacity-80">
             <div className="rounded-lg bg-sky-100 p-2">
-              <FontAwesomeIcon icon={faMapMarkerAlt} className="w-4 h-4 text-sky-600" />
+              <MapPin className="w-4 h-4 text-sky-600" />
             </div>
             <div>
               <p className="font-semibold text-gray-900">{kecamatan ?? name}</p>
@@ -267,12 +266,12 @@ function KecamatanGroup({ userId, name, kecamatan, kabupaten, submissions, onVal
                 {totalPending} menunggu
               </span>
             )}
-            <FontAwesomeIcon icon={expanded ? faChevronDown : faChevronRight} className="w-4 h-4 text-gray-400 ml-auto" />
+            <ChevronDown className={cn("w-4 h-4 text-gray-400 ml-auto transition-transform", !expanded && "rotate-180")} />
           </button>
           {totalPending > 0 && (
             <button type="button" onClick={() => setBulkOpen(true)}
               className="ml-4 flex items-center gap-2 rounded-lg bg-sky-600 px-3 py-2 text-xs font-medium text-white hover:bg-sky-700 shrink-0">
-              <FontAwesomeIcon icon={faCheckDouble} className="w-3.5 h-3.5" />
+              <CheckCheck className="w-3.5 h-3.5" />
               Validasi Semua ({totalPending})
             </button>
           )}
@@ -312,7 +311,7 @@ function CategorySection({ cat, onValidate }: {
         {pendingCount > 0 && (
           <span className="text-xs text-amber-600 font-medium">{pendingCount} menunggu</span>
         )}
-        <FontAwesomeIcon icon={expanded ? faChevronDown : faChevronRight} className="w-3.5 h-3.5 text-gray-400" />
+        {expanded ? <ChevronDown className="w-3.5 h-3.5 text-gray-400" /> : <ChevronRight className="w-3.5 h-3.5 text-gray-400" />}
       </button>
 
       {/* Indicators */}
@@ -382,7 +381,7 @@ function IndicatorRow({ submission: s, onValidate }: {
           {s.supportingDoc ? (
             <a href={s.supportingDoc} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1 text-sky-600 hover:underline">
-              <FontAwesomeIcon icon={faLink} className="w-3 h-3" /> Buka Dokumen
+              <LinkIcon className="w-3 h-3" /> Buka Dokumen
             </a>
           ) : (
             <p className="text-gray-400 italic">Tidak ada dokumen</p>
@@ -440,7 +439,7 @@ export function ValidationTable({ submissions, onValidated }: ValidationTablePro
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-        <FontAwesomeIcon icon={faExclamationCircle} className="w-4 h-4 shrink-0" />
+        <AlertCircle className="w-4 h-4 shrink-0" />
         <span>
           <strong>{totalPending}</strong> indikator menunggu validasi dari{' '}
           <strong>{groupList.length}</strong> kecamatan

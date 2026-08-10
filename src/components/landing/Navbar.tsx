@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Menu, X } from 'lucide-react'
@@ -59,16 +60,18 @@ export function Navbar() {
       >
         {/* Logo */}
         <div className="flex items-center justify-center gap-1 shrink-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src="/logo/logo-kota.png"
             alt="Logo Kota"
+            width={40}
+            height={40}
             className="h-10 w-auto object-contain"
           />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src="/logo/kecamatan-berdaya.png"
             alt="Klas Berdaya"
+            width={44}
+            height={44}
             className="h-11 w-auto object-contain translate-y-[1px]"
           />
         </div>

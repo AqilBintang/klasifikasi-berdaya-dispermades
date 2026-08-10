@@ -1,6 +1,5 @@
 import Link from 'next/link'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
+import { ArrowLeft } from 'lucide-react'
 import { CreateAssessmentForm } from '@/components/admin/CreateAssessmentForm'
 
 export default function CreateAssessmentNewPage() {
@@ -12,7 +11,7 @@ export default function CreateAssessmentNewPage() {
           href="/admin/assessment/create"
           className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors mb-3"
         >
-          <FontAwesomeIcon icon={faArrowLeft} className="w-3.5 h-3.5" />
+          <ArrowLeft className="w-3.5 h-3.5" />
           Kembali ke Daftar Assessment
         </Link>
         <h2 className="text-2xl font-bold text-gray-900">Buat Assessment Baru</h2>

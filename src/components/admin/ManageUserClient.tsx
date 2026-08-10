@@ -1,11 +1,10 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faPlus, faToggleOn, faToggleOff, faSpinner,
-  faCheckCircle, faTriangleExclamation, faUser, faShield, faUserGear,
-} from '@fortawesome/free-solid-svg-icons'
+  Plus, ToggleRight, ToggleLeft, Loader2,
+  CheckCircle, AlertTriangle, User, Shield, UserCog,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Pagination } from '@/components/shared/ui/Pagination'
 import type { KabKotaJateng, KecamatanJateng } from '@/types/wilayah'
@@ -23,9 +22,9 @@ interface UserRow {
 }
 
 const ROLE_CONFIG = {
-  ADMIN:     { label: 'Admin',     icon: faShield,   class: 'bg-red-100 text-red-700' },
-  VALIDATOR: { label: 'Validator', icon: faUserGear, class: 'bg-purple-100 text-purple-700' },
-  USER:      { label: 'User',      icon: faUser,     class: 'bg-blue-100 text-blue-700' },
+  ADMIN:     { label: 'Admin',     icon: Shield,   class: 'bg-red-100 text-red-700' },
+  VALIDATOR: { label: 'Validator', icon: UserCog, class: 'bg-purple-100 text-purple-700' },
+  USER:      { label: 'User',      icon: User,     class: 'bg-blue-100 text-blue-700' },
 }
 
 function AddUserModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
@@ -170,7 +169,7 @@ function AddUserModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
           </button>
           <button type="button" onClick={handleSubmit} disabled={saving}
             className="flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50">
-            {saving && <FontAwesomeIcon icon={faSpinner} className="w-3.5 h-3.5 animate-spin" />}
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             Simpan
           </button>
         </div>
@@ -241,7 +240,11 @@ export function ManageUserClient({ initialUsers }: { initialUsers: UserRow[] }) 
           'fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border px-4 py-3 shadow-lg text-sm',
           toast.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'
         )}>
-          <FontAwesomeIcon icon={toast.type === 'success' ? faCheckCircle : faTriangleExclamation} className="w-4 h-4 shrink-0" />
+          {toast.type === 'success' ? (
+            <CheckCircle className="w-4 h-4 shrink-0" />
+          ) : (
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+          )}
           {toast.message}
         </div>
       )}
@@ -254,7 +257,7 @@ export function ManageUserClient({ initialUsers }: { initialUsers: UserRow[] }) 
           onClick={() => setShowAdd(true)}
           className="flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700"
         >
-          <FontAwesomeIcon icon={faPlus} className="w-3.5 h-3.5" />
+          <Plus className="w-3.5 h-3.5" />
           Tambah User
         </button>
       </div>
@@ -296,7 +299,7 @@ export function ManageUserClient({ initialUsers }: { initialUsers: UserRow[] }) 
                     </td>
                     <td className="px-4 py-3">
                       <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium', roleCfg.class)}>
-                        <FontAwesomeIcon icon={roleCfg.icon} className="w-3 h-3" />
+                        <roleCfg.icon className="w-3 h-3" />
                         {roleCfg.label}
                       </span>
                     </td>
@@ -313,12 +316,11 @@ export function ManageUserClient({ initialUsers }: { initialUsers: UserRow[] }) 
                         className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
                       >
                         {toggling === u.id ? (
-                          <FontAwesomeIcon icon={faSpinner} className="w-5 h-5 animate-spin" />
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : u.isActive ? (
+                          <ToggleRight className={cn('w-6 h-6', 'text-green-500')} />
                         ) : (
-                          <FontAwesomeIcon
-                            icon={u.isActive ? faToggleOn : faToggleOff}
-                            className={cn('w-6 h-6', u.isActive ? 'text-green-500' : 'text-gray-300')}
-                          />
+                          <ToggleLeft className={cn('w-6 h-6', 'text-gray-300')} />
                         )}
                       </button>
                     </td>

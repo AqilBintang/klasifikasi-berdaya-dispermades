@@ -4,31 +4,21 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useState } from 'react'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faGauge,
-  faClipboardList,
-  faCirclePlus,
-  faCheckDouble,
-  faAward,
-  faChartBar,
-  faFileArrowDown,
-  faUsers,
-  faChevronDown,
-  faChevronRight,
-  faRightFromBracket,
-  faBook,
-  faPhotoFilm
-} from '@fortawesome/free-solid-svg-icons'
+  Gauge, ClipboardList, PlusCircle, CheckCheck, Award,
+  BarChart3, FileDown, Users, ChevronDown, ChevronRight,
+  LogOut, BookOpen, Film, type LucideIcon,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
+import Image from 'next/image'
 
 // ─── Nav config ───────────────────────────────────────────────────────────────
 
-const ASSESSMENT_ITEMS = [
-  { label: 'Create Assessment',       href: '/admin/assessment/create',     icon: faCirclePlus },
-  { label: 'Validation Assessment',   href: '/admin/assessment/validation',  icon: faCheckDouble },
-  { label: 'Rekapitulasi Assessment', href: '/admin/assessment/results',     icon: faAward },]
+const ASSESSMENT_ITEMS: { label: string; href: string; icon: LucideIcon }[] = [
+  { label: 'Create Assessment',       href: '/admin/assessment/create',     icon: PlusCircle },
+  { label: 'Validation Assessment',   href: '/admin/assessment/validation',  icon: CheckCheck },
+  { label: 'Rekapitulasi Assessment', href: '/admin/assessment/results',     icon: Award },]
 
 // ─── SidebarContent ───────────────────────────────────────────────────────────
 
@@ -48,10 +38,11 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
     <div className="flex h-full flex-col bg-gray-900 text-gray-100">
       {/* Brand */}
       <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-700/60">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src="/logo/logo-kota.png"
           alt="Logo"
+          width={32}
+          height={32}
           className="h-8 w-auto object-contain"
         />
         <div className="flex flex-col leading-tight">
@@ -77,7 +68,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
                   : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
               )}
             >
-              <FontAwesomeIcon icon={faGauge} className="w-4 h-4 shrink-0" />
+              <Gauge className="w-4 h-4 shrink-0" />
               <span>Dashboard</span>
             </Link>
           </li>
@@ -95,7 +86,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
                   : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
               )}
             >
-              <FontAwesomeIcon icon={faPhotoFilm} className="w-4 h-4 shrink-0" />
+              <Film className="w-4 h-4 shrink-0" />
               <span>Landing Page</span>
             </Link>
           </li>
@@ -113,7 +104,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
                   : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
               )}
             >
-              <FontAwesomeIcon icon={faBook} className="w-4 h-4 shrink-0" />
+              <BookOpen className="w-4 h-4 shrink-0" />
               <span>Panduan Rubrik</span>
             </Link>
           </li>
@@ -131,12 +122,12 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
               )}
               aria-expanded={assessmentOpen}
             >
-              <FontAwesomeIcon icon={faClipboardList} className="w-4 h-4 shrink-0" />
+              <ClipboardList className="w-4 h-4 shrink-0" />
               <span className="flex-1 text-left">Assessment</span>
-              <FontAwesomeIcon
-                icon={assessmentOpen ? faChevronDown : faChevronRight}
-                className="w-3 h-3 transition-transform duration-200"
-              />
+              {assessmentOpen
+                ? <ChevronDown className="w-3 h-3 transition-transform duration-200" />
+                : <ChevronRight className="w-3 h-3 transition-transform duration-200" />
+              }
             </button>
 
             {/* Sub-items */}
@@ -155,7 +146,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
                           : 'text-gray-400 hover:text-gray-100'
                       )}
                     >
-                      <FontAwesomeIcon icon={item.icon} className="w-3.5 h-3.5 shrink-0" />
+                      <item.icon className="w-3.5 h-3.5 shrink-0" />
                       <span>{item.label}</span>
                     </Link>
                   </li>
@@ -177,7 +168,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
                   : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
               )}
             >
-              <FontAwesomeIcon icon={faChartBar} className="w-4 h-4 shrink-0" />
+              <BarChart3 className="w-4 h-4 shrink-0" />
               <span>Klasifikasi Berdaya</span>
             </Link>
           </li>
@@ -194,7 +185,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
                   : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
               )}
             >
-              <FontAwesomeIcon icon={faFileArrowDown} className="w-4 h-4 shrink-0" />
+              <FileDown className="w-4 h-4 shrink-0" />
               <span>Backup & Export</span>
             </Link>
           </li>
@@ -212,7 +203,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
                   : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
               )}
             >
-              <FontAwesomeIcon icon={faUsers} className="w-4 h-4 shrink-0" />
+              <Users className="w-4 h-4 shrink-0" />
               <span>Manage User</span>
             </Link>
           </li>
@@ -227,7 +218,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
           onClick={() => signOut({ callbackUrl: '/login' })}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-gray-100 transition-colors"
         >
-          <FontAwesomeIcon icon={faRightFromBracket} className="w-4 h-4 shrink-0" />
+          <LogOut className="w-4 h-4 shrink-0" />
           <span>Logout</span>
         </button>
       </div>

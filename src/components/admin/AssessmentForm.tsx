@@ -1,16 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faFloppyDisk,
-  faPaperPlane,
-  faUpload,
-  faCircleInfo,
-  faSpinner,
-  faCheckCircle,
-  faTriangleExclamation,
-} from '@fortawesome/free-solid-svg-icons'
+  Save,
+  Send,
+  Upload,
+  Info,
+  Loader2,
+  CheckCircle,
+  AlertTriangle,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -166,7 +165,7 @@ export function AssessmentForm({ categories, submittedById, periode }: Assessmen
     <div className="space-y-8">
       {/* Info periode */}
       <div className="flex items-center gap-2 rounded-lg bg-sky-50 border border-sky-200 px-4 py-3 text-sm text-sky-800">
-        <FontAwesomeIcon icon={faCircleInfo} className="w-4 h-4 shrink-0" />
+        <Info className="w-4 h-4 shrink-0" />
         <span>Periode Assessment: <strong>{periode}</strong> · Diisi oleh User ID: {submittedById}</span>
       </div>
 
@@ -178,10 +177,11 @@ export function AssessmentForm({ categories, submittedById, periode }: Assessmen
             ? 'bg-green-50 border-green-200 text-green-800'
             : 'bg-red-50 border-red-200 text-red-800'
         )}>
-          <FontAwesomeIcon
-            icon={result.type === 'success' ? faCheckCircle : faTriangleExclamation}
-            className="w-4 h-4 mt-0.5 shrink-0"
-          />
+          {result.type === 'success' ? (
+            <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" />
+          ) : (
+            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+          )}
           <span>{result.message}</span>
         </div>
       )}
@@ -212,7 +212,7 @@ export function AssessmentForm({ categories, submittedById, periode }: Assessmen
                   </th>
                   <th className="w-48 px-4 py-3 text-left font-semibold text-gray-700">
                     <span className="flex items-center gap-1">
-                      <FontAwesomeIcon icon={faUpload} className="w-3 h-3" />
+                      <Upload className="w-3 h-3" />
                       Dokumen Pendukung
                     </span>
                   </th>
@@ -290,9 +290,9 @@ export function AssessmentForm({ categories, submittedById, periode }: Assessmen
           className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
         >
           {submitting && submitType === 'draft' ? (
-            <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
-            <FontAwesomeIcon icon={faFloppyDisk} className="w-4 h-4" />
+            <Save className="w-4 h-4" />
           )}
           Simpan Draft
         </button>
@@ -303,9 +303,9 @@ export function AssessmentForm({ categories, submittedById, periode }: Assessmen
           className="flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-sky-700 transition-colors disabled:opacity-50"
         >
           {submitting && submitType === 'submit' ? (
-            <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
-            <FontAwesomeIcon icon={faPaperPlane} className="w-4 h-4" />
+            <Send className="w-4 h-4" />
           )}
           Submit Assessment
         </button>

@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCheckCircle, faTriangleExclamation, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { CheckCircle, AlertTriangle, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -38,10 +37,10 @@ export const toast = {
 
 // ─── Toast item ───────────────────────────────────────────────────────────────
 
-const CONFIG: Record<ToastType, { icon: typeof faCheckCircle; bg: string; border: string; text: string }> = {
-  success: { icon: faCheckCircle,        bg: 'bg-green-50',  border: 'border-green-200', text: 'text-green-800' },
-  error:   { icon: faTriangleExclamation, bg: 'bg-red-50',    border: 'border-red-200',   text: 'text-red-800'   },
-  warning: { icon: faTriangleExclamation, bg: 'bg-amber-50',  border: 'border-amber-200', text: 'text-amber-800' },
+const CONFIG: Record<ToastType, { Icon: typeof CheckCircle; bg: string; border: string; text: string }> = {
+  success: { Icon: CheckCircle,    bg: 'bg-green-50',  border: 'border-green-200', text: 'text-green-800' },
+  error:   { Icon: AlertTriangle,  bg: 'bg-red-50',    border: 'border-red-200',   text: 'text-red-800'   },
+  warning: { Icon: AlertTriangle,  bg: 'bg-amber-50',  border: 'border-amber-200', text: 'text-amber-800' },
 }
 
 function ToastItem({ toast: t, onDismiss }: { toast: Toast; onDismiss: (id: number) => void }) {
@@ -63,7 +62,7 @@ function ToastItem({ toast: t, onDismiss }: { toast: Toast; onDismiss: (id: numb
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
       )}
     >
-      <FontAwesomeIcon icon={cfg.icon} className="w-4 h-4 mt-0.5 shrink-0" />
+      <cfg.Icon className="w-4 h-4 mt-0.5 shrink-0" />
       <span className="flex-1 leading-snug">{t.message}</span>
       <button
         type="button"
@@ -71,7 +70,7 @@ function ToastItem({ toast: t, onDismiss }: { toast: Toast; onDismiss: (id: numb
         className="shrink-0 opacity-50 hover:opacity-100 transition-opacity"
         aria-label="Tutup notifikasi"
       >
-        <FontAwesomeIcon icon={faXmark} className="w-3.5 h-3.5" />
+        <X className="w-3.5 h-3.5" />
       </button>
     </div>
   )

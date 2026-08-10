@@ -1,8 +1,7 @@
 'use client'
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCalendarDays } from '@fortawesome/free-solid-svg-icons'
+import { Calendar } from 'lucide-react'
 
 interface YearFilterProps {
   years: string[]
@@ -26,7 +25,7 @@ export function YearFilter({ years, selected }: YearFilterProps) {
 
   return (
     <div className="flex items-center gap-2">
-      <FontAwesomeIcon icon={faCalendarDays} className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+      <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
       <select
         value={selected ?? ''}
         onChange={(e) => onChange(e.target.value)}

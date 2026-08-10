@@ -1,7 +1,6 @@
 'use client'
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBars } from '@fortawesome/free-solid-svg-icons'
+import { Menu } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 interface KecamatanHeaderProps {
@@ -34,7 +33,7 @@ export function KecamatanHeader({
             aria-label="Buka menu navigasi"
             onClick={onMenuToggle}
           >
-            <FontAwesomeIcon icon={faBars} className="w-5 h-5" />
+            <Menu className="w-5 h-5" />
           </button>
           <h1 className="text-lg font-bold text-gray-800">{pageTitle}</h1>
         </div>

@@ -4,8 +4,8 @@ import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { signIn, signOut, getSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSpinner, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
+import { Loader2, Eye, EyeOff } from 'lucide-react'
+import Image from 'next/image'
 
 function LoginForm() {
   const router = useRouter()
@@ -90,7 +90,7 @@ function LoginForm() {
             className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             aria-label={showPw ? 'Sembunyikan password' : 'Tampilkan password'}
           >
-            <FontAwesomeIcon icon={showPw ? faEyeSlash : faEye} className="w-4 h-4" />
+            {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
       </div>
@@ -116,7 +116,7 @@ function LoginForm() {
         disabled={loading}
         className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 py-3 text-sm font-semibold text-white hover:bg-sky-700 transition-colors disabled:opacity-60"
       >
-        {loading && <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin" />}
+        {loading && <Loader2 className="w-4 h-4 animate-spin" />}
         {loading ? 'Masuk...' : 'Masuk'}
       </button>
     </form>
@@ -130,12 +130,10 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 mb-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo/logo-kota.png" alt="Logo" className="h-12 w-auto object-contain" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo/kecamatan-berdaya.png" alt="Klas Berdaya" className="h-12 w-auto object-contain" />
+            <Image src="/logo/logo-kota.png" alt="Logo" width={48} height={48} className="h-12 w-auto object-contain" />
+            <Image src="/logo/kecamatan-berdaya.png" alt="Klas Berdaya" width={48} height={48} className="h-12 w-auto object-contain" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Portal Kecamatan</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Portal Kecamatan Klas Berdaya</h1>
           <p className="mt-1 text-sm text-gray-500">
             Halaman kecamatan
           </p>

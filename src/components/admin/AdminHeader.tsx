@@ -2,13 +2,12 @@
 
 import Link from 'next/link'
 import { signOut } from 'next-auth/react'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faBars,
-  faBell,
-  faUser,
-  faRightFromBracket,
-} from '@fortawesome/free-solid-svg-icons'
+  Menu,
+  Bell,
+  User,
+  LogOut,
+} from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,

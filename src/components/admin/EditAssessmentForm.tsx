@@ -2,18 +2,17 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faPlus,
-  faTrash,
-  faFloppyDisk,
-  faSpinner,
-  faCheckCircle,
-  faTriangleExclamation,
-  faFolderPlus,
-  faGripVertical,
-  faBoxArchive,
-} from '@fortawesome/free-solid-svg-icons'
+  Plus,
+  Trash2,
+  Save,
+  Loader2,
+  CheckCircle,
+  AlertTriangle,
+  FolderPlus,
+  GripVertical,
+  Archive,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface IndicatorRow {
@@ -195,7 +194,7 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
           'flex items-start gap-3 rounded-lg border px-4 py-3 text-sm',
           result.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'
         )}>
-          <FontAwesomeIcon icon={result.type === 'success' ? faCheckCircle : faTriangleExclamation} className="w-4 h-4 mt-0.5 shrink-0" />
+          {result.type === 'success' ? <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" /> : <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />}
           <span>{result.message}</span>
         </div>
       )}
@@ -203,7 +202,7 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
       {/* Info dasar */}
       <div className="rounded-xl border bg-white p-6 shadow-sm space-y-4">
         <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-          <FontAwesomeIcon icon={faGripVertical} className="w-4 h-4 text-gray-400" />
+          <GripVertical className="w-4 h-4 text-gray-400" />
           Informasi Assessment
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -250,7 +249,7 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
             </div>
             <button type="button" onClick={() => removeCategory(cat.tempId)} disabled={categories.length === 1 || isLocked}
               className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed">
-              <FontAwesomeIcon icon={faTrash} className="w-3 h-3" /> Hapus
+              <Trash2 className="w-3 h-3" /> Hapus
             </button>
           </div>
           <div className="px-6 py-4 space-y-3">
@@ -269,14 +268,14 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
                 <button type="button" onClick={() => removeIndicator(cat.tempId, ind.tempId)}
                   disabled={cat.indicators.length === 1 || isLocked}
                   className="mt-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed">
-                  <FontAwesomeIcon icon={faTrash} className="w-3.5 h-3.5" />
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             ))}
             <button type="button" onClick={() => addIndicator(cat.tempId)}
               disabled={isLocked}
               className="mt-1 flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-sky-400 hover:text-sky-600 w-full justify-center disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:text-gray-500">
-              <FontAwesomeIcon icon={faPlus} className="w-3.5 h-3.5" /> Tambah Indikator
+              <Plus className="w-3.5 h-3.5" /> Tambah Indikator
             </button>
           </div>
         </div>
@@ -285,7 +284,7 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
       {!isLocked && (
         <button type="button" onClick={addCategory}
           className="flex items-center gap-2 rounded-xl border-2 border-dashed border-gray-300 px-6 py-4 text-sm font-medium text-gray-500 hover:border-sky-400 hover:text-sky-600 w-full justify-center">
-          <FontAwesomeIcon icon={faFolderPlus} className="w-4 h-4" /> Tambah Kategori Baru
+          <FolderPlus className="w-4 h-4" /> Tambah Kategori Baru
         </button>
       )}
 
@@ -294,12 +293,12 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
           {status === 'PUBLISHED' && (
             <button type="button" onClick={() => { setStatus('ARCHIVED') }}
               className="flex items-center gap-2 rounded-lg border border-amber-300 px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 mr-auto">
-              <FontAwesomeIcon icon={faBoxArchive} className="w-3.5 h-3.5" /> Archive
+              <Archive className="w-3.5 h-3.5" /> Archive
             </button>
           )}
           <button type="button" disabled={saving} onClick={handleSave}
             className="flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50">
-            {saving ? <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin" /> : <FontAwesomeIcon icon={faFloppyDisk} className="w-4 h-4" />}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Simpan Perubahan
           </button>
         </div>

@@ -3,11 +3,10 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faPlus, faClipboardList, faCheckCircle,
-  faCircleDot, faBoxArchive, faPencil, faCopy,
-} from '@fortawesome/free-solid-svg-icons'
+  Plus, ClipboardList, CheckCircle,
+  Circle, Archive, Pencil, Copy,
+} from 'lucide-react'
 import { Loader2, X } from 'lucide-react'
 import { Pagination } from '@/components/shared/ui/Pagination'
 import { cn } from '@/lib/utils'
@@ -28,9 +27,9 @@ interface AssessmentItem {
 }
 
 const STATUS_CONFIG = {
-  DRAFT:     { label: 'Draft',     icon: faCircleDot,   class: 'bg-gray-100 text-gray-600' },
-  PUBLISHED: { label: 'Published', icon: faCheckCircle, class: 'bg-green-100 text-green-700' },
-  ARCHIVED:  { label: 'Archived',  icon: faBoxArchive,  class: 'bg-amber-100 text-amber-700' },
+  DRAFT:     { label: 'Draft',     icon: Circle,   class: 'bg-gray-100 text-gray-600' },
+  PUBLISHED: { label: 'Published', icon: CheckCircle, class: 'bg-green-100 text-green-700' },
+  ARCHIVED:  { label: 'Archived',  icon: Archive,  class: 'bg-amber-100 text-amber-700' },
 }
 
 const PAGE_SIZE = 9
@@ -137,7 +136,7 @@ function DuplicateModal({ assessment, onClose, onSuccess }: DuplicateModalProps)
                 loading ? 'bg-sky-400 cursor-not-allowed' : 'bg-sky-600 hover:bg-sky-700'
               )}
             >
-              {loading ? <Loader2 className="size-4 animate-spin" /> : <FontAwesomeIcon icon={faCopy} className="w-3.5 h-3.5" />}
+              {loading ? <Loader2 className="size-4 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
               {loading ? 'Menduplikat…' : 'Duplikat'}
             </button>
           </div>
@@ -165,14 +164,14 @@ export function AssessmentListClient({ assessments }: { assessments: AssessmentI
   if (assessments.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white py-16 text-center">
-        <FontAwesomeIcon icon={faClipboardList} className="w-12 h-12 text-gray-300 mb-4" />
+        <ClipboardList className="w-12 h-12 text-gray-300 mb-4" />
         <p className="text-gray-500 font-medium">Belum ada assessment</p>
         <p className="mt-1 text-sm text-gray-400">Buat assessment baru untuk mulai mengelola penilaian desa</p>
         <Link
           href="/admin/assessment/create"
           className="mt-4 flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 transition-colors"
         >
-          <FontAwesomeIcon icon={faPlus} className="w-3.5 h-3.5" />
+          <Plus className="w-3.5 h-3.5" />
           Buat Assessment Pertama
         </Link>
       </div>
@@ -193,7 +192,7 @@ export function AssessmentListClient({ assessments }: { assessments: AssessmentI
               {/* Status badge */}
               <div className="flex items-center justify-between mb-3">
                 <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${statusCfg.class}`}>
-                  <FontAwesomeIcon icon={statusCfg.icon} className="w-3 h-3" />
+                  <statusCfg.icon className="w-3 h-3" />
                   {statusCfg.label}
                 </span>
                 <span className="text-xs text-gray-400">Periode: {a.periode}</span>
@@ -218,7 +217,7 @@ export function AssessmentListClient({ assessments }: { assessments: AssessmentI
                   href={`/admin/assessment/${a.id}`}
                   className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
                 >
-                  <FontAwesomeIcon icon={faPencil} className="w-3 h-3" />
+                  <Pencil className="w-3 h-3" />
                   Detail / Edit
                 </Link>
                 <button
@@ -227,7 +226,7 @@ export function AssessmentListClient({ assessments }: { assessments: AssessmentI
                   className="flex items-center justify-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-700 hover:bg-sky-100 transition-colors"
                   title="Duplikat assessment ini"
                 >
-                  <FontAwesomeIcon icon={faCopy} className="w-3 h-3" />
+                  <Copy className="w-3 h-3" />
                   Duplikat
                 </button>
               </div>

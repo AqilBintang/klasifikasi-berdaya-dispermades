@@ -2,12 +2,11 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faFloppyDisk, faPaperPlane, faSpinner,
-  faCheckCircle, faTriangleExclamation, faUpload,
-  faCloudArrowUp, faCircleCheck,
-} from '@fortawesome/free-solid-svg-icons'
+  Save, Send, Loader2,
+  CheckCircle, AlertTriangle, Upload,
+  CloudUpload, CheckCircle2,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUnsavedWarning } from '@/hooks/useUnsavedWarning'
 
@@ -210,7 +209,7 @@ export function KecamatanAssessmentForm({ assessment, existingEntries, submitted
       {/* Status bar: submitted / auto-save indicator */}
       {allSubmitted ? (
         <div className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
-          <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4" />
+          <CheckCircle className="w-4 h-4" />
           Assessment sudah disubmit dan sedang menunggu validasi.
         </div>
       ) : (
@@ -218,18 +217,18 @@ export function KecamatanAssessmentForm({ assessment, existingEntries, submitted
           <span>Perubahan akan otomatis disimpan sebagai draft dalam 2 detik.</span>
           <span className="flex items-center gap-1.5 font-medium">
             {autoSave === 'saving' && (
-              <><FontAwesomeIcon icon={faSpinner} className="w-3 h-3 animate-spin" /> Menyimpan...</>
+              <><Loader2 className="w-3 h-3 animate-spin" /> Menyimpan...</>
             )}
             {autoSave === 'saved' && (
-              <><FontAwesomeIcon icon={faCircleCheck} className="w-3 h-3 text-green-600" />
+              <><CheckCircle2 className="w-3 h-3 text-green-600" />
               <span className="text-green-700">Tersimpan otomatis</span></>
             )}
             {autoSave === 'error' && (
-              <><FontAwesomeIcon icon={faTriangleExclamation} className="w-3 h-3 text-red-500" />
+              <><AlertTriangle className="w-3 h-3 text-red-500" />
               <span className="text-red-600">Auto-save gagal</span></>
             )}
             {autoSave === 'idle' && isDirty && (
-              <><FontAwesomeIcon icon={faCloudArrowUp} className="w-3 h-3 text-sky-500" />
+              <><CloudUpload className="w-3 h-3 text-sky-500" />
               <span>Ada perubahan belum disimpan</span></>
             )}
           </span>
@@ -242,7 +241,7 @@ export function KecamatanAssessmentForm({ assessment, existingEntries, submitted
           'flex items-start gap-3 rounded-lg border px-4 py-3 text-sm',
           result.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'
         )}>
-          <FontAwesomeIcon icon={result.type === 'success' ? faCheckCircle : faTriangleExclamation} className="w-4 h-4 mt-0.5 shrink-0" />
+          {result.type === 'success' ? <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" /> : <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />}
           {result.message}
         </div>
       )}
@@ -263,7 +262,7 @@ export function KecamatanAssessmentForm({ assessment, existingEntries, submitted
                   <th className="w-20 px-4 py-3 text-center">Skor</th>
                   <th className="w-44 px-4 py-3 text-left">
                     <span className="flex items-center gap-1">
-                      <FontAwesomeIcon icon={faUpload} className="w-3 h-3" /> Dokumen
+                      <Upload className="w-3 h-3" /> Dokumen
                     </span>
                   </th>
                 </tr>
@@ -333,15 +332,15 @@ export function KecamatanAssessmentForm({ assessment, existingEntries, submitted
           <button type="button" disabled={submitting} onClick={() => handleSave('DRAFT')}
             className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
             {submitting && submitType === 'draft'
-              ? <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin" />
-              : <FontAwesomeIcon icon={faFloppyDisk} className="w-4 h-4" />}
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <Save className="w-4 h-4" />}
             Simpan Draft
           </button>
           <button type="button" disabled={submitting} onClick={() => handleSave('SUBMITTED')}
             className="flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50">
             {submitting && submitType === 'submit'
-              ? <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin" />
-              : <FontAwesomeIcon icon={faPaperPlane} className="w-4 h-4" />}
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <Send className="w-4 h-4" />}
             Submit Assessment
           </button>
         </div>

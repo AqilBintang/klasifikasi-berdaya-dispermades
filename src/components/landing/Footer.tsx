@@ -1,10 +1,6 @@
 import Link from 'next/link'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-  faLocationDot,
-  faPhone,
-  faEnvelope,
-} from '@fortawesome/free-solid-svg-icons'
+import Image from 'next/image'
+import { MapPin, Phone, Mail } from 'lucide-react'
 
 const NAV_LINKS = [
   { label: 'Home',            href: '/home' },
@@ -29,17 +25,19 @@ export function Footer() {
             href="/dashboard"
             className="inline-flex w-fit items-center gap-1 rounded-xl border border-white/20 bg-white p-2 shadow-lg shadow-black/10"
             >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                 src="/logo/logo-kota.png"
                 alt="Logo Kota"
+                width={40}
+                height={40}
                 className="h-10 w-auto object-contain"
                 />
 
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                 src="/logo/kecamatan-berdaya.png"
                 alt="Klas Berdaya"
+                width={40}
+                height={40}
                 className="h-10 w-auto object-contain translate-y-[1px]"
                 />
             </Link>
@@ -76,15 +74,15 @@ export function Footer() {
             </h3>
             <ul className="flex flex-col gap-3 text-sm text-gray-400">
               <li className="flex items-start gap-2">
-                <FontAwesomeIcon icon={faLocationDot} className="mt-1 w-4 shrink-0 text-gray-500" />
+                <MapPin className="mt-1 w-4 shrink-0 text-gray-500" />
                 <span>Jl. Pemuda No. 148, Semarang, Jawa Tengah 50132</span>
               </li>
               <li className="flex items-center gap-2">
-                <FontAwesomeIcon icon={faPhone} className="w-4 shrink-0 text-gray-500" />
+                <Phone className="w-4 shrink-0 text-gray-500" />
                 <span>(024) 1234-5678</span>
               </li>
               <li className="flex items-center gap-2">
-                <FontAwesomeIcon icon={faEnvelope} className="w-4 shrink-0 text-gray-500" />
+                <Mail className="w-4 shrink-0 text-gray-500" />
                 <a
                   href="mailto:info@klasberdaya.id"
                   className="hover:text-white transition-colors"
