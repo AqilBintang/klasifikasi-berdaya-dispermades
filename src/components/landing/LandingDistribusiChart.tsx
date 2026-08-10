@@ -19,10 +19,10 @@ export type SkorPerTahunRow = {
 
 // Warna muted — tidak terlalu terang, harmonis
 const LEVELS = [
-  { key: 'berdaya',    label: 'Berdaya',    color: '#4ade80', muted: '#86efac' },
-  { key: 'maju',       label: 'Maju',       color: '#60a5fa', muted: '#93c5fd' },
-  { key: 'berkembang', label: 'Berkembang', color: '#fbbf24', muted: '#fde68a' },
   { key: 'rintisan',   label: 'Rintisan',   color: '#f87171', muted: '#fca5a5' },
+  { key: 'berkembang', label: 'Berkembang', color: '#fbbf24', muted: '#fde68a' },
+  { key: 'maju',       label: 'Maju',       color: '#60a5fa', muted: '#93c5fd' },
+  { key: 'berdaya',    label: 'Berdaya',    color: '#4ade80', muted: '#86efac' },
 ] as const
 
 const STATUS_COLOR: Record<string, string> = {
