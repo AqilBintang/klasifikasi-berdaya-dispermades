@@ -91,7 +91,7 @@ export default async function LandingPage() {
     <div>
       {/* ── ① HERO ─────────────────────────────────────────────────────────── */}
       <section
-        className="relative flex items-center justify-center"
+        className="sticky top-0 flex items-center justify-center"
         style={{
           minHeight: '100svh',
           backgroundImage: 'url(/hero/hero.jpg)',
@@ -103,39 +103,37 @@ export default async function LandingPage() {
       >
         <div className="absolute inset-0 bg-black/55" aria-hidden="true" />
 
-        <div className="relative z-10 w-full max-w-4xl px-6 flex flex-col items-center gap-8">
-          <div className="w-full">
-            <InfoBanner slides={bannerSlides} />
-          </div>
-
-          <div className="w-full text-center text-white">
-            <h1 className="text-3xl md:text-5xl font-bold tracking-tight leading-tight drop-shadow-lg">
+        <div className="relative z-10 w-full max-w-6xl px-1 flex flex-col md:flex-row items-center gap-10 md:gap-16">
+          {/* Caption — kiri */}
+          <div className="flex-1 flex flex-col items-start gap-6 text-white">
+            <h1 className="text-3xl md:text-5xl font-normal tracking-tight leading-tight drop-shadow-lg">
               Klasifikasi Indeks<br />Kecamatan Berdaya
             </h1>
-            <p className="mt-4 text-base md:text-lg text-white/80 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-base md:text-lg font-normal text-white/80 leading-relaxed">
               Platform penilaian mandiri kecamatan untuk mengukur kapasitas dan
               potensi pemberdayaan wilayah di Jawa Tengah.
             </p>
+            <a
+              href="#data"
+              className="inline-flex items-center gap-2 rounded-full bg-white/20 border border-white/30 px-6 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/30"
+              aria-label="Lihat data klasifikasi"
+            >
+              Lihat Data Klasifikasi
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </a>
           </div>
 
-          <a
-            href="#data"
-            className="inline-flex items-center gap-2 rounded-full bg-white/20 border border-white/30 px-6 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/30"
-            aria-label="Lihat data klasifikasi"
-          >
-            Lihat Data Klasifikasi
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </a>
-        </div>
-
-        <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-none">
-          <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-16 md:h-20 block">
-            <path d="M0,40 C360,0 1080,80 1440,40 L1440,80 L0,80 Z" fill="oklch(88.87% 0.0568 219.092)" />
-          </svg>
+          {/* Banner — kanan */}
+          <div className="w-full md:w-[480px] shrink-0">
+            <InfoBanner slides={bannerSlides} />
+          </div>
         </div>
       </section>
+
+      {/* ── sections below overlay the sticky hero ─────────────────────── */}
+      <div className="relative z-10">
 
       {/* ── ② STAT CARDS ──────────────────────────────────────────────────── */}
       <section aria-label="Statistik ringkas" style={{ backgroundColor: 'oklch(88.87% 0.0568 219.092)' }}>
@@ -273,6 +271,8 @@ export default async function LandingPage() {
           />
         </div>
       </section>
+
+      </div>{/* end sticky overlay wrapper */}
     </div>
   )
 }
