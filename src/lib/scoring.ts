@@ -3,6 +3,23 @@
  * Formula weighted: A*0.31 + B*0.255 + C*0.16 + D*0.22 + E*0.01 + F*0.045
  * Threshold: ≤14.41 (Rintisan), ≤29.13 (Berkembang), ≤43.23 (Maju), ≥43.24 (Berdaya)
  */
+import type { ScoringRule } from '@/types/assessment'
+
+export type { ScoringRule }
+
+/**
+ * Evaluasi skor kategori berdasarkan scoringRule kustom.
+ * Entry diurutkan dari kecil ke besar; entry tanpa max = fallback.
+ * Mengembalikan label string, bukan KlasifikasiLevel (bisa bebas).
+ */
+export function evaluateScoringRule(score: number, rule: ScoringRule): string | null {
+  if (!rule || rule.length === 0) return null
+  // Cari entry pertama dengan max >= score, atau fallback (tanpa max)
+  for (const entry of rule) {
+    if (entry.max === undefined || score <= entry.max) return entry.label
+  }
+  return null
+}
 export type KlasifikasiLevel = 'Rintisan' | 'Berkembang' | 'Maju' | 'Berdaya'
 
 // Bobot per kategori untuk weighted scoring

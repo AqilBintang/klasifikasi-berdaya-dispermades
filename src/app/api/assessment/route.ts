@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
+
+const scoringRuleEntrySchema = z.object({
+  max:   z.number().int().min(0).optional(), // undefined = fallback/else
+  label: z.string().min(1).max(100).trim(),
+})
 
 const indicatorSchema = z.object({
   number:    z.number().int().positive(),
@@ -14,6 +20,7 @@ const categorySchema = z.object({
   name:        z.string().min(1).max(255).trim(),
   description: z.string().max(2000).trim().optional(),
   order:       z.number().int().min(0).default(0),
+  scoringRule: z.array(scoringRuleEntrySchema).optional().nullable(),
   indicators:  z.array(indicatorSchema).min(1),
 })
 
@@ -93,6 +100,7 @@ export async function POST(req: NextRequest) {
               name: cat.name,
               description: cat.description,
               order: cat.order,
+              scoringRule: cat.scoringRule ?? Prisma.JsonNull,
               indicators: {
                 create: cat.indicators.map((ind) => ({
                   number: ind.number,

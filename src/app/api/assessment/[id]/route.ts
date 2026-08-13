@@ -4,7 +4,7 @@ import { auth } from '@/auth'
 import { z } from 'zod'
 import { createAssessmentVersion, type AssessmentUpdateChanges } from '@/lib/assessment-versioning'
 import { assessmentMigrationService } from '@/lib/assessment-migration'
-import { IndicatorChangeType } from '@prisma/client'
+import { IndicatorChangeType, Prisma } from '@prisma/client'
 
 const indicatorSchema = z.object({
   id:        z.number().int().positive().optional(),  // ada jika existing
@@ -13,12 +13,18 @@ const indicatorSchema = z.object({
   maxScore:  z.number().int().min(1).max(10).default(4),
 })
 
+const scoringRuleEntrySchema = z.object({
+  max:   z.number().int().min(0).optional(),
+  label: z.string().min(1).max(100).trim(),
+})
+
 const categorySchema = z.object({
   id:          z.number().int().positive().optional(),
   code:        z.string().min(1).max(10).trim().toUpperCase(),
   name:        z.string().min(1).max(255).trim(),
   description: z.string().max(2000).trim().optional().nullable(),
   order:       z.number().int().min(0).default(0),
+  scoringRule: z.array(scoringRuleEntrySchema).optional().nullable(),
   indicators:  z.array(indicatorSchema).min(1),
 })
 
@@ -170,6 +176,7 @@ async function handleAssessmentUpdateWithMigration(
             name: cat.name,
             description: cat.description ?? null,
             order: cat.order,
+            scoringRule: cat.scoringRule ?? Prisma.JsonNull,
           })),
         })
 
@@ -327,6 +334,7 @@ export async function PATCH(
             name: cat.name,
             description: cat.description ?? null,
             order: cat.order,
+            scoringRule: cat.scoringRule ?? Prisma.JsonNull,
           })),
         })
 

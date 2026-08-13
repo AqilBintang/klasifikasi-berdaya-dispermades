@@ -380,8 +380,8 @@ export function KecamatanAssessmentForm({
                           )}
                         >
                           <option value="">-</option>
-                          {Array.from({ length: ind.maxScore + 1 }, (_, i) => (
-                            <option key={i} value={i}>{i}</option>
+                          {Array.from({ length: ind.maxScore }, (_, i) => (
+                            <option key={i + 1} value={i + 1}>{i + 1}</option>
                           ))}
                         </select>
                         <p className="text-xs text-gray-400 mt-0.5">/{ind.maxScore}</p>

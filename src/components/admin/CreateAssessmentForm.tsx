@@ -5,15 +5,21 @@ import { useRouter } from 'next/navigation'
 import {
   Plus, Trash2, Loader2,
   AlertTriangle, FolderPlus,
-  ArrowRight, ArrowLeft, Eye, Shield,
+  ArrowRight, ArrowLeft, Eye, Shield, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from '@/components/ui/toast'
+import type { ScoringRuleEntry } from '@/types/assessment'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface IndicatorRow { tempId: string; number: number; indicator: string; maxScore: number }
-interface CategoryBlock { tempId: string; code: string; name: string; description: string; order: number; indicators: IndicatorRow[] }
+interface CategoryBlock {
+  tempId: string; code: string; name: string; description: string; order: number
+  indicators: IndicatorRow[]
+  scoringRule: ScoringRuleEntry[]
+  showScoringRule: boolean
+}
 
 let tempCounter = 0
 const uid = () => `tmp_${++tempCounter}`
@@ -21,6 +27,8 @@ const newIndicator = (n: number): IndicatorRow => ({ tempId: uid(), number: n, i
 const newCategory  = (order: number): CategoryBlock => ({
   tempId: uid(), code: String.fromCharCode(65 + order), name: '', description: '', order,
   indicators: [newIndicator(1)],
+  scoringRule: [],
+  showScoringRule: false,
 })
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
@@ -100,6 +108,81 @@ function IndicatorRows({ indicators, catTempId, onChange, onAdd, onRemove }: {
   )
 }
 
+// ─── Scoring Rule Editor ──────────────────────────────────────────────────────
+
+function ScoringRuleEditor({ rules, onChange }: {
+  rules: ScoringRuleEntry[]
+  onChange: (rules: ScoringRuleEntry[]) => void
+}) {
+  const updateRule = (idx: number, field: keyof ScoringRuleEntry, value: string) => {
+    const next = rules.map((r, i) => {
+      if (i !== idx) return r
+      if (field === 'max') {
+        const n = parseInt(value, 10)
+        return { ...r, max: isNaN(n) ? undefined : n }
+      }
+      return { ...r, label: value }
+    })
+    onChange(next)
+  }
+
+  const addRule    = () => onChange([...rules, { label: '' }])
+  const removeRule = (idx: number) => onChange(rules.filter((_, i) => i !== idx))
+
+  return (
+    <div className="mt-4 rounded-lg border border-dashed border-amber-300 bg-amber-50/50 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="text-xs font-semibold text-amber-800">Aturan Penilaian Kategori</p>
+          <p className="text-xs text-amber-600 mt-0.5">
+            Tentukan label klasifikasi berdasarkan total skor. Baris terakhir tanpa batas maks = fallback.
+          </p>
+        </div>
+      </div>
+
+      {rules.length > 0 && (
+        <div className="mb-2">
+          <div className="grid grid-cols-[80px_1fr_32px] gap-2 px-1 mb-1">
+            <span className="text-xs text-gray-400 font-medium">Skor maks</span>
+            <span className="text-xs text-gray-400 font-medium">Label klasifikasi</span>
+            <span />
+          </div>
+          <div className="flex flex-col gap-2">
+            {rules.map((rule, idx) => (
+              <div key={idx} className="grid grid-cols-[80px_1fr_32px] gap-2 items-center">
+                <input
+                  type="number" min={0}
+                  value={rule.max ?? ''}
+                  onChange={(e) => updateRule(idx, 'max', e.target.value)}
+                  placeholder="—"
+                  className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-center focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/20"
+                />
+                <input
+                  type="text"
+                  value={rule.label}
+                  onChange={(e) => updateRule(idx, 'label', e.target.value)}
+                  placeholder={idx === rules.length - 1 ? 'contoh: Berdaya (fallback)' : 'contoh: Rintisan'}
+                  maxLength={100}
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/20"
+                />
+                <button type="button" onClick={() => removeRule(idx)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <button type="button" onClick={addRule}
+        className="flex items-center gap-1.5 text-xs text-amber-700 hover:text-amber-900 transition-colors">
+        <Plus className="w-3 h-3" /> Tambah threshold
+      </button>
+    </div>
+  )
+}
+
 // ─── Review step ──────────────────────────────────────────────────────────────
 
 function ReviewStep({ title, description, periode, categories }: {
@@ -153,6 +236,18 @@ function ReviewStep({ title, description, periode, categories }: {
                 </li>
               ))}
             </ol>
+            {cat.scoringRule.length > 0 && (
+              <div className="px-5 py-3 bg-amber-50 border-t border-amber-100">
+                <p className="text-xs font-semibold text-amber-700 mb-2">Aturan Penilaian</p>
+                <div className="flex flex-wrap gap-2">
+                  {cat.scoringRule.map((r, i) => (
+                    <span key={i} className="inline-flex items-center gap-1 rounded-full bg-white border border-amber-200 px-2.5 py-0.5 text-xs text-amber-800">
+                      {r.max !== undefined ? `≤ ${r.max}` : 'else'} → {r.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -253,8 +348,11 @@ export function CreateAssessmentForm() {
   const removeCategory = (id: string) => setCategories((p) =>
     p.filter((c) => c.tempId !== id).map((c, i) => ({ ...c, order: i, code: String.fromCharCode(65 + i) }))
   )
-  const updateCategory = (id: string, f: keyof CategoryBlock, v: string | number) =>
+  const updateCategory = (id: string, f: keyof CategoryBlock, v: string | number | boolean | ScoringRuleEntry[]) =>
     setCategories((p) => p.map((c) => c.tempId === id ? { ...c, [f]: v } : c))
+
+  const toggleScoringRule = (id: string) =>
+    setCategories((p) => p.map((c) => c.tempId === id ? { ...c, showScoringRule: !c.showScoringRule } : c))
 
   const addIndicator    = (cId: string) => setCategories((p) => p.map((c) =>
     c.tempId !== cId ? c : { ...c, indicators: [...c.indicators, newIndicator(c.indicators.length + 1)] }
@@ -327,6 +425,7 @@ export function CreateAssessmentForm() {
             name: cat.name.trim(),
             description: cat.description.trim() || undefined,
             order: cat.order,
+            scoringRule: cat.scoringRule.length > 0 ? cat.scoringRule : null,
             indicators: cat.indicators.map((ind) => ({
               number: ind.number,
               indicator: ind.indicator.trim(),
@@ -422,6 +521,29 @@ export function CreateAssessmentForm() {
               <div className="px-6 pb-6">
                 <IndicatorRows indicators={cat.indicators} catTempId={cat.tempId}
                   onChange={updateIndicator} onAdd={addIndicator} onRemove={removeIndicator} />
+
+                {/* Scoring Rule toggle */}
+                <div className="mt-4">
+                  <button type="button"
+                    onClick={() => toggleScoringRule(cat.tempId)}
+                    className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-amber-700 transition-colors">
+                    {cat.showScoringRule
+                      ? <ChevronUp className="w-3.5 h-3.5" />
+                      : <ChevronDown className="w-3.5 h-3.5" />}
+                    Aturan penilaian kategori
+                    {cat.scoringRule.length > 0 && (
+                      <span className="ml-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                        {cat.scoringRule.length} threshold
+                      </span>
+                    )}
+                  </button>
+                  {cat.showScoringRule && (
+                    <ScoringRuleEditor
+                      rules={cat.scoringRule}
+                      onChange={(rules) => updateCategory(cat.tempId, 'scoringRule', rules)}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           ))}

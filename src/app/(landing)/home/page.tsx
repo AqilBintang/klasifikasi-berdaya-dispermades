@@ -103,10 +103,10 @@ export default async function LandingPage() {
       >
         <div className="absolute inset-0 bg-black/55" aria-hidden="true" />
 
-        <div className="relative z-10 w-full max-w-6xl px-1 flex flex-col md:flex-row items-center gap-10 md:gap-16">
+        <div className="relative z-10 w-full max-w-6xl px-6 md:px-8 flex flex-col md:flex-row items-center gap-8 md:gap-16">
           {/* Caption — kiri */}
-          <div className="flex-1 flex flex-col items-start gap-6 text-white">
-            <h1 className="text-3xl md:text-5xl font-normal tracking-tight leading-tight drop-shadow-lg">
+          <div className="flex-1 flex flex-col items-start gap-5 text-white text-center md:text-left">
+            <h1 className="w-full text-3xl md:text-5xl font-normal tracking-tight leading-tight drop-shadow-lg">
               Klasifikasi Indeks<br />Kecamatan Berdaya
             </h1>
             <p className="text-base md:text-lg font-normal text-white/80 leading-relaxed">
@@ -115,7 +115,7 @@ export default async function LandingPage() {
             </p>
             <a
               href="#data"
-              className="inline-flex items-center gap-2 rounded-full bg-white/20 border border-white/30 px-6 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/30"
+              className="inline-flex self-center md:self-start items-center gap-2 rounded-full bg-white/20 border border-white/30 px-6 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/30"
               aria-label="Lihat data klasifikasi"
             >
               Lihat Data Klasifikasi

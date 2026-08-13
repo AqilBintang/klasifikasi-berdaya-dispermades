@@ -12,7 +12,7 @@ const createSchema = z.object({
   submittedById: z.number().int().positive(),
   periode:      z.string().min(4).max(20).regex(/^[\w-]+$/), // contoh: "2025" atau "2025-Q1"
   description:  z.string().min(1).max(5000).trim(),
-  score:        z.number().int().min(0).max(4),
+  score:        z.number().int().min(1).max(4),
   supportingDoc: z.string().url().max(500).optional().nullable(),
 })
 

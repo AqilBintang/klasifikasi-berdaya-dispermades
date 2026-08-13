@@ -5,7 +5,7 @@ import { z } from 'zod'
 
 const updateSchema = z.object({
   description:   z.string().min(1).max(5000).trim().optional(),
-  score:         z.number().int().min(0).max(4).optional(),
+  score:         z.number().int().min(1).max(4).optional(),
   supportingDoc: z.string().url().max(500).optional().nullable(),
   status:        z.enum(['DRAFT', 'SUBMITTED']).optional(),
 })

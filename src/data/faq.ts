@@ -25,7 +25,7 @@ export const FAQ_DATA: FaqCategory[] = [
       {
         question: 'Seberapa sering data klasifikasi diperbarui?',
         answer:
-          'Data klasifikasi diperbarui setiap tahun seiring dengan siklus pengisian self-assessment oleh kecamatan. Data yang ditampilkan adalah data tervalidasi oleh tim admin.',
+          'Data klasifikasi diperbarui setiap tahun seiring dengan siklus pengisian self-assessment oleh kecamatan. Data yang ditampilkan adalah data tervalidasi oleh tim teknis.',
       },
     ],
   },
@@ -35,7 +35,7 @@ export const FAQ_DATA: FaqCategory[] = [
       {
         question: 'Bagaimana cara kerja sistem penilaian?',
         answer:
-          'Setiap kecamatan mengisi self-assessment secara mandiri berdasarkan indikator-indikator yang telah ditentukan. Jawaban kemudian divalidasi oleh tim admin, dan skor tertimbang dihitung untuk menentukan level klasifikasi kecamatan tersebut.',
+          'Setiap kecamatan mengisi self-assessment secara mandiri berdasarkan indikator-indikator yang telah ditentukan. Jawaban kemudian divalidasi oleh tim teknis, dan skor tertimbang dihitung untuk menentukan level klasifikasi kecamatan tersebut.',
       },
       {
         question: 'Apa perbedaan antara keempat level klasifikasi?',
@@ -45,12 +45,12 @@ export const FAQ_DATA: FaqCategory[] = [
       {
         question: 'Apakah hasil klasifikasi bisa berubah setiap tahun?',
         answer:
-          'Ya. Klasifikasi dihitung ulang setiap periode penilaian berdasarkan data self-assessment terbaru. Kecamatan yang konsisten meningkatkan program pemberdayaannya dapat naik ke level yang lebih tinggi.',
+          'Ya. Klasifikasi dihitung ulang setiap periode penilaian berdasarkan data self-assessment terbaru.',
       },
       {
         question: 'Siapa yang memvalidasi hasil penilaian?',
         answer:
-          'Validasi dilakukan oleh tim admin yang berwenang. Setiap jawaban self-assessment yang dikirimkan oleh kecamatan akan ditinjau dan dapat diberikan skor tervalidasi yang berbeda dari skor awal jika diperlukan.',
+          'Validasi dilakukan oleh tim teknis yang berwenang. Setiap jawaban self-assessment yang dikirimkan oleh kecamatan akan ditinjau dan dapat diberikan skor tervalidasi yang berbeda dari skor awal jika diperlukan.',
       },
     ],
   },
@@ -60,12 +60,7 @@ export const FAQ_DATA: FaqCategory[] = [
       {
         question: 'Dari mana data klasifikasi yang ditampilkan berasal?',
         answer:
-          'Data berasal dari self-assessment yang diisi langsung oleh pihak kecamatan, kemudian divalidasi oleh tim admin. Hanya data yang telah tervalidasi yang ditampilkan kepada publik.',
-      },
-      {
-        question: 'Apakah data yang ditampilkan dapat diunduh?',
-        answer:
-          'Untuk kebutuhan ekspor data secara resmi, silakan menghubungi tim admin melalui kontak yang tersedia. Fitur unduh publik belum tersedia saat ini.',
+          'Data berasal dari self-assessment yang diisi langsung oleh pihak kecamatan, kemudian divalidasi oleh tim teknis. Hanya data yang telah tervalidasi yang ditampilkan kepada publik.',
       },
     ],
   },
