@@ -8,18 +8,55 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🌱 Seeding database...')
 
+  // ── Super Admin user ────────────────────────────────────────
+  const superAdminEmail = process.env.SUPER_ADMIN_EMAIL
+  const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD
+
+  if (!superAdminEmail || !superAdminPassword) {
+    throw new Error(
+      '❌ SUPER_ADMIN_EMAIL dan SUPER_ADMIN_PASSWORD harus diset di environment variables. ' +
+      'Jangan gunakan password default untuk production.'
+    )
+  }
+
+  const superAdminPasswordHash = await bcrypt.hash(superAdminPassword, 12)
+
+  await prisma.user.upsert({
+    where: { email: superAdminEmail },
+    update: {}, // Jangan overwrite akun SUPER_ADMIN yang sudah ada
+    create: {
+      name: 'Super Administrator',
+      email: superAdminEmail,
+      passwordHash: superAdminPasswordHash,
+      role: 'SUPER_ADMIN',
+    },
+  })
+  console.log(`   - Super Admin: ${superAdminEmail}`)
+
   // ── Admin user ──────────────────────────────────────────────
-  const adminPassword = await bcrypt.hash('Admin@1234', 12)
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@klasberdaya.id' },
+  const adminEmail = process.env.ADMIN_EMAIL
+  const adminPassword = process.env.ADMIN_PASSWORD
+
+  if (!adminEmail || !adminPassword) {
+    throw new Error(
+      '❌ ADMIN_EMAIL dan ADMIN_PASSWORD harus diset di environment variables. ' +
+      'Jangan gunakan password default untuk production.'
+    )
+  }
+
+  const adminPasswordHash = await bcrypt.hash(adminPassword, 12)
+
+  await prisma.user.upsert({
+    where: { email: adminEmail },
     update: {},
     create: {
       name: 'Administrator',
-      email: 'admin@klasberdaya.id',
-      passwordHash: adminPassword,
+      email: adminEmail,
+      passwordHash: adminPasswordHash,
       role: 'ADMIN',
     },
   })
+  console.log(`   - Admin: ${adminEmail}`)
 
   // ── Assessment template awal ────────────────────────────────
   // Cek apakah sudah ada assessment dengan judul ini
@@ -65,7 +102,6 @@ async function main() {
   await updateUserWilayahReferences()
 
   console.log('✅ Seeding selesai.')
-  console.log('   - Admin: admin@klasberdaya.id / Admin@1234')
 }
 
 async function seedWilayahJawaTengah() {

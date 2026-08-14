@@ -16,6 +16,7 @@ datasource db {
 // ─────────────────────────────────────────────────────────────
 
 enum UserRole {
+  SUPER_ADMIN
   ADMIN
   VALIDATOR
   USER
@@ -42,6 +43,7 @@ model User {
   assessmentVersionsCreated AssessmentVersion[] @relation("AssessmentVersionCreator")
   assessmentStatuses UserAssessmentStatus[] @relation("UserAssessmentStatuses")
   draftBackups    AssessmentDraftBackup[]
+  auditLogs       AuditLog[]
 
   // Relations
   kabupaten     Wilayah?  @relation("UserKabupaten", fields: [kabupatenId], references: [id])
@@ -358,4 +360,36 @@ model AssessmentBackup {
 
   @@unique([assessmentTitle, periode, kecamatan])
   @@map("assessment_backups")
+}
+
+// ─────────────────────────────────────────────────────────────
+// AUDIT LOG
+// ─────────────────────────────────────────────────────────────
+
+enum AuditAction {
+  USER_LOGIN
+  USER_CREATED
+  USER_UPDATED  
+  USER_DEACTIVATED
+  ASSESSMENT_SUBMITTED
+  ASSESSMENT_VALIDATED
+  ROLE_CHANGED
+}
+
+model AuditLog {
+  id          Int         @id @default(autoincrement())
+  action      AuditAction
+  userId      Int?        // User yang melakukan action (null untuk system)
+  targetId    String?     @db.VarChar(100)  // ID object yang diaffect (user id, assessment id, etc)
+  targetType  String?     @db.VarChar(50)   // Type object (user, assessment, etc)
+  details     Json?       // Additional details
+  metadata    Json?       // Request metadata (IP, user agent, etc)
+  createdAt   DateTime    @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([action])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

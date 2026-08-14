@@ -1,6 +1,9 @@
-import { auth } from '@/auth'
+import NextAuth from 'next-auth'
+import { authConfig } from '@/auth.config'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+
+const { auth } = NextAuth(authConfig)
 
 export async function middleware(req: NextRequest) {
   const session = await auth()
@@ -16,7 +19,7 @@ export async function middleware(req: NextRequest) {
     if (session.user.role === 'VALIDATOR') {
       return NextResponse.redirect(new URL('/validator/validasi', req.url))
     }
-    if (session.user.role !== 'ADMIN') {
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN') {
       return NextResponse.redirect(new URL('/kecamatan/dashboard', req.url))
     }
   }
@@ -47,14 +50,14 @@ export async function middleware(req: NextRequest) {
 
   // ── Halaman login kecamatan — redirect jika sudah login ───────────────
   if (pathname === '/kecamatan/login' && session) {
-    if (session.user.role === 'ADMIN')     return NextResponse.redirect(new URL('/admin', req.url))
+    if (session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN') return NextResponse.redirect(new URL('/admin', req.url))
     if (session.user.role === 'VALIDATOR') return NextResponse.redirect(new URL('/validator/validasi', req.url))
     return NextResponse.redirect(new URL('/kecamatan/dashboard', req.url))
   }
 
   // ── Halaman login admin — redirect jika sudah login ───────────────────
   if (pathname === '/admin/login' && session) {
-    if (session.user.role === 'ADMIN')     return NextResponse.redirect(new URL('/admin', req.url))
+    if (session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN') return NextResponse.redirect(new URL('/admin', req.url))
     if (session.user.role === 'VALIDATOR') return NextResponse.redirect(new URL('/validator/validasi', req.url))
     return NextResponse.redirect(new URL('/kecamatan/login', req.url))
   }

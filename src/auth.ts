@@ -1,9 +1,9 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
-import bcrypt from 'bcryptjs'
-import { prisma } from '@/lib/prisma'
+import { authConfig } from './auth.config'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   providers: [
     Credentials({
       name: 'credentials',
@@ -16,6 +16,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const email    = String(credentials.email).toLowerCase().trim()
         const password = String(credentials.password)
+
+        const { prisma }  = await import('@/lib/prisma')
+        const bcrypt      = await import('bcryptjs')
 
         const user = await prisma.user.findUnique({ where: { email } })
         if (!user || !user.isActive) return null
@@ -37,27 +40,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        // Initial sign-in: populate token from user object
         token.id        = user.id
-        token.role      = user.role
-        token.kabupaten = user.kabupaten
-        token.kecamatan = user.kecamatan
+        token.role      = (user as any).role
+        token.kabupaten = (user as any).kabupaten
+        token.kecamatan = (user as any).kecamatan
+
+        try {
+          const { auditLog } = await import('@/lib/audit')
+          await auditLog.userLogin(Number(user.id))
+        } catch (err) {
+          console.error('Failed to log user login:', err)
+        }
+
         return token
       }
 
-      // Subsequent requests: re-validate isActive against database.
-      // If the DB query fails (transient error), keep the session alive rather
-      // than logging out the user — a brief DB hiccup shouldn't kill a valid session.
+      // Re-validate isActive on subsequent requests
       if (token.id) {
         try {
+          const { prisma } = await import('@/lib/prisma')
           const dbUser = await prisma.user.findUnique({
             where: { id: Number(token.id) },
             select: { isActive: true },
           })
-          // Only invalidate if we got a clear answer that the user is deactivated
           if (dbUser && !dbUser.isActive) return null
         } catch {
-          // DB error — keep session, will be checked on next request
+          // DB error — keep session
         }
       }
 
@@ -65,19 +73,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     session({ session, token }) {
       if (session.user) {
-        session.user.id        = token.id
-        session.user.role      = token.role
-        session.user.kabupaten = token.kabupaten
-        session.user.kecamatan = token.kecamatan
+        session.user.id        = token.id as string
+        session.user.role      = token.role as 'SUPER_ADMIN' | 'ADMIN' | 'VALIDATOR' | 'USER'
+        session.user.kabupaten = token.kabupaten as string | undefined
+        session.user.kecamatan = token.kecamatan as string | undefined
       }
       return session
     },
   },
-  pages: { signIn: '/kecamatan/login' },
-  session: {
-    strategy: 'jwt',
-    maxAge: 60 * 60,       // waktu session (1 jam)
-    updateAge: 60 * 60,    // perpanjang session setiap 1 jam jika aktif
-  },
-  secret: process.env.NEXTAUTH_SECRET,
 })

@@ -13,7 +13,7 @@ interface UserRow {
   id: number
   name: string
   email: string
-  role: 'ADMIN' | 'VALIDATOR' | 'USER'
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'VALIDATOR' | 'USER'
   kabupaten: string | null
   kecamatan: string | null
   isActive: boolean
@@ -22,15 +22,16 @@ interface UserRow {
 }
 
 const ROLE_CONFIG = {
-  ADMIN:     { label: 'Admin',     icon: Shield,   class: 'bg-red-100 text-red-700' },
-  VALIDATOR: { label: 'Validator', icon: UserCog, class: 'bg-purple-100 text-purple-700' },
-  USER:      { label: 'User',      icon: User,     class: 'bg-blue-100 text-blue-700' },
+  SUPER_ADMIN: { label: 'Super Admin', icon: Shield,   class: 'bg-red-100 text-red-700 border border-red-200' },
+  ADMIN:       { label: 'Admin',       icon: Shield,   class: 'bg-red-100 text-red-700' },
+  VALIDATOR:   { label: 'Validator',   icon: UserCog, class: 'bg-purple-100 text-purple-700' },
+  USER:        { label: 'User',        icon: User,     class: 'bg-blue-100 text-blue-700' },
 }
 
 function AddUserModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const [form, setForm] = useState({
     name: '', email: '', password: '',
-    role: 'USER' as 'ADMIN' | 'VALIDATOR' | 'USER',
+    role: 'USER' as 'SUPER_ADMIN' | 'ADMIN' | 'VALIDATOR' | 'USER',
     kabupatenKode: '', kecamatanKode: '',
   })
   const [saving, setSaving] = useState(false)

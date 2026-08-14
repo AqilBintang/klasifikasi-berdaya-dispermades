@@ -2,12 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { signOut } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 import { useState } from 'react'
 import {
   Gauge, ClipboardList, PlusCircle, Award,
   BarChart3, FileDown, Users, ChevronDown, ChevronRight,
-  LogOut, BookOpen, Film, type LucideIcon,
+  LogOut, BookOpen, Film, Shield, ScrollText, type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
@@ -24,6 +24,8 @@ const ASSESSMENT_ITEMS: { label: string; href: string; icon: LucideIcon }[] = [
 
 function SidebarContent({ onClose }: { onClose: () => void }) {
   const pathname = usePathname()
+  const { data: session } = useSession()
+  const isSuperAdmin = session?.user?.role === 'SUPER_ADMIN'
 
   // Assessment group open jika salah satu child aktif
   const assessmentActive = ASSESSMENT_ITEMS.some(
@@ -207,6 +209,53 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
               <span>Manage User</span>
             </Link>
           </li>
+
+          {/* ── Super Admin Menu ── */}
+          {isSuperAdmin && (
+            <>
+              <li className="pt-2">
+                <div className="flex items-center gap-2 px-3 pb-1">
+                  <div className="h-px flex-1 bg-gray-700/60" />
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Super Admin</span>
+                  <div className="h-px flex-1 bg-gray-700/60" />
+                </div>
+              </li>
+
+              <li>
+                <Link
+                  href="/admin/manage-admin"
+                  onClick={onClose}
+                  aria-current={isActive('/admin/manage-admin') ? 'page' : undefined}
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                    isActive('/admin/manage-admin')
+                      ? 'bg-red-500/20 text-red-300'
+                      : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
+                  )}
+                >
+                  <Shield className="w-4 h-4 shrink-0" />
+                  <span>Manajemen Admin</span>
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  href="/admin/audit-log"
+                  onClick={onClose}
+                  aria-current={isActive('/admin/audit-log') ? 'page' : undefined}
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                    isActive('/admin/audit-log')
+                      ? 'bg-red-500/20 text-red-300'
+                      : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
+                  )}
+                >
+                  <ScrollText className="w-4 h-4 shrink-0" />
+                  <span>Audit Log</span>
+                </Link>
+              </li>
+            </>
+          )}
         </ul>
       </nav>
 

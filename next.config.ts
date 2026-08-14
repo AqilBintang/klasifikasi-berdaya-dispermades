@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Prisma client perlu ini agar tidak di-bundle dengan error
-  serverExternalPackages: ['@prisma/client'],
+  // Pastikan library Node.js ini tidak di-bundle ke Edge Runtime
+  serverExternalPackages: ['@prisma/client', 'bcryptjs'],
 };
 
 export default nextConfig;

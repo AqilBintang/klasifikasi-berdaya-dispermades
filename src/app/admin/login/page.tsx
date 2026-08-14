@@ -30,7 +30,7 @@ function AdminLoginForm() {
         const session = await getSession()
         const role = session?.user.role
 
-        if (role === 'ADMIN') {
+        if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
           const callbackUrl = searchParams.get('callbackUrl') ?? '/admin'
           router.push(callbackUrl)
           router.refresh()

@@ -56,7 +56,7 @@ export async function PATCH(
   try {
     const session = await auth()
     if (!session) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
-    if (session.user.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN') return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
 
     const { id } = await params
     const numId = parseInt(id, 10)
@@ -113,7 +113,7 @@ export async function DELETE(
   try {
     const session = await auth()
     if (!session) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
-    if (session.user.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN') return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
 
     const { id } = await params
     await prisma.assessmentRubric.delete({ where: { id: parseInt(id, 10) } })

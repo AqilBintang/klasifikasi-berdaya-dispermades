@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { z } from 'zod'
+import { auditLog } from '@/lib/audit'
 
 const updateSchema = z.object({
   description:   z.string().min(1).max(5000).trim().optional(),
@@ -45,7 +46,7 @@ export async function PATCH(
     }
 
     // Ownership check: USER hanya boleh edit miliknya sendiri; ADMIN boleh edit semua
-    if (session.user.role !== 'ADMIN' && existing.submittedById !== parseInt(session.user.id, 10)) {
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN' && existing.submittedById !== parseInt(session.user.id, 10)) {
       return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
     }
 
@@ -72,6 +73,19 @@ export async function PATCH(
         ...(parsed.data.status === 'SUBMITTED' && { submittedAt: new Date() }),
       },
     })
+
+    // Audit log jika status berubah ke SUBMITTED
+    if (parsed.data.status === 'SUBMITTED' && existing.status !== 'SUBMITTED') {
+      try {
+        await auditLog.assessmentSubmitted(
+          Number(session.user.id),
+          existing.indicator.categoryId, // Use category ID as assessment reference
+          req
+        )
+      } catch (err) {
+        console.error('Failed to log assessment submission:', err)
+      }
+    }
 
     return NextResponse.json({ data: updated })
   } catch {
@@ -106,7 +120,7 @@ export async function DELETE(
     }
 
     // Ownership check: USER hanya boleh hapus miliknya sendiri; ADMIN boleh hapus semua
-    if (session.user.role !== 'ADMIN' && existing.submittedById !== parseInt(session.user.id, 10)) {
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN' && existing.submittedById !== parseInt(session.user.id, 10)) {
       return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
     }
 

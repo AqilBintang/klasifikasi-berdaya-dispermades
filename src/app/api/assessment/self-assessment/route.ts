@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     const periode       = searchParams.get('periode') ?? ''
 
     // Non-admin hanya boleh lihat data miliknya sendiri
-    const isAdmin = session.user.role === 'ADMIN'
+    const isAdmin = session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN'
     const effectiveSubmittedById = isAdmin
       ? (submittedById > 0 ? submittedById : undefined)
       : parseInt(session.user.id, 10)
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     const { indicatorId, submittedById, periode, description, score, supportingDoc } = parsed.data
 
     // Non-admin hanya boleh submit atas nama dirinya sendiri
-    if (session.user.role !== 'ADMIN' && submittedById !== parseInt(session.user.id, 10)) {
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN' && submittedById !== parseInt(session.user.id, 10)) {
       return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
     }
 

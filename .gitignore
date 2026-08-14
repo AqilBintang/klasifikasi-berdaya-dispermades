@@ -26,15 +26,18 @@
 # misc
 .DS_Store
 *.pem
+Thumbs.db
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
-# env files (can opt-in for committing if needed)
+# env files
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -43,7 +46,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# kiro
+# kiro / ai tools
 .kiro
 AGENTS.md
 /src/generated/prisma
@@ -65,8 +68,9 @@ src/data/wilayah-jateng.json
 # runtime export output
 /exports/
 
-# external reference data (not part of this codebase)
+# external reference data (large SQL dumps, not part of codebase)
 /wilayah/
+/db/
 
 # prisma backup files
 prisma/*.backup
@@ -75,9 +79,12 @@ prisma/*.backup
 /public/banners/*
 !/public/banners/.gitkeep
 
-# sample/reference excel files used during development (contains real data)
+# sample/reference excel files (contains real data)
 /contoh_excel/
-
 
 # development documentation (local only)
 fontawesome-inventory.md
+
+# OS files
+.DS_Store
+desktop.ini

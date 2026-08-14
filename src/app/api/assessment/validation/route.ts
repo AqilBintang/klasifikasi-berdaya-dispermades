@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { z } from 'zod'
 import { deleteBackupForGroup, upsertBackupIfComplete } from '@/lib/export/backup-snapshot'
+import { auditLog } from '@/lib/audit'
 
 const validateSchema = z.object({
   selfAssessmentId: z.number().int().positive(),
@@ -200,6 +201,23 @@ export async function POST(req: NextRequest) {
 
       return validation
     })
+
+    // Audit log untuk assessment validation
+    try {
+      await auditLog.assessmentValidated(
+        validatorId,
+        selfAssessmentId,
+        {
+          status,
+          validatedScore,
+          submittedById: sa.submittedById,
+          assessmentId
+        },
+        req
+      )
+    } catch (err) {
+      console.error('Failed to log assessment validation:', err)
+    }
 
     if (status === 'APPROVED') await upsertBackupIfComplete({ submittedById: sa.submittedById, periode: sa.periode, assessmentId })
     else await deleteBackupForGroup({ submittedById: sa.submittedById, periode: sa.periode, assessmentId })
