@@ -515,7 +515,7 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
       
       {!formDisabled && (
         <div className="flex flex-col sm:flex-row items-center justify-end gap-3 rounded-xl border bg-white px-6 py-4 shadow-sm">
-          {status === 'PUBLISHED' && !showImpactPreview && (
+          {status === 'PUBLISHED' && (
             <button type="button" onClick={() => { setStatus('ARCHIVED') }}
               className="flex items-center gap-2 rounded-lg border border-amber-300 px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 mr-auto">
               <Archive className="w-3.5 h-3.5" /> Archive

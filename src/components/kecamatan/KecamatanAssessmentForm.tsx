@@ -81,15 +81,22 @@ export function KecamatanAssessmentForm({
 
   const doSaveDraft = useCallback(async (currentRows: Record<number, RowState>) => {
     const entries = Object.entries(currentRows)
-      .filter(([, r]) => r.description.trim() || r.score)
-      .map(([indId, r]) => ({
-        indicatorId:   parseInt(indId, 10),
-        submittedById,
-        periode,
-        description:   r.description.trim() || '-',
-        score:         parseInt(r.score || '0', 10),
-        supportingDoc: r.supportingDoc.trim() || null,
-      }))
+      .filter(([, r]) => r.description.trim() || (r.score && r.score !== ''))
+      .map(([indId, r]) => {
+        // Parse score, default to 1 if empty or invalid, cap at 4 for API compatibility
+        const scoreValue = parseInt(r.score, 10)
+        let score = isNaN(scoreValue) || scoreValue < 1 ? 1 : scoreValue
+        score = score > 4 ? 4 : score // Cap at 4 for API validation
+
+        return {
+          indicatorId:   parseInt(indId, 10),
+          submittedById,
+          periode,
+          description:   r.description.trim() || '-',
+          score,
+          supportingDoc: r.supportingDoc.trim() || null,
+        }
+      })
 
     if (entries.length === 0) return
 
@@ -152,19 +159,26 @@ export function KecamatanAssessmentForm({
     // Saat revisi, hanya simpan indikator yang berubah
     const entriesToSave = Object.entries(rows)
       .filter(([indId, r]) => {
-        if (!r.description.trim() && !r.score) return false
+        if (!r.description.trim() && !(r.score && r.score !== '')) return false
         // Kalau revisi: prioritaskan indikator yang perlu diisi ulang
         // tapi tetap simpan semua yang diisi
         return true
       })
-      .map(([indId, r]) => ({
-        indicatorId:   parseInt(indId, 10),
-        submittedById,
-        periode,
-        description:   r.description.trim() || '-',
-        score:         parseInt(r.score || '0', 10),
-        supportingDoc: r.supportingDoc.trim() || null,
-      }))
+      .map(([indId, r]) => {
+        // Parse score, default to 1 if empty or invalid, cap at 4 for API compatibility
+        const scoreValue = parseInt(r.score, 10)
+        let score = isNaN(scoreValue) || scoreValue < 1 ? 1 : scoreValue
+        score = score > 4 ? 4 : score // Cap at 4 for API validation
+
+        return {
+          indicatorId:   parseInt(indId, 10),
+          submittedById,
+          periode,
+          description:   r.description.trim() || '-',
+          score,
+          supportingDoc: r.supportingDoc.trim() || null,
+        }
+      })
 
     if (entriesToSave.length === 0) {
       setResult({ type: 'error', message: 'Isi minimal satu indikator sebelum menyimpan.' })
