@@ -14,8 +14,11 @@ import {
   Archive,
   Lock,
   Unlock,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { ScoringRuleEntry } from '@/types/assessment'
 
 interface IndicatorRow {
   tempId: string
@@ -31,6 +34,8 @@ interface CategoryBlock {
   description: string
   order: number
   indicators: IndicatorRow[]
+  scoringRule: ScoringRuleEntry[]
+  showScoringRule: boolean
 }
 
 interface AssessmentData {
@@ -46,6 +51,7 @@ interface AssessmentData {
     description: string | null
     order: number
     indicators: { id: number; number: number; indicator: string; maxScore: number }[]
+    scoringRule: any // ScoringRuleEntry[] | null
   }[]
 }
 
@@ -64,6 +70,8 @@ const toBlock = (cat: AssessmentData['categories'][0]): CategoryBlock => ({
     indicator: ind.indicator,
     maxScore: ind.maxScore,
   })),
+  scoringRule: cat.scoringRule ?? [], // ensure array
+  showScoringRule: false,
 })
 
 const newIndicator = (number: number): IndicatorRow => ({
@@ -77,6 +85,8 @@ const newCategory = (order: number): CategoryBlock => ({
   description: '',
   order,
   indicators: [newIndicator(1)],
+  scoringRule: [],
+  showScoringRule: false,
 })
 
 export function EditAssessmentForm({ assessment, isLocked = false }: { assessment: AssessmentData; isLocked?: boolean }) {
@@ -108,7 +118,6 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
   const needsLockBeforeEdit = isLocked && !isRevisionMode && assessment.status === 'PUBLISHED'
 
   // ── Auto save (hanya saat status DRAFT) ────────────────────────────────────
-
   const scheduleAutoSave = () => {
     if (status !== 'DRAFT') return
     if (isFirstRender.current) { isFirstRender.current = false; return }
@@ -134,6 +143,7 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
                 indicator: ind.indicator.trim(),
                 maxScore: ind.maxScore,
               })),
+              scoringRule: cat.scoringRule.length > 0 ? cat.scoringRule : null,
             })),
           }),
         })
@@ -151,7 +161,7 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
   useEffect(() => {
     scheduleAutoSave()
     return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, description, periode, categories])
 
   const addCategory = () =>
@@ -162,7 +172,7 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
       p.filter((c) => c.tempId !== tempId).map((c, i) => ({ ...c, order: i, code: String.fromCharCode(65 + i) }))
     )
 
-  const updateCategory = (tempId: string, field: keyof CategoryBlock, value: string | number) =>
+  const updateCategory = <T extends keyof CategoryBlock>(tempId: string, field: T, value: CategoryBlock[T]) =>
     setCategories((p) => p.map((c) => c.tempId === tempId ? { ...c, [field]: value } : c))
 
   const addIndicator = (catTempId: string) =>
@@ -189,6 +199,9 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
         indicators: c.indicators.map((i) => i.tempId === indTempId ? { ...i, [field]: value } : i),
       })
     )
+
+  const toggleScoringRule = (tempId: string) =>
+    setCategories((p) => p.map((c) => c.tempId === tempId ? { ...c, showScoringRule: !c.showScoringRule } : c))
 
   // Lock assessment ke REVISION sebelum admin bisa edit
   const handleStartEdit = async () => {
@@ -284,7 +297,6 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
     return changes
   }
 
-  
   const handleSave = async (withMigration = false) => {
     if (!title.trim()) { setResult({ type: 'error', message: 'Judul wajib diisi.' }); return }
     for (const cat of categories) {
@@ -313,7 +325,7 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
         periode: periode.trim(),
         status,
         withMigration,
-        changes: withMigration ? calculatedChanges : undefined,
+        changes: withMigration ? calculateChanges() : undefined,
         categories: categories.map((cat) => ({
           code: cat.code,
           name: cat.name.trim(),
@@ -324,6 +336,7 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
             indicator: ind.indicator.trim(),
             maxScore: ind.maxScore,
           })),
+          scoringRule: cat.scoringRule.length > 0 ? cat.scoringRule : null,
         })),
       }
 
@@ -469,7 +482,7 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
               <input type="text" value={cat.name} onChange={(e) => updateCategory(cat.tempId, 'name', e.target.value)}
                 placeholder="Nama kategori..." maxLength={255}
                 disabled={formDisabled}
-                className="bg-transparent border-b border-white/40 text-white placeholder:text-white/60 text-sm font-medium focus:outline-none focus:border-white w-72 disabled:cursor-not-allowed disabled:opacity-70" />
+                className="bg-transparent border-b border-white/40 text-white placeholder:text-white/60 text-sm font-medium focus:outline-none focus:border-white w-72" />
             </div>
             <button type="button" onClick={() => removeCategory(cat.tempId)} disabled={categories.length === 1 || formDisabled}
               className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed">
@@ -486,7 +499,8 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
                   <span className="text-sm font-medium text-gray-500">{ind.number}</span>
                 </div>
                 <textarea value={ind.indicator} onChange={(e) => updateIndicator(cat.tempId, ind.tempId, 'indicator', e.target.value)}
-                  placeholder="Tuliskan indikator penilaian..." rows={2} maxLength={2000}
+                  placeholder="Tuliskan indikator penilaian..."
+                  rows={2} maxLength={2000}
                   disabled={formDisabled}
                   className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed" />
                 <button type="button" onClick={() => removeIndicator(cat.tempId, ind.tempId)}
@@ -498,9 +512,97 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
             ))}
             <button type="button" onClick={() => addIndicator(cat.tempId)}
               disabled={formDisabled}
-              className="mt-1 flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-sky-400 hover:text-sky-600 w-full justify-center disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:text-gray-500">
+              className="mt-1 flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-sky-400 hover:text-sky-600 w-full justify-center">
               <Plus className="w-3.5 h-3.5" /> Tambah Indikator
             </button>
+
+            {/* Scoring Rule toggle */}
+            <div className="mt-4">
+              <button type="button"
+                onClick={() => !formDisabled && toggleScoringRule(cat.tempId)}
+                disabled={formDisabled}
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-amber-700 transition-colors opacity-75 disabled:cursor-not-allowed">
+                {cat.showScoringRule
+                  ? <ChevronUp className="w-3.5 h-3.5" />
+                  : <ChevronDown className="w-3.5 h-3.5" />}
+                Aturan penilaian kategori
+                {cat.scoringRule.length > 0 && (
+                  <span className="ml-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                    {cat.scoringRule.length} threshold
+                  </span>
+                )}
+              </button>
+              {!formDisabled && cat.showScoringRule && (
+                <div className="mt-4 rounded-lg border border-dashed border-amber-300 bg-amber-50/50 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-xs font-semibold text-amber-800">Aturan Penilaian Kategori</p>
+                      <p className="text-xs text-amber-600 mt-0.5">
+                        Tentukan label klasifikasi berdasarkan total skor. Baris terakhir tanpa batas maks = fallback.
+                      </p>
+                    </div>
+                  </div>
+
+                  {cat.scoringRule.length > 0 && (
+                    <div className="mb-2">
+                      <div className="grid grid-cols-[80px_1fr_32px] gap-2 px-1 mb-1">
+                        <span className="text-xs text-gray-400 font-medium">Skor maks</span>
+                        <span className="text-xs text-gray-400 font-medium">Label klasifikasi</span>
+                        <span />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {cat.scoringRule.map((rule, idx) => (
+                          <div key={idx} className="grid grid-cols-[80px_1fr_32px] gap-2 items-center">
+                            <input
+                              type="number" min={0}
+                              value={rule.max ?? ''}
+                              onChange={(e) => {
+                                const n = parseInt(e.target.value, 10)
+                                !formDisabled && updateCategory(cat.tempId, 'scoringRule',
+                                  cat.scoringRule.map((r, i) => {
+                                    if (i !== idx) return r
+                                    return { ...r, max: isNaN(n) ? undefined : n }
+                                  })
+                                )
+                              }}
+                              placeholder="—"
+                              className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-center focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                            />
+                            <input
+                              type="text"
+                              value={rule.label}
+                              onChange={(e) => !formDisabled && updateCategory(cat.tempId, 'scoringRule',
+                                cat.scoringRule.map((r, i) => {
+                                  if (i !== idx) return r
+                                  return { ...r, label: e.target.value }
+                                })
+                              )}
+                              placeholder={idx === cat.scoringRule.length - 1 ? 'contoh: Berdaya (fallback)' : 'contoh: Rintisan'}
+                              maxLength={100}
+                              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                            />
+                            <button type="button" onClick={() => !formDisabled && updateCategory(cat.tempId, 'scoringRule',
+                              cat.scoringRule.filter((_, i) => i !== idx)
+                            )}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <button type="button" onClick={() => !formDisabled && updateCategory(cat.tempId, 'scoringRule', [
+                    ...cat.scoringRule,
+                    { label: '' }
+                  ])}
+                    className="flex items-center gap-1.5 text-xs text-amber-700 hover:text-amber-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <Plus className="w-3 h-3" /> Tambah threshold
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       ))}
@@ -512,7 +614,6 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
         </button>
       )}
 
-      
       {!formDisabled && (
         <div className="flex flex-col sm:flex-row items-center justify-end gap-3 rounded-xl border bg-white px-6 py-4 shadow-sm">
           {status === 'PUBLISHED' && (
@@ -522,13 +623,11 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
             </button>
           )}
 
-          
           <button
             type="button"
             disabled={saving || isPublishing}
             onClick={() => handleSave()}
-            className="flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
-          >
+            className="flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50">
             {(saving || isPublishing) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {isPublishing ? 'Publishing...' : 'Simpan Perubahan'}
           </button>

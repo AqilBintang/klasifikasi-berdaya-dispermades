@@ -48,7 +48,7 @@ export function KecamatanAssessmentForm({
         const ex = existingEntries.find((e) => e.indicatorId === ind.id)
         r[ind.id] = {
           description:   ex?.description    ?? '',
-          score:         ex?.score != null   ? String(ex.score) : '',
+          score:         ex?.score != null   ? String(ex.score) : '1',
           supportingDoc: ex?.supportingDoc   ?? '',
         }
       }
@@ -393,7 +393,6 @@ export function KecamatanAssessmentForm({
                               : 'border-gray-300 focus:border-sky-400'
                           )}
                         >
-                          <option value="">-</option>
                           {Array.from({ length: ind.maxScore }, (_, i) => (
                             <option key={i + 1} value={i + 1}>{i + 1}</option>
                           ))}
