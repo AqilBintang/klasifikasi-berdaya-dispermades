@@ -17,12 +17,13 @@ import { cn } from '@/lib/utils'
 
 interface AssessmentImpactPreviewProps {
   assessmentId: number
-  currentVersion: number
+  /** @deprecated not used, kept for API compatibility */
+  currentVersion?: number
   changes: Array<{
     type: IndicatorChangeType
     indicatorId?: number
-    oldValue?: any
-    newValue?: any
+    oldValue?: unknown
+    newValue?: unknown
     requiresResubmit?: boolean
   }>
   onConfirm?: (impact: MigrationImpact) => void
@@ -32,7 +33,6 @@ interface AssessmentImpactPreviewProps {
 
 export function AssessmentImpactPreview({
   assessmentId,
-  currentVersion,
   changes,
   onConfirm,
   onCancel,
@@ -42,10 +42,6 @@ export function AssessmentImpactPreview({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showDetails, setShowDetails] = useState(false)
-
-  useEffect(() => {
-    analyzeImpact()
-  }, [assessmentId, changes])
 
   const analyzeImpact = async () => {
     try {
@@ -71,6 +67,10 @@ export function AssessmentImpactPreview({
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    analyzeImpact()
+  }, [assessmentId, changes])
 
   if (loading) {
     return (

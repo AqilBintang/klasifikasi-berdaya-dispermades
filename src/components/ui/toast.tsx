@@ -80,10 +80,10 @@ function ToastItem({ toast: t, onDismiss }: { toast: Toast; onDismiss: (id: numb
 
 export function ToastContainer() {
   const [toasts, setToasts] = useState<Toast[]>([])
-  const ref = useRef(setToasts)
-  ref.current = setToasts
+  const ref = useRef<React.Dispatch<React.SetStateAction<Toast[]>> | null>(null)
 
   useEffect(() => {
+    ref.current = setToasts
     _setToasts = ref.current
     return () => { _setToasts = null }
   }, [])

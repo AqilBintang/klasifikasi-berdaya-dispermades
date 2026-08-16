@@ -274,7 +274,7 @@ function ConfirmModal({ titre, periode, onConfirm, onCancel, saving }: {
             <h3 className="font-bold text-gray-900">Konfirmasi Akhir</h3>
           </div>
           <p className="text-sm text-gray-500 mt-2">
-            Anda akan membuat assessment <strong className="text-gray-800">"{titre}"</strong> untuk periode <strong className="text-gray-800">{periode}</strong>.
+            Anda akan membuat assessment <strong className="text-gray-800">&quot;{titre}&quot;</strong> untuk periode <strong className="text-gray-800">{periode}</strong>.
           </p>
         </div>
 
@@ -464,15 +464,19 @@ export function CreateAssessmentForm({ draftId: initialDraftId }: { draftId?: nu
 
     setChecking(true)
     try {
-      const res = await fetch(`/api/assessment?checkPeriode=${encodeURIComponent(periode.trim())}`)
-      const json = await res.json()
-      const exists = (json.data ?? []).some((a: { periode: string }) => a.periode === periode.trim())
-      if (exists) {
-        toast.error(`Assessment untuk periode "${periode.trim()}" sudah ada. Hanya boleh 1 assessment per periode.`)
-        return
+      // Check for duplicate periode - simple approach: fetch minimal data
+      const res = await fetch('/api/assessment')
+      if (res.ok) {
+        const json = await res.json()
+        const exists = (json.data ?? []).some((a: { periode: string }) => a.periode === periode.trim())
+        if (exists) {
+          toast.error(`Assessment untuk periode "${periode.trim()}" sudah ada. Hanya boleh 1 assessment per periode.`)
+          return
+        }
       }
+      // If fetch fails, continue - the final submit will catch the duplicate error
     } catch {
-      // Gagal cek — tetap lanjut, API akan tolak saat submit
+      // Network error - continue, API will catch duplicate on submit
     } finally {
       setChecking(false)
     }

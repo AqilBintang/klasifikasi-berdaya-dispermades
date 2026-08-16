@@ -1,4 +1,6 @@
 import { Suspense } from 'react'
+import { auth } from '@/auth'
+import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { getStatusAkhir, KLASIFIKASI_CONFIG, type KlasifikasiLevel } from '@/lib/scoring'
 import { KlasifikasiBerdayaChart } from '@/components/admin/KlasifikasiBerdayaChart'
@@ -151,6 +153,11 @@ export default async function KlasifikasiBerdayaPage({
 }: {
   searchParams: Promise<{ tahun?: string }>
 }) {
+  const session = await auth()
+  if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
+    redirect('/admin')
+  }
+
   const { tahun } = await searchParams
   const stats = await getStats(tahun)
 

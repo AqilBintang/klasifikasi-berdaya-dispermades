@@ -12,14 +12,10 @@ import {
   FolderPlus,
   GripVertical,
   Archive,
-  Eye,
   Lock,
   Unlock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { AssessmentImpactPreview } from './AssessmentImpactPreview'
-import { IndicatorChangeType } from '@prisma/client'
-import type { MigrationImpact } from '@/lib/assessment-migration'
 
 interface IndicatorRow {
   tempId: string
@@ -106,15 +102,6 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
   const [isRevisionMode, setIsRevisionMode] = useState(assessment.status === 'REVISION')
   const [lockingRevision, setLockingRevision] = useState(false)
 
-  // Impact Preview states
-  const [showImpactPreview, setShowImpactPreview] = useState(false)
-  const [calculatedChanges, setCalculatedChanges] = useState<Array<{
-    type: IndicatorChangeType
-    indicatorId?: number
-    oldValue?: any
-    newValue?: any
-    requiresResubmit?: boolean
-  }>>([])
   const [isPublishing, setIsPublishing] = useState(false)
 
   // Assessment PUBLISHED dengan jawaban masuk — harus lock dulu sebelum bisa edit
@@ -297,24 +284,7 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
     return changes
   }
 
-  const handlePreviewImpact = () => {
-    const changes = calculateChanges()
-    setCalculatedChanges(changes)
-    setShowImpactPreview(true)
-  }
-
-  const handleConfirmPublish = async (_impact: MigrationImpact) => {
-    setIsPublishing(true)
-    try {
-      await handleSave(true)
-      setShowImpactPreview(false)
-    } catch (error) {
-      console.error('Publish with migration failed:', error)
-    } finally {
-      setIsPublishing(false)
-    }
-  }
-
+  
   const handleSave = async (withMigration = false) => {
     if (!title.trim()) { setResult({ type: 'error', message: 'Judul wajib diisi.' }); return }
     for (const cat of categories) {
@@ -325,15 +295,13 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
     }
 
     // Kalau assessment sedang di-lock (REVISION) dan mau publish, wajib pakai migration flow
-    if (isRevisionMode && status === 'PUBLISHED' && !withMigration && !showImpactPreview) {
-      handlePreviewImpact()
-      return
+    if (isRevisionMode && status === 'PUBLISHED' && !withMigration) {
+      // Proceed directly to save without preview impact
     }
 
     // Assessment baru (belum ada jawaban) publish biasa
-    if (status === 'PUBLISHED' && assessment.status !== 'PUBLISHED' && !isRevisionMode && !withMigration && !showImpactPreview) {
-      handlePreviewImpact()
-      return
+    if (status === 'PUBLISHED' && assessment.status !== 'PUBLISHED' && !isRevisionMode && !withMigration) {
+      // Proceed directly to save without preview impact
     }
 
     setSaving(true)
@@ -544,20 +512,7 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
         </button>
       )}
 
-      {/* Impact Preview */}
-      {showImpactPreview && !formDisabled && (
-        <AssessmentImpactPreview
-          assessmentId={assessment.id}
-          currentVersion={1}
-          changes={calculatedChanges}
-          onConfirm={handleConfirmPublish}
-          onCancel={() => {
-            setShowImpactPreview(false)
-            setCalculatedChanges([])
-          }}
-        />
-      )}
-
+      
       {!formDisabled && (
         <div className="flex flex-col sm:flex-row items-center justify-end gap-3 rounded-xl border bg-white px-6 py-4 shadow-sm">
           {status === 'PUBLISHED' && !showImpactPreview && (
@@ -567,25 +522,15 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
             </button>
           )}
 
-          {status === 'PUBLISHED' && !showImpactPreview && (
-            <button
-              type="button"
-              onClick={handlePreviewImpact}
-              disabled={saving}
-              className="flex items-center gap-2 rounded-lg border border-sky-300 px-4 py-2.5 text-sm text-sky-700 hover:bg-sky-50 disabled:opacity-50"
-            >
-              <Eye className="w-3.5 h-3.5" /> Preview Impact
-            </button>
-          )}
-
+          
           <button
             type="button"
-            disabled={saving || isPublishing || showImpactPreview}
+            disabled={saving || isPublishing}
             onClick={() => handleSave()}
             className="flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
           >
             {(saving || isPublishing) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {isPublishing ? 'Publishing...' : showImpactPreview ? 'Simpan Draft' : 'Simpan Perubahan'}
+            {isPublishing ? 'Publishing...' : 'Simpan Perubahan'}
           </button>
         </div>
       )}

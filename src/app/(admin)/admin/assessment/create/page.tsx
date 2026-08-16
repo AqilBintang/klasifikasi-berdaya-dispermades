@@ -1,3 +1,5 @@
+import { auth } from '@/auth'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
@@ -19,6 +21,11 @@ async function getAssessments() {
 }
 
 export default async function CreateAssessmentIndexPage() {
+  const session = await auth()
+  if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
+    redirect('/admin')
+  }
+
   const assessments = await getAssessments()
 
   return (

@@ -1,3 +1,5 @@
+import { auth } from '@/auth'
+import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { ManageUserClient } from '@/components/admin/ManageUserClient'
 
@@ -26,6 +28,11 @@ async function getUsers() {
 }
 
 export default async function ManageUsersPage() {
+  const session = await auth()
+  if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
+    redirect('/admin')
+  }
+
   const users = await getUsers()
 
   return (
