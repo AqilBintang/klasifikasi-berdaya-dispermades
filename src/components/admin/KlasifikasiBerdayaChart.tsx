@@ -19,10 +19,10 @@ export type KlasifikasiBerdayaChartRow = {
 }
 
 const SERIES = [
-  { key: 'rintisan', label: 'Rintisan', color: '#ef4444' },
+  { key: 'rintisan',   label: 'Rintisan',   color: '#ef4444' },
   { key: 'berkembang', label: 'Berkembang', color: '#f59e0b' },
-  { key: 'maju', label: 'Maju', color: '#3b82f6' },
-  { key: 'berdaya', label: 'Berdaya', color: '#22c55e' },
+  { key: 'maju',       label: 'Maju',       color: '#3b82f6' },
+  { key: 'berdaya',    label: 'Berdaya',    color: '#22c55e' },
 ] as const
 
 export function KlasifikasiBerdayaChart({ data }: { data: KlasifikasiBerdayaChartRow[] }) {

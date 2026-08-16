@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
-import { getKlasifikasi } from '@/lib/scoring'
+import { getKlasifikasiPerKategori } from '@/lib/scoring'
 
 // GET /api/assessment/results?assessmentId=1&periode=2025&page=1&limit=50
 //
@@ -139,7 +139,7 @@ export async function GET(req: NextRequest) {
     // Hitung klasifikasi per kategori
     for (const group of Object.values(grouped)) {
       for (const cat of Object.values(group.categories)) {
-        cat.klasifikasi = getKlasifikasi(cat.totalScore, cat.maxScore) ?? null
+        cat.klasifikasi = getKlasifikasiPerKategori(cat.code, cat.totalScore) ?? null
       }
     }
 

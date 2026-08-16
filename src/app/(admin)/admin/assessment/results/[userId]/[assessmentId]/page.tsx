@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft, faLink } from '@fortawesome/free-solid-svg-icons'
-import { getKlasifikasi, getStatusAkhir, evaluateScoringRule, KLASIFIKASI_CONFIG, type KlasifikasiLevel } from '@/lib/scoring'
+import { getKlasifikasiPerKategori, getStatusAkhir, evaluateScoringRule, KLASIFIKASI_CONFIG, type KlasifikasiLevel } from '@/lib/scoring'
 import type { ScoringRule } from '@/types/assessment'
 
 function cn(...classes: (string | undefined | null | false)[]) {
@@ -134,7 +134,7 @@ async function getDetail(userId: number, assessmentId: number, periode: string) 
   }
 
   for (const cat of Object.values(catMap)) {
-    cat.klasifikasi  = getKlasifikasi(cat.totalScore, cat.maxPossible)
+    cat.klasifikasi  = getKlasifikasiPerKategori(cat.code, cat.totalScore)
     cat.customLabel  = cat.scoringRule ? evaluateScoringRule(cat.totalScore, cat.scoringRule) : null
   }
 

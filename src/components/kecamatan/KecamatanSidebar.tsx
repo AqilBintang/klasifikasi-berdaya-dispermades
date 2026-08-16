@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  Gauge, ClipboardList, BarChart3, BookOpen, LogOut, TrendingUp, type LucideIcon,
+  Gauge, ClipboardList, BarChart3, BookOpen, LogOut, TrendingUp, FileSpreadsheet, type LucideIcon,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { label: 'Isi Assessment', href: '/kecamatan/assessment', icon: ClipboardList },
   { label: 'Hasil Nilai',    href: '/kecamatan/hasil',      icon: BarChart3 },
   { label: 'Statistik',      href: '/kecamatan/statistik',  icon: TrendingUp },
+  { label: 'Laporan',        href: '/kecamatan/laporan',    icon: FileSpreadsheet },
 ]
 
 function SidebarContent({ onClose }: { onClose: () => void }) {

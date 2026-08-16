@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAward, faCheckCircle, faClockRotateLeft, faTimesCircle, faMedal } from '@fortawesome/free-solid-svg-icons'
 import { cn } from '@/lib/utils'
-import { getKlasifikasi, getStatusAkhir, KLASIFIKASI_CONFIG, type KlasifikasiLevel } from '@/lib/scoring'
+import { getKlasifikasiPerKategori, getStatusAkhir, KLASIFIKASI_CONFIG, type KlasifikasiLevel } from '@/lib/scoring'
 
 // ─── Sub-components ───────────────────────────────────────────────────────
 
@@ -132,7 +132,7 @@ export default async function KecamatanHasilPage() {
 
   for (const ag of Object.values(assessmentMap)) {
     for (const cat of ag.categories) {
-      cat.klasifikasi = getKlasifikasi(cat.totalScore, cat.maxPossibleScore)
+      cat.klasifikasi = getKlasifikasiPerKategori(cat.code, cat.totalScore)
     }
     // Konversi categories untuk weighted scoring
     const categoryScores = ag.categories.map(cat => ({

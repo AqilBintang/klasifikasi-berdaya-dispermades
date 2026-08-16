@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import { prisma } from '@/lib/prisma'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAward, faChartBar } from '@fortawesome/free-solid-svg-icons'
-import { getKlasifikasi, getStatusAkhir } from '@/lib/scoring'
+import { getKlasifikasiPerKategori, getStatusAkhir } from '@/lib/scoring'
 import { YearFilter } from '@/components/shared/ui/YearFilter'
 import { RekapitulasiClient } from '@/components/admin/RekapitulasiClient'
 
@@ -109,7 +109,7 @@ async function getRekapitulasi(periodeFilter?: string) {
       assessmentId: parseInt(assessmentId, 10),
       statusAkhir:  getStatusAkhir(g.totalScore, g.maxPossibleTotal, categoryScores),
       categories:   Object.values(g.catScores).map((c) => ({
-        ...c, klasifikasi: getKlasifikasi(c.totalScore, c.maxPossible),
+        ...c, klasifikasi: getKlasifikasiPerKategori(c.code, c.totalScore),
       })),
     }
   }).sort((a, b) => (a.user.kecamatan ?? a.user.name).localeCompare(b.user.kecamatan ?? b.user.name))

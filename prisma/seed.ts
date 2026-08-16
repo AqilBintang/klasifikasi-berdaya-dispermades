@@ -105,9 +105,9 @@ async function main() {
 }
 
 async function seedWilayahJawaTengah() {
-  const wilayahDir = path.join(process.cwd(), 'wilayah', 'db')
-  const level12Path = path.join(wilayahDir, 'wilayah_level_1_2.sql')
-  const wilayahPath = path.join(wilayahDir, 'wilayah.sql')
+  const wilayahDir = path.join(process.cwd(), 'db')
+  const level12Path = path.join(wilayahDir, 'wilayah_level_1_2_jateng.sql')
+  const wilayahPath = path.join(wilayahDir, 'wilayah_jateng.sql')
 
   // We'll collect all rows from both files that belong to Jawa Tengah (kode starts with '33')
   const rows: Array<{
@@ -200,8 +200,8 @@ async function seedWilayahJawaTengah() {
       }
 
       // Determine which file we are processing to know the expected number of columns
-      const isLevel12 = filePath.endsWith('wilayah_level_1_2.sql')
-      const isWilayah = filePath.endsWith('wilayah.sql')
+      const isLevel12 = filePath.includes('wilayah_level_1_2')
+      const isWilayah = !isLevel12 && filePath.includes('wilayah')
 
       if (isLevel12) {
         // Expect 11 columns: kode,nama,ibukota,lat,lng,elv,tz,luas,penduduk,path,status
@@ -302,20 +302,11 @@ async function seedWilayahJawaTengah() {
       }
     }
 
-    // Insert the wilayah
-    const wilayah = await prisma.wilayah.create({
-      data: {
-        kode,
-        nama,
-        level,
-        parentId,
-        lat,
-        lng,
-        luas,
-        penduduk,
-        path,
-        status: null, // we don't have status from the SQL, set to null
-      },
+    // Upsert wilayah — skip duplicate kode tanpa error
+    const wilayah = await prisma.wilayah.upsert({
+      where: { kode },
+      update: { nama, level, parentId, lat, lng, luas, penduduk, path, status: null },
+      create: { kode, nama, level, parentId, lat, lng, luas, penduduk, path, status: null },
     })
 
     kodeToId.set(kode, wilayah.id)

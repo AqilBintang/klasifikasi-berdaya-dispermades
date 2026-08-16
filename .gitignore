@@ -70,7 +70,6 @@ src/data/wilayah-jateng.json
 
 # external reference data (large SQL dumps, not part of codebase)
 /wilayah/
-/db/
 
 # prisma backup files
 prisma/*.backup

@@ -65,8 +65,8 @@ const LEVEL_CONFIG = [
   {
     level: 'Berdaya',
     range: 'Skor ≥ 43,24',
-    accent: 'bg-green-400',
-    desc: 'Mencapai tingkat pemberdayaan optimal dan menjadi percontohan bagi wilayah lain.',
+    accent: 'bg-green-500',
+    desc: 'Kecamatan dengan kapasitas pemberdayaan optimal dan menjadi rujukan daerah sekitarnya.',
   },
 ] as const
 
@@ -82,7 +82,7 @@ export default async function LandingPage() {
 
   const latestYear = stats.years.at(-1) ?? '-'
   const latestChartRow = stats.chartData.at(-1)
-  const berdayaCount = latestChartRow?.berdaya ?? 0
+  const majuCount = latestChartRow?.maju ?? 0
 
   const bannerSlides: BannerSlide[] = landingContent.banner.slides
   const tentang = landingContent.tentangPlatform
@@ -159,8 +159,8 @@ export default async function LandingPage() {
             />
             <StatCard
               icon={<TrendingUp className="h-5 w-5" aria-hidden="true" />}
-              value={berdayaCount}
-              label="Kecamatan Berdaya"
+              value={majuCount}
+              label="Kecamatan Maju"
               sub={latestYear !== '-' ? `Per tahun ${latestYear}` : undefined}
             />
           </div>

@@ -26,10 +26,10 @@ const LEVELS = [
 ] as const
 
 const STATUS_COLOR: Record<string, string> = {
-  Rintisan:   '#f87171',
-  Berkembang: '#fbbf24',
-  Maju:       '#60a5fa',
-  Berdaya:    '#4ade80',
+  'Rintisan':   '#f87171',
+  'Berkembang': '#fbbf24',
+  'Maju':       '#60a5fa',
+  'Berdaya':    '#4ade80',
 }
 
 // ─── Distribusi ───────────────────────────────────────────────────────────────

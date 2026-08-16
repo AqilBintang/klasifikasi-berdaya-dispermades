@@ -7,7 +7,7 @@ import { useState } from 'react'
 import {
   Gauge, ClipboardList, PlusCircle, Award,
   BarChart3, FileDown, Users, ChevronDown, ChevronRight,
-  LogOut, BookOpen, Film, Shield, ScrollText, type LucideIcon,
+  LogOut, BookOpen, Film, Shield, ScrollText, Database, type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
@@ -188,7 +188,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
               )}
             >
               <FileDown className="w-4 h-4 shrink-0" />
-              <span>Backup & Export</span>
+              <span>Export Laporan Data</span>
             </Link>
           </li>
           
@@ -240,6 +240,23 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
 
               <li>
                 <Link
+                  href="/admin/manage-kecamatan"
+                  onClick={onClose}
+                  aria-current={isActive('/admin/manage-kecamatan') ? 'page' : undefined}
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                    isActive('/admin/manage-kecamatan')
+                      ? 'bg-red-500/20 text-red-300'
+                      : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
+                  )}
+                >
+                  <Users className="w-4 h-4 shrink-0" />
+                  <span>Manajemen Kecamatan</span>
+                </Link>
+              </li>
+
+              <li>
+                <Link
                   href="/admin/audit-log"
                   onClick={onClose}
                   aria-current={isActive('/admin/audit-log') ? 'page' : undefined}
@@ -252,6 +269,23 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
                 >
                   <ScrollText className="w-4 h-4 shrink-0" />
                   <span>Audit Log</span>
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  href="/admin/super-admin-backup"
+                  onClick={onClose}
+                  aria-current={isActive('/admin/super-admin-backup') ? 'page' : undefined}
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                    isActive('/admin/super-admin-backup')
+                      ? 'bg-red-500/20 text-red-300'
+                      : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
+                  )}
+                >
+                  <Database className="w-4 h-4 shrink-0" />
+                  <span>Backup Data</span>
                 </Link>
               </li>
             </>

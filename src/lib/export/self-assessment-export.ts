@@ -21,7 +21,7 @@
 
 import * as XLSX from 'xlsx'
 import { prisma } from '@/lib/prisma'
-import { getKlasifikasi, getStatusAkhir } from '@/lib/scoring'
+import { getStatusAkhir, getKlasifikasiPerKategori } from '@/lib/scoring'
 import { aoaToSheet, workbookToXlsxBuffer } from '@/lib/excel'
 
 // ─── Ambil data ───────────────────────────────────────────────────────────────
@@ -106,7 +106,7 @@ export async function buildSelfAssessmentExport(userId: number, assessmentId: nu
     grandTotal += catScore
     grandMax   += catMax
 
-    const klasifikasi = getKlasifikasi(catScore, catMax)
+    const klasifikasi = getKlasifikasiPerKategori(cat.code, catScore)
 
     // Header kategori
     rows.push([`${cat.code}. ${cat.name}`, '', '', '', '', ''])
@@ -242,6 +242,260 @@ export async function buildSelfAssessmentWorkbook(userId: number, assessmentId: 
     s.replace(/[^a-z0-9 _-]/gi, '').trim().replace(/\s+/g, '_').toUpperCase()
 
   const filename = `KECAMATAN_${safePart(kecamatanNama)}_${safePart(kabupatenNama)}-${assessmentTitle.replace(/\s+/g, '_')}-${periode}.xlsx`
+
+  return { buffer: workbookToXlsxBuffer(wb), filename }
+}
+
+
+// ─── Laporan Tahunan ──────────────────────────────────────────────────────────
+
+/**
+ * Build workbook laporan tahunan — satu sheet per assessment dalam tahun tersebut.
+ *
+ * Layout kolom (A-G):
+ *   A  = No
+ *   B  = Indikator
+ *   C  = Deskripsi         ┐
+ *   D  = Skor              │ SELF ASSESSMENT (header di atas)
+ *   E  = Dokumen Pendukung │
+ *   F  = Skor Validasi     │
+ *   G  = Komentar Tim Teknis┘
+ */
+export async function buildYearlyReportWorkbook(userId: number, tahun: number) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      name: true,
+      kecamatan: { select: { nama: true } },
+      kabupaten: { select: { nama: true } },
+      kecamatanName: true,
+      kabupatenName: true,
+    },
+  })
+  if (!user) throw new Error('User tidak ditemukan')
+
+  const kecamatanNama = user.kecamatan?.nama ?? user.kecamatanName ?? '-'
+  const kabupatenNama = user.kabupaten?.nama ?? user.kabupatenName ?? '-'
+
+  // Ambil semua self-assessment user pada tahun tersebut
+  const entries = await prisma.selfAssessment.findMany({
+    where: {
+      submittedById: userId,
+      periode: { contains: String(tahun) },
+    },
+    select: {
+      indicatorId: true,
+      periode: true,
+      description: true,
+      score: true,
+      supportingDoc: true,
+      status: true,
+      validations: {
+        orderBy: { validatedAt: 'desc' },
+        take: 1,
+        select: { validatedScore: true, notes: true },
+      },
+      indicator: {
+        select: {
+          id: true,
+          number: true,
+          indicator: true,
+          maxScore: true,
+          category: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              order: true,
+              assessmentId: true,
+              assessment: { select: { id: true, title: true, periode: true } },
+            },
+          },
+        },
+      },
+    },
+    orderBy: [
+      { indicator: { category: { order: 'asc' } } },
+      { indicator: { number: 'asc' } },
+    ],
+  })
+
+  if (entries.length === 0) throw new Error(`Tidak ada data assessment untuk tahun ${tahun}`)
+
+  // Kelompokkan per assessmentId+periode
+  type EntryType = typeof entries[0]
+  const groupMap = new Map<string, { assessmentId: number; title: string; periode: string; entries: EntryType[] }>()
+  for (const e of entries) {
+    const key = `${e.indicator.category.assessmentId}_${e.periode}`
+    if (!groupMap.has(key)) {
+      groupMap.set(key, {
+        assessmentId: e.indicator.category.assessmentId,
+        title: e.indicator.category.assessment.title,
+        periode: e.periode,
+        entries: [],
+      })
+    }
+    groupMap.get(key)!.entries.push(e)
+  }
+
+  const wb = XLSX.utils.book_new()
+
+  // Kolom: A=0 No, B=1 Indikator, C=2 Deskripsi, D=3 Skor, E=4 Dokumen, F=5 Skor Validasi, G=6 Komentar
+  const COL_COUNT = 7
+
+  for (const group of groupMap.values()) {
+    const rows: unknown[][] = []
+    const merges: XLSX.Range[] = []
+    const merge = (r1: number, c1: number, r2: number, c2: number) =>
+      merges.push({ s: { r: r1, c: c1 }, e: { r: r2, c: c2 } })
+
+    // ── Header dokumen (baris 0-3, A kosong, label di B, nilai di C) ──
+    // r=0: judul di A1, merge A:G
+    rows.push(['SELF ASESSMENT KECAMATAN BERDAYA PROVINSI JAWA TENGAH', '', '', '', '', '', ''])
+    merge(0, 0, 0, 6)
+
+    // r=1: Kecamatan — label B, nilai C:G
+    rows.push(['', 'Kecamatan', kecamatanNama.toUpperCase(), '', '', '', ''])
+    merge(1, 2, 1, 6)
+
+    // r=2: Kabupaten — label B, nilai C:G
+    rows.push(['', 'Kabupaten/Kota', kabupatenNama.toUpperCase(), '', '', '', ''])
+    merge(2, 2, 2, 6)
+
+    // r=3: Periode — label B, nilai C:G
+    rows.push(['', 'Periode', group.periode, '', '', '', ''])
+    merge(3, 2, 3, 6)
+
+    // r=4: kosong
+    rows.push(Array(COL_COUNT).fill(''))
+
+    // Kelompokkan entries per kategori
+    type CatData = { code: string; name: string; order: number; items: EntryType[] }
+    const catMap = new Map<number, CatData>()
+    for (const e of group.entries) {
+      const cat = e.indicator.category
+      if (!catMap.has(cat.id)) {
+        catMap.set(cat.id, { code: cat.code, name: cat.name, order: cat.order, items: [] })
+      }
+      catMap.get(cat.id)!.items.push(e)
+    }
+    const cats = Array.from(catMap.values()).sort((a, b) => a.order - b.order)
+
+    let grandTotal = 0
+    let grandMax = 0
+    const rekapRows: unknown[][] = []
+
+    for (const cat of cats) {
+      let catScore = 0
+      let catMax = 0
+
+      // r: header kategori — A:G merge
+      const rCatHeader = rows.length
+      rows.push([`${cat.code}. ${cat.name}`, '', '', '', '', '', ''])
+      merge(rCatHeader, 0, rCatHeader, 6)
+
+      // r+1: sub-header baris atas
+      //   A=No (merge 2 baris), B=Indikator (merge 2 baris), C:G = "SELF ASSESSMENT"
+      const rSubH1 = rows.length
+      rows.push(['NO', 'INDIKATOR', 'SELF ASSESSMENT', '', '', '', ''])
+      merge(rSubH1, 0, rSubH1 + 1, 0)   // No: merge 2 baris
+      merge(rSubH1, 1, rSubH1 + 1, 1)   // Indikator: merge 2 baris
+      merge(rSubH1, 2, rSubH1, 6)        // SELF ASSESSMENT: merge C:G
+
+      // r+2: sub-header baris bawah (kolom detail)
+      rows.push(['', '', 'DESKRIPSI', 'SKOR', 'DOKUMEN PENDUKUNG', 'SKOR VALIDASI', 'KOMENTAR TIM TEKNIS'])
+
+      // Baris data indikator
+      for (const e of cat.items) {
+        const validatedScore = e.validations[0]?.validatedScore ?? null
+        const effectiveScore = validatedScore ?? e.score
+        catScore += effectiveScore
+        catMax += e.indicator.maxScore
+        rows.push([
+          e.indicator.number,
+          e.indicator.indicator,
+          e.description,
+          e.score,
+          e.supportingDoc ?? '-',
+          validatedScore ?? '-',
+          e.validations[0]?.notes ?? '-',
+        ])
+      }
+
+      grandTotal += catScore
+      grandMax += catMax
+      const klasifikasi = getKlasifikasiPerKategori(cat.code, catScore)
+
+      // Total skor kategori — A:C merge, nilai di D
+      const rTotal = rows.length
+      rows.push([`TOTAL SKOR ${cat.code}`, '', '', catScore, '', '', ''])
+      merge(rTotal, 0, rTotal, 2)
+
+      // Baris klasifikasi — hanya untuk kategori A, B, C, D
+      if (klasifikasi !== null) {
+        const rKlas = rows.length
+        rows.push(['KATEGORI PROGRAM PRIORITAS', '', klasifikasi, '', '', '', ''])
+        merge(rKlas, 0, rKlas, 1)
+        merge(rKlas, 2, rKlas, 3)
+      }
+
+      rows.push(Array(COL_COUNT).fill(''))
+
+      rekapRows.push([cat.code, cat.name, catScore, catMax, klasifikasi ?? '-'])
+    }
+
+    // Rekap akhir
+    const categoryScores = cats.map((cat) => {
+      let score = 0; let maxScore = 0
+      for (const e of cat.items) {
+        score += e.validations[0]?.validatedScore ?? e.score
+        maxScore += e.indicator.maxScore
+      }
+      return { code: cat.code, score, maxScore }
+    })
+    const statusAkhir = getStatusAkhir(grandTotal, grandMax, categoryScores)
+
+    // Grand total — A:C merge
+    const rGrand = rows.length
+    rows.push([`TOTAL SKOR KESELURUHAN`, '', '', grandTotal, '', '', ''])
+    merge(rGrand, 0, rGrand, 2)
+
+    // Status akhir — A:B merge, nilai di C
+    const rStatus = rows.length
+    rows.push(['KATEGORI KECAMATAN BERDAYA', '', statusAkhir ?? '-', '', '', '', ''])
+    merge(rStatus, 0, rStatus, 1)
+    merge(rStatus, 2, rStatus, 3)
+
+    rows.push(Array(COL_COUNT).fill(''))
+
+    // Tabel rekapitulasi ringkas
+    rows.push(['REKAPITULASI', '', '', '', '', '', ''])
+    rows.push(['Kode', 'Kategori', 'Skor', 'Skor Maks', 'Klasifikasi', '', ''])
+    rows.push(...rekapRows.map((r) => [...(r as unknown[]), '', '']))
+    rows.push(['', 'TOTAL', grandTotal, grandMax, statusAkhir ?? '-', '', ''])
+
+    const ws = aoaToSheet(rows)
+    ws['!merges'] = merges
+    ws['!cols'] = [
+      { wch: 6 },   // A: No
+      { wch: 50 },  // B: Indikator
+      { wch: 55 },  // C: Deskripsi
+      { wch: 8 },   // D: Skor
+      { wch: 40 },  // E: Dokumen Pendukung
+      { wch: 14 },  // F: Skor Validasi
+      { wch: 45 },  // G: Komentar Tim Teknis
+    ]
+    ws['!freeze'] = { xSplit: 0, ySplit: 5, topLeftCell: 'A6', activePane: 'bottomLeft', state: 'frozen' }
+
+    // Sheet name: periode (maks 31 char, strip karakter invalid)
+    const sheetName = group.periode.replace(/[\\/*?[\]:]/g, '-').slice(0, 31)
+    XLSX.utils.book_append_sheet(wb, ws, sheetName)
+  }
+
+  const safePart = (s: string) =>
+    s.replace(/[^a-z0-9 _-]/gi, '').trim().replace(/\s+/g, '_').toUpperCase()
+
+  const filename = `LAPORAN_${safePart(kecamatanNama)}_${tahun}.xlsx`
 
   return { buffer: workbookToXlsxBuffer(wb), filename }
 }

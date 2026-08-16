@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { getKlasifikasi, getStatusAkhir } from '@/lib/scoring'
+import { getKlasifikasiPerKategori, getStatusAkhir } from '@/lib/scoring'
 
 type SnapshotIndicator = {
   number: number
@@ -134,7 +134,7 @@ export async function upsertBackupIfComplete(input: { submittedById: number; per
 
   const categories = Array.from(categoryMap.values()).sort((a, b) => a.order - b.order)
   for (const c of categories) {
-    c.klasifikasi = getKlasifikasi(c.totalScore, c.maxScore)
+    c.klasifikasi = getKlasifikasiPerKategori(c.code, c.totalScore)
   }
 
   const statusAkhir = getStatusAkhir(totalScore, maxPossibleTotal)

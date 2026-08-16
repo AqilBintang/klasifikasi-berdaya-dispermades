@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { z } from 'zod'
+import bcrypt from 'bcryptjs'
 import { UserRole } from '@prisma/client'
 import { auditLog } from '@/lib/audit'
 
 const updateSchema = z.object({
-  name:     z.string().min(1).max(100).trim().optional(),
-  role:     z.nativeEnum(UserRole).optional(),
-  isActive: z.boolean().optional(),
+  name:           z.string().min(1).max(100).trim().optional(),
+  role:           z.nativeEnum(UserRole).optional(),
+  isActive:       z.boolean().optional(),
+  password:       z.string().min(8).max(100).optional(),
+  kabupatenKode:  z.string().max(13).trim().optional(),
+  kecamatanKode:  z.string().max(13).trim().optional(),
 })
 
 // PATCH /api/users/[id]
@@ -63,9 +67,60 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: 'Tidak dapat mengubah akun Super Admin lain.' }, { status: 403 })
     }
 
+    // Handle wilayah updates
+    let kabupatenId: number | null = null
+    let kecamatanId: number | null = null
+    let kabupatenName: string | null = null
+    let kecamatanName: string | null = null
+
+    if (parsed.data.kabupatenKode !== undefined) {
+      if (parsed.data.kabupatenKode) {
+        const kab = await prisma.wilayah.findUnique({
+          where: { kode: parsed.data.kabupatenKode },
+          select: { id: true, nama: true },
+        })
+        if (!kab) return NextResponse.json({ error: 'Kabupaten/kota tidak ditemukan.' }, { status: 400 })
+        kabupatenId = kab.id
+        kabupatenName = kab.nama
+      } else {
+        kabupatenId = null
+        kabupatenName = null
+      }
+    }
+
+    if (parsed.data.kecamatanKode !== undefined) {
+      if (parsed.data.kecamatanKode) {
+        const kec = await prisma.wilayah.findUnique({
+          where: { kode: parsed.data.kecamatanKode },
+          select: { id: true, nama: true },
+        })
+        if (!kec) return NextResponse.json({ error: 'Kecamatan tidak ditemukan.' }, { status: 400 })
+        kecamatanId = kec.id
+        kecamatanName = kec.nama
+      } else {
+        kecamatanId = null
+        kecamatanName = null
+      }
+    }
+
     const user = await prisma.user.update({
       where: { id: numId },
-      data: parsed.data,
+      data: {
+        ...(parsed.data.name     !== undefined && { name:     parsed.data.name }),
+        ...(parsed.data.role     !== undefined && { role:     parsed.data.role }),
+        ...(parsed.data.isActive !== undefined && { isActive: parsed.data.isActive }),
+        ...(parsed.data.password !== undefined && {
+          passwordHash: await bcrypt.hash(parsed.data.password, 12),
+        }),
+        ...(parsed.data.kabupatenKode !== undefined && { 
+          kabupatenId,
+          kabupatenName,
+        }),
+        ...(parsed.data.kecamatanKode !== undefined && { 
+          kecamatanId,
+          kecamatanName,
+        }),
+      },
       select: { id: true, name: true, email: true, role: true, isActive: true },
     })
 

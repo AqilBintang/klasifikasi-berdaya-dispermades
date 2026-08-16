@@ -60,14 +60,15 @@ export function calculateWeightedScore(categoryScores: Array<{ code: string; sco
 }
 
 /**
- * Klasifikasi berdasarkan weighted score dengan threshold baru
+ * Klasifikasi berdasarkan weighted score sesuai rumus tim teknis.
+ * Skor konversi = (A*0.31)+(B*0.255)+(C*0.16)+(D*0.22)+(E*0.01)+(F*0.045)
+ * ≤14.41 Rintisan | ≤29.13 Berkembang | ≤43.23 Maju | ≥43.24 Berdaya
  */
 export function getKlasifikasiFromWeighted(weightedScore: number): KlasifikasiLevel | null {
-  // Minimum weighted score yang diperlukan agar semua kategori tersedia
   if (weightedScore < 0) return null
 
   if (weightedScore <= 14.41) return 'Rintisan'
-  if (weightedScore <= 29.13) return 'Berkembang'  
+  if (weightedScore <= 29.13) return 'Berkembang'
   if (weightedScore <= 43.23) return 'Maju'
   return 'Berdaya'
 }
@@ -93,6 +94,38 @@ export const KLASIFIKASI_CONFIG: Record<KlasifikasiLevel, { color: string; bg: s
   'Berkembang':    { color: 'text-amber-700',  bg: 'bg-amber-100',  border: 'border-amber-200',  emoji: '🟡' },
   'Maju':          { color: 'text-blue-700',   bg: 'bg-blue-100',   border: 'border-blue-200',   emoji: '🔵' },
   'Berdaya':       { color: 'text-green-700',  bg: 'bg-green-100',  border: 'border-green-200',  emoji: '🟢' },
+}
+
+/**
+ * Threshold klasifikasi per kategori sesuai rumus tim teknis.
+ * Kategori A–D punya threshold berbeda. Kategori lain (E, F, dst.) tidak diklasifikasi.
+ *
+ * A: ≤21 Rintisan | ≤42 Berkembang | ≤63 Maju | ≥64 Berdaya
+ * B: ≤16 Rintisan | ≤32 Berkembang | ≤48 Maju | ≥49 Berdaya
+ * C: ≤5  Rintisan | ≤10 Berkembang | ≤15 Maju | ≥16 Berdaya
+ * D: ≤11 Rintisan | ≤22 Berkembang | ≤33 Maju | ≥34 Berdaya
+ */
+const CATEGORY_THRESHOLDS: Record<string, [number, number, number]> = {
+  // [Rintisan max, Berkembang max, Maju max] — di atas Maju max = Berdaya
+  'A': [21, 42, 63],
+  'B': [16, 32, 48],
+  'C': [5,  10, 15],
+  'D': [11, 22, 33],
+}
+
+/**
+ * Klasifikasi per kategori menggunakan threshold dari tim teknis.
+ * Hanya berlaku untuk kategori A, B, C, D.
+ * Kategori lain (E, F, dst.) mengembalikan null — tidak diklasifikasi, hanya tampil total skor.
+ */
+export function getKlasifikasiPerKategori(code: string, score: number): KlasifikasiLevel | null {
+  const thresholds = CATEGORY_THRESHOLDS[code.toUpperCase()]
+  if (!thresholds) return null
+  const [rintisan, berkembang, maju] = thresholds
+  if (score <= rintisan)  return 'Rintisan'
+  if (score <= berkembang) return 'Berkembang'
+  if (score <= maju)      return 'Maju'
+  return 'Berdaya'
 }
 
 /**

@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChartLine } from '@fortawesome/free-solid-svg-icons'
-import { getStatusAkhir, getKlasifikasi } from '@/lib/scoring'
+import { getStatusAkhir, getKlasifikasiPerKategori } from '@/lib/scoring'
 import { KecamatanStatistikClient, type PeriodeStat } from '@/components/kecamatan/KecamatanStatistikClient'
 
 export default async function KecamatanStatistikPage() {
@@ -67,7 +67,7 @@ export default async function KecamatanStatistikPage() {
           order: c.order,
           totalScore: c.total,
           maxScore: c.max,
-          klasifikasi: getKlasifikasi(c.total, c.max),
+          klasifikasi: getKlasifikasiPerKategori(c.code, c.total),
         }))
 
       // Prepare category data for weighted scoring

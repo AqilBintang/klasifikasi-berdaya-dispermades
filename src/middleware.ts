@@ -17,7 +17,7 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(url)
     }
     if (session.user.role === 'VALIDATOR') {
-      return NextResponse.redirect(new URL('/validator/validasi', req.url))
+      return NextResponse.redirect(new URL('/validator', req.url))
     }
     if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN') {
       return NextResponse.redirect(new URL('/kecamatan/dashboard', req.url))
@@ -45,20 +45,20 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(url)
     }
     if (session.user.role === 'ADMIN')     return NextResponse.redirect(new URL('/admin', req.url))
-    if (session.user.role === 'VALIDATOR') return NextResponse.redirect(new URL('/validator/validasi', req.url))
+    if (session.user.role === 'VALIDATOR') return NextResponse.redirect(new URL('/validator', req.url))
   }
 
   // ── Halaman login kecamatan — redirect jika sudah login ───────────────
   if (pathname === '/kecamatan/login' && session) {
     if (session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN') return NextResponse.redirect(new URL('/admin', req.url))
-    if (session.user.role === 'VALIDATOR') return NextResponse.redirect(new URL('/validator/validasi', req.url))
+    if (session.user.role === 'VALIDATOR') return NextResponse.redirect(new URL('/validator', req.url))
     return NextResponse.redirect(new URL('/kecamatan/dashboard', req.url))
   }
 
   // ── Halaman login admin — redirect jika sudah login ───────────────────
   if (pathname === '/admin/login' && session) {
     if (session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN') return NextResponse.redirect(new URL('/admin', req.url))
-    if (session.user.role === 'VALIDATOR') return NextResponse.redirect(new URL('/validator/validasi', req.url))
+    if (session.user.role === 'VALIDATOR') return NextResponse.redirect(new URL('/validator', req.url))
     return NextResponse.redirect(new URL('/kecamatan/login', req.url))
   }
 

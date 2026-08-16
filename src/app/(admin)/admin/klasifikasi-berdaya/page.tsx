@@ -118,7 +118,7 @@ async function getStats(yearFilter?: string) {
     for (const u of users) {
       const s = latestByUserYear.get(`${u.id}_${activeYear}`)?.status
       if (!s) summary.belumAda++
-      else { summary[s]++; validatedUserIds.add(u.id) }
+      else { (summary as Record<string, number>)[s]++; validatedUserIds.add(u.id) }
     }
   }
 
@@ -262,7 +262,7 @@ export default async function KlasifikasiBerdayaPage({
         <div className="p-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             {STATUS_ORDER.map((level) => {
-              const count = summary[level]
+              const count = (summary as Record<string, number>)[level] ?? 0
               const pct = totalValidated > 0 ? Math.round((count / totalValidated) * 100) : 0
               const cfg = KLASIFIKASI_CONFIG[level]
               return (
@@ -282,7 +282,7 @@ export default async function KlasifikasiBerdayaPage({
           <div className="bg-gray-100 rounded-full h-3 overflow-hidden">
             <div className="h-full flex">
               {STATUS_ORDER.map((level) => {
-                const count = summary[level]
+                const count = (summary as Record<string, number>)[level] ?? 0
                 const pct = totalValidated > 0 ? (count / totalValidated) * 100 : 0
                 return pct > 0 ? (
                   <div 
