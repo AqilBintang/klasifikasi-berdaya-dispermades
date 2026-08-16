@@ -11,7 +11,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react'
-import { assessmentMigrationService, type MigrationImpact } from '@/lib/assessment-migration'
+import type { MigrationImpact } from '@/lib/assessment-migration'
 import { IndicatorChangeType } from '@prisma/client'
 import { cn } from '@/lib/utils'
 
@@ -51,8 +51,19 @@ export function AssessmentImpactPreview({
     try {
       setLoading(true)
       setError(null)
-      
-      const result = await assessmentMigrationService.analyzeUpdateImpact(assessmentId, changes)
+
+      const res = await fetch(`/api/assessment/${assessmentId}/impact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ changes }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error ?? 'Gagal menganalisis dampak')
+      }
+
+      const result: MigrationImpact = await res.json()
       setImpact(result)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal menganalisis dampak')

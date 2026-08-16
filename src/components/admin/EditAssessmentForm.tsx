@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Plus,
@@ -97,6 +97,10 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
   )
   const [saving, setSaving] = useState(false)
   const [result, setResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [autoSaving, setAutoSaving] = useState(false)
+  const [autoSaved, setAutoSaved] = useState(false)
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isFirstRender = useRef(true)
 
   // REVISION mode: admin sudah klik "Mulai Edit", assessment sedang di-lock
   const [isRevisionMode, setIsRevisionMode] = useState(assessment.status === 'REVISION')
@@ -115,6 +119,53 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
 
   // Assessment PUBLISHED dengan jawaban masuk — harus lock dulu sebelum bisa edit
   const needsLockBeforeEdit = isLocked && !isRevisionMode && assessment.status === 'PUBLISHED'
+
+  // ── Auto save (hanya saat status DRAFT) ────────────────────────────────────
+
+  const scheduleAutoSave = () => {
+    if (status !== 'DRAFT') return
+    if (isFirstRender.current) { isFirstRender.current = false; return }
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    autoSaveTimer.current = setTimeout(async () => {
+      setAutoSaving(true)
+      try {
+        await fetch(`/api/assessment/${assessment.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: title.trim() || assessment.title,
+            description: description.trim() || null,
+            periode: periode.trim() || assessment.periode,
+            status: 'DRAFT',
+            categories: categories.map((cat) => ({
+              code: cat.code,
+              name: cat.name.trim() || `Kategori ${cat.code}`,
+              description: cat.description.trim() || null,
+              order: cat.order,
+              indicators: cat.indicators.map((ind) => ({
+                number: ind.number,
+                indicator: ind.indicator.trim(),
+                maxScore: ind.maxScore,
+              })),
+            })),
+          }),
+        })
+        setAutoSaved(true)
+        setTimeout(() => setAutoSaved(false), 2500)
+      } catch {
+        // silent fail
+      } finally {
+        setAutoSaving(false)
+      }
+    }, 2000)
+  }
+
+  // Trigger auto save setiap kali konten form berubah
+  useEffect(() => {
+    scheduleAutoSave()
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, description, periode, categories])
 
   const addCategory = () =>
     setCategories((p) => [...p, newCategory(p.length)])
@@ -391,6 +442,18 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
         </div>
       )}
 
+      {/* Auto save indicator (hanya untuk DRAFT) */}
+      {assessment.status === 'DRAFT' && (
+        <div className="flex items-center gap-1.5 text-xs text-gray-400">
+          {autoSaving
+            ? <><Loader2 className="w-3 h-3 animate-spin" /> Menyimpan draft otomatis...</>
+            : autoSaved
+              ? <><CheckCircle className="w-3 h-3 text-green-500" /> <span className="text-green-600">Draft tersimpan otomatis</span></>
+              : <><span className="h-1.5 w-1.5 rounded-full bg-gray-300 inline-block" /> Draft disimpan otomatis saat ada perubahan</>
+          }
+        </div>
+      )}
+
       {/* Info dasar */}
       <div className="rounded-xl border bg-white p-6 shadow-sm space-y-4">
         <h3 className="font-semibold text-gray-800 flex items-center gap-2">
@@ -528,36 +591,4 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
       )}
     </div>
   )
-}
-
-interface IndicatorRow {
-  tempId: string
-  number: number
-  indicator: string
-  maxScore: number
-}
-
-interface CategoryBlock {
-  tempId: string
-  code: string
-  name: string
-  description: string
-  order: number
-  indicators: IndicatorRow[]
-}
-
-interface AssessmentData {
-  id: number
-  title: string
-  description: string | null
-  periode: string
-  status: 'DRAFT' | 'PUBLISHED' | 'REVISION' | 'ARCHIVED'
-  categories: {
-    id: number
-    code: string
-    name: string
-    description: string | null
-    order: number
-    indicators: { id: number; number: number; indicator: string; maxScore: number }[]
-  }[]
 }

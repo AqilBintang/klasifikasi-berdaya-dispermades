@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Plus, Trash2, Loader2,
@@ -328,7 +328,7 @@ function ConfirmModal({ titre, periode, onConfirm, onCancel, saving }: {
 
 // ─── Main Form ────────────────────────────────────────────────────────────────
 
-export function CreateAssessmentForm() {
+export function CreateAssessmentForm({ draftId: initialDraftId }: { draftId?: number } = {}) {
   const router = useRouter()
 
   const [step, setStep] = useState<1 | 2>(1)
@@ -339,31 +339,105 @@ export function CreateAssessmentForm() {
   const [periode, setPeriode]         = useState(String(new Date().getFullYear()))
   const [categories, setCategories]   = useState<CategoryBlock[]>([newCategory(0)])
 
-  const [saving, setSaving]       = useState(false)
-  const [checking, setChecking]   = useState(false)
+  const [saving, setSaving]         = useState(false)
+  const [checking, setChecking]     = useState(false)
+  const [draftId, setDraftId]       = useState<number | null>(initialDraftId ?? null)
+  const [autoSaving, setAutoSaving] = useState(false)
+  const autoSaveTimer               = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isFirstRender               = useRef(true)
+
+  // ── Auto save ke draft ────────────────────────────────────
+
+  const buildPayload = () => ({
+    title: title.trim() || 'Draft Assessment',
+    description: description.trim() || undefined,
+    periode: /^\d{4}$/.test(periode.trim()) ? periode.trim() : String(new Date().getFullYear()),
+    status: 'DRAFT' as const,
+    categories: categories.map((cat) => ({
+      code: cat.code,
+      name: cat.name.trim() || `Kategori ${cat.code}`,
+      description: cat.description.trim() || undefined,
+      order: cat.order,
+      scoringRule: cat.scoringRule.length > 0 ? cat.scoringRule : null,
+      indicators: cat.indicators
+        .filter((ind) => ind.indicator.trim())
+        .map((ind) => ({ number: ind.number, indicator: ind.indicator.trim(), maxScore: ind.maxScore })),
+    })).filter((cat) => cat.indicators.length > 0),
+  })
+
+  const saveDraft = async () => {
+    const payload = buildPayload()
+    // Jangan save jika tidak ada konten sama sekali
+    if (!payload.title || payload.categories.length === 0) return
+
+    try {
+      setAutoSaving(true)
+      if (!draftId) {
+        // Buat draft baru
+        const res = await fetch('/api/assessment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        if (res.ok) {
+          const json = await res.json()
+          setDraftId(json.data.id)
+        }
+      } else {
+        // Update draft yang sudah ada
+        await fetch(`/api/assessment/${draftId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+      }
+    } catch {
+      // Silent fail — auto save tidak perlu menampilkan error
+    } finally {
+      setAutoSaving(false)
+    }
+  }
+
+  // Trigger auto save dengan debounce 2 detik setiap kali form berubah
+  const scheduleAutoSave = () => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    autoSaveTimer.current = setTimeout(saveDraft, 2000)
+  }
+
+  // Wrap setters agar trigger auto save
+  const setTitleAuto        = (v: string)     => { setTitle(v);       scheduleAutoSave() }
+  const setDescriptionAuto  = (v: string)     => { setDescription(v); scheduleAutoSave() }
+  const setPeriodeAuto      = (v: string)     => { setPeriode(v);     scheduleAutoSave() }
+  const setCategoriesAuto   = (fn: (p: CategoryBlock[]) => CategoryBlock[]) => {
+    setCategories((p) => { const next = fn(p); scheduleAutoSave(); return next })
+  }
 
   // ── Category handlers ──────────────────────────────────────
 
-  const addCategory    = () => setCategories((p) => [...p, newCategory(p.length)])
-  const removeCategory = (id: string) => setCategories((p) =>
+  const addCategory    = () => setCategoriesAuto((p) => [...p, newCategory(p.length)])
+  const removeCategory = (id: string) => setCategoriesAuto((p) =>
     p.filter((c) => c.tempId !== id).map((c, i) => ({ ...c, order: i, code: String.fromCharCode(65 + i) }))
   )
   const updateCategory = (id: string, f: keyof CategoryBlock, v: string | number | boolean | ScoringRuleEntry[]) =>
-    setCategories((p) => p.map((c) => c.tempId === id ? { ...c, [f]: v } : c))
+    setCategoriesAuto((p) => p.map((c) => c.tempId === id ? { ...c, [f]: v } : c))
 
   const toggleScoringRule = (id: string) =>
-    setCategories((p) => p.map((c) => c.tempId === id ? { ...c, showScoringRule: !c.showScoringRule } : c))
+    setCategoriesAuto((p) => p.map((c) => c.tempId === id ? { ...c, showScoringRule: !c.showScoringRule } : c))
 
-  const addIndicator    = (cId: string) => setCategories((p) => p.map((c) =>
+  const addIndicator    = (cId: string) => setCategoriesAuto((p) => p.map((c) =>
     c.tempId !== cId ? c : { ...c, indicators: [...c.indicators, newIndicator(c.indicators.length + 1)] }
   ))
-  const removeIndicator = (cId: string, iId: string) => setCategories((p) => p.map((c) => {
+  const removeIndicator = (cId: string, iId: string) => setCategoriesAuto((p) => p.map((c) => {
     if (c.tempId !== cId) return c
     const filtered = c.indicators.filter((i) => i.tempId !== iId).map((i, idx) => ({ ...i, number: idx + 1 }))
     return { ...c, indicators: filtered }
   }))
   const updateIndicator = (cId: string, iId: string, f: keyof IndicatorRow, v: string | number) =>
-    setCategories((p) => p.map((c) =>
+    setCategoriesAuto((p) => p.map((c) =>
       c.tempId !== cId ? c : { ...c, indicators: c.indicators.map((i) => i.tempId === iId ? { ...i, [f]: v } : i) }
     ))
 
@@ -411,29 +485,44 @@ export function CreateAssessmentForm() {
 
   const handleConfirm = async (status: 'DRAFT' | 'PUBLISHED') => {
     setSaving(true)
+    // Batalkan auto save yang pending
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
     try {
-      const res = await fetch('/api/assessment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim() || undefined,
-          periode: periode.trim(),
-          status,
-          categories: categories.map((cat) => ({
-            code: cat.code,
-            name: cat.name.trim(),
-            description: cat.description.trim() || undefined,
-            order: cat.order,
-            scoringRule: cat.scoringRule.length > 0 ? cat.scoringRule : null,
-            indicators: cat.indicators.map((ind) => ({
-              number: ind.number,
-              indicator: ind.indicator.trim(),
-              maxScore: ind.maxScore,
-            })),
+      const payload = {
+        title: title.trim(),
+        description: description.trim() || undefined,
+        periode: periode.trim(),
+        status,
+        categories: categories.map((cat) => ({
+          code: cat.code,
+          name: cat.name.trim(),
+          description: cat.description.trim() || undefined,
+          order: cat.order,
+          scoringRule: cat.scoringRule.length > 0 ? cat.scoringRule : null,
+          indicators: cat.indicators.map((ind) => ({
+            number: ind.number,
+            indicator: ind.indicator.trim(),
+            maxScore: ind.maxScore,
           })),
-        }),
-      })
+        })),
+      }
+
+      let res: Response
+      if (draftId) {
+        // Update draft yang sudah ada
+        res = await fetch(`/api/assessment/${draftId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+      } else {
+        // Buat baru
+        res = await fetch('/api/assessment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+      }
 
       const json = await res.json()
       if (res.ok) {
@@ -466,6 +555,16 @@ export function CreateAssessmentForm() {
 
       <StepBar step={step} />
 
+      {/* Auto save indicator */}
+      {(autoSaving || draftId) && (
+        <div className="flex items-center gap-1.5 text-xs text-gray-400">
+          {autoSaving
+            ? <><Loader2 className="w-3 h-3 animate-spin" /> Menyimpan draft...</>
+            : <><span className="h-1.5 w-1.5 rounded-full bg-green-400 inline-block" /> Draft tersimpan</>
+          }
+        </div>
+      )}
+
       {/* ── STEP 1: Form ── */}
       {step === 1 && (
         <>
@@ -475,7 +574,7 @@ export function CreateAssessmentForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Judul Assessment <span className="text-red-500">*</span></label>
-                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
+                <input type="text" value={title} onChange={(e) => setTitleAuto(e.target.value)}
                   placeholder="contoh: Self Assessment Kecamatan Berdaya 2026"
                   maxLength={255}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20" />
@@ -485,13 +584,13 @@ export function CreateAssessmentForm() {
                   Periode <span className="text-red-500">*</span>
                   <span className="ml-1 text-xs text-gray-400 font-normal">(4 digit tahun, 1 assessment per tahun)</span>
                 </label>
-                <input type="text" value={periode} onChange={(e) => setPeriode(e.target.value)}
+                <input type="text" value={periode} onChange={(e) => setPeriodeAuto(e.target.value)}
                   placeholder="2026" maxLength={4}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi <span className="text-gray-400 font-normal">(opsional)</span></label>
-                <input type="text" value={description} onChange={(e) => setDescription(e.target.value)}
+                <input type="text" value={description} onChange={(e) => setDescriptionAuto(e.target.value)}
                   placeholder="Deskripsi singkat assessment..." maxLength={2000}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20" />
               </div>

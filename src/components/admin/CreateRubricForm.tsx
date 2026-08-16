@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk, faSpinner, faCheckCircle, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
@@ -14,13 +14,41 @@ interface CreateRubricFormProps { assessments: AssessmentOption[] }
 
 interface ScoreRow { score1: string; score2: string; score3: string; score4: string }
 
+const LS_KEY = 'rubric_create_draft'
+
 export function CreateRubricForm({ assessments }: CreateRubricFormProps) {
   const router = useRouter()
+
+  // Semua state diinisialisasi dengan nilai default (aman untuk SSR)
   const [selectedId, setSelectedId] = useState<number | ''>('')
   const [title, setTitle] = useState('RUBRIK PENILAIAN KECAMATAN BERDAYA PROGRAM')
   const [rows, setRows] = useState<Record<number, ScoreRow>>({})
   const [saving, setSaving] = useState(false)
   const [result, setResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [autoSaved, setAutoSaved] = useState(false)
+  const [hasDraft, setHasDraft] = useState(false)
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const skipNextAutoSave = useRef(true) // skip save saat restore dari localStorage
+
+  // Baca localStorage setelah mount (aman dari hydration mismatch)
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    try {
+      const d = localStorage.getItem(LS_KEY)
+      if (!d) return
+      const parsed = JSON.parse(d)
+      const restoredId: number | '' = parsed.selectedId ?? ''
+      const restoredTitle: string = parsed.title ?? 'RUBRIK PENILAIAN KECAMATAN BERDAYA PROGRAM'
+      const restoredRows: Record<number, ScoreRow> = parsed.rows ?? {}
+
+      skipNextAutoSave.current = true
+      if (restoredId) setSelectedId(restoredId)
+      setTitle(restoredTitle)
+      if (Object.keys(restoredRows).length > 0) setRows(restoredRows)
+      setHasDraft(true)
+    } catch { /* ignore */ }
+  }, [])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const selectedAssessment = assessments.find((a) => a.id === selectedId)
 
@@ -39,6 +67,22 @@ export function CreateRubricForm({ assessments }: CreateRubricFormProps) {
 
   const updateRow = (indId: number, field: keyof ScoreRow, val: string) =>
     setRows((p) => ({ ...p, [indId]: { ...p[indId], [field]: val } }))
+
+  // Auto save ke localStorage dengan debounce 2 detik
+  useEffect(() => {
+    if (skipNextAutoSave.current) { skipNextAutoSave.current = false; return }
+    if (!selectedId) return
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    autoSaveTimer.current = setTimeout(() => {
+      try {
+        localStorage.setItem(LS_KEY, JSON.stringify({ selectedId, title, rows }))
+        setAutoSaved(true)
+        setHasDraft(true)
+        setTimeout(() => setAutoSaved(false), 2500)
+      } catch { /* ignore */ }
+    }, 2000)
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
+  }, [selectedId, title, rows])
 
   const handleSave = async () => {
     if (!selectedId) { setResult({ type: 'error', message: 'Pilih assessment terlebih dahulu.' }); return }
@@ -65,6 +109,8 @@ export function CreateRubricForm({ assessments }: CreateRubricFormProps) {
       })
       const json = await res.json()
       if (res.ok) {
+        try { localStorage.removeItem(LS_KEY) } catch { /* ignore */ }
+        setHasDraft(false)
         setResult({ type: 'success', message: 'Rubrik berhasil disimpan.' })
         setTimeout(() => router.push('/admin/panduan'), 1200)
       } else {
@@ -86,6 +132,13 @@ export function CreateRubricForm({ assessments }: CreateRubricFormProps) {
         )}>
           <FontAwesomeIcon icon={result.type === 'success' ? faCheckCircle : faTriangleExclamation} className="w-4 h-4 mt-0.5 shrink-0" />
           {result.message}
+        </div>
+      )}
+
+      {/* Info draft tersimpan lokal */}
+      {hasDraft && !result && (
+        <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-700">
+          Ada draft yang tersimpan sementara di browser. Klik &ldquo;Simpan Rubrik&rdquo; untuk menyimpan ke server.
         </div>
       )}
 
@@ -163,7 +216,13 @@ export function CreateRubricForm({ assessments }: CreateRubricFormProps) {
       ))}
 
       {selectedAssessment && (
-        <div className="flex justify-end rounded-xl border bg-white px-6 py-4 shadow-sm">
+        <div className="flex items-center justify-between rounded-xl border bg-white px-6 py-4 shadow-sm">
+          <span className="flex items-center gap-1.5 text-xs text-gray-400">
+            {autoSaved
+              ? <><FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3 text-green-500" /> <span className="text-green-600">Tersimpan sementara di browser</span></>
+              : <><span className="h-1.5 w-1.5 rounded-full bg-gray-300 inline-block" /> Perubahan disimpan otomatis ke browser</>
+            }
+          </span>
           <button
             type="button"
             disabled={saving}

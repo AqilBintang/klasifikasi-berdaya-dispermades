@@ -1,8 +1,8 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import type { ChangeEvent } from 'react'
-import { Save, Plus, Trash2, ImageIcon, GripVertical, Layers, Info, Upload, Link2, Loader2, X } from 'lucide-react'
+import { Save, Plus, Trash2, ImageIcon, GripVertical, Layers, Info, Upload, Link2, Loader2, X, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -240,11 +240,60 @@ export function LandingPageClient({ initialData }: Props) {
   const [tentang, setTentang]     = useState<TentangPlatform>(initialData.tentangPlatform)
   const [saving, setSaving]       = useState(false)
   const [toast, setToast]         = useState<{ type: 'ok' | 'err'; msg: string } | null>(null)
+  const [autoSaving, setAutoSaving] = useState(false)
+  const [autoSaved, setAutoSaved]   = useState(false)
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isFirstRender = useRef({ banner: true, tentang: true })
 
   function showToast(type: 'ok' | 'err', msg: string) {
     setToast({ type, msg })
     setTimeout(() => setToast(null), 3500)
   }
+
+  // ── Auto save per tab ──
+  // Setiap kali slides berubah, auto save tab banner
+  useEffect(() => {
+    if (isFirstRender.current.banner) { isFirstRender.current.banner = false; return }
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    autoSaveTimer.current = setTimeout(async () => {
+      setAutoSaving(true)
+      try {
+        const res = await fetch('/api/landing-page', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ banner: { slides } }),
+        })
+        if (res.ok) {
+          setAutoSaved(true)
+          setTimeout(() => setAutoSaved(false), 2500)
+        }
+      } catch { /* silent fail */ }
+      finally { setAutoSaving(false) }
+    }, 2000)
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
+  }, [slides])
+
+  // Setiap kali tentang berubah, auto save tab tentang
+  useEffect(() => {
+    if (isFirstRender.current.tentang) { isFirstRender.current.tentang = false; return }
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    autoSaveTimer.current = setTimeout(async () => {
+      setAutoSaving(true)
+      try {
+        const res = await fetch('/api/landing-page', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tentangPlatform: tentang }),
+        })
+        if (res.ok) {
+          setAutoSaved(true)
+          setTimeout(() => setAutoSaved(false), 2500)
+        }
+      } catch { /* silent fail */ }
+      finally { setAutoSaving(false) }
+    }, 2000)
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
+  }, [tentang])
 
   async function save() {
     setSaving(true)
@@ -318,14 +367,25 @@ export function LandingPageClient({ initialData }: Props) {
           </p>
         </div>
 
-        <Button
-          onClick={save}
-          disabled={saving}
-          className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white"
-        >
-          <Save className="size-4" />
-          {saving ? 'Menyimpan…' : 'Simpan Perubahan'}
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* Auto save indicator */}
+          <span className="flex items-center gap-1.5 text-xs text-gray-400">
+            {autoSaving
+              ? <><Loader2 className="size-3 animate-spin" /> Menyimpan...</>
+              : autoSaved
+                ? <><CheckCircle className="size-3 text-green-500" /> <span className="text-green-600">Tersimpan</span></>
+                : null
+            }
+          </span>
+          <Button
+            onClick={save}
+            disabled={saving}
+            className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white"
+          >
+            <Save className="size-4" />
+            {saving ? 'Menyimpan…' : 'Simpan Perubahan'}
+          </Button>
+        </div>
       </div>
 
       {/* Toast */}

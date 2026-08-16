@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk, faSpinner, faCheckCircle, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
@@ -47,9 +47,46 @@ export function EditRubricForm({ rubric }: { rubric: RubricData }) {
   const [rows, setRows] = useState<Record<number, ScoreRow>>(initRows)
   const [saving, setSaving] = useState(false)
   const [result, setResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [autoSaved, setAutoSaved] = useState(false)
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const skipNextAutoSave = useRef(true) // skip save saat restore dari localStorage
+
+  // Apakah ada draft yang tersimpan di localStorage
+  const [hasDraft, setHasDraft] = useState(false)
+
+  // Baca localStorage setelah mount (aman dari hydration mismatch)
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`rubric_draft_${rubric.id}`)
+      if (saved) {
+        const parsed = JSON.parse(saved) as Record<number, ScoreRow>
+        skipNextAutoSave.current = true // jangan auto save saat restore
+        setRows(parsed)
+        setHasDraft(true)
+      }
+    } catch { /* ignore */ }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const updateRow = (indId: number, field: keyof ScoreRow, val: string) =>
     setRows((p) => ({ ...p, [indId]: { ...p[indId], [field]: val } }))
+
+  // Auto save ke localStorage dengan debounce 2 detik
+  useEffect(() => {
+    if (skipNextAutoSave.current) { skipNextAutoSave.current = false; return }
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    autoSaveTimer.current = setTimeout(() => {
+      try {
+        localStorage.setItem(`rubric_draft_${rubric.id}`, JSON.stringify(rows))
+        setAutoSaved(true)
+        setHasDraft(true)
+        setTimeout(() => setAutoSaved(false), 2500)
+      } catch { /* ignore */ }
+    }, 2000)
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows])
 
   const handleSave = async () => {
     setSaving(true); setResult(null)
@@ -70,6 +107,9 @@ export function EditRubricForm({ rubric }: { rubric: RubricData }) {
       })
       const json = await res.json()
       if (res.ok) {
+        // Bersihkan draft localStorage setelah berhasil disimpan ke server
+        try { localStorage.removeItem(`rubric_draft_${rubric.id}`) } catch { /* ignore */ }
+        setHasDraft(false)
         setResult({ type: 'success', message: 'Rubrik berhasil disimpan.' })
         setTimeout(() => router.push('/admin/panduan'), 1200)
       } else {
@@ -91,6 +131,13 @@ export function EditRubricForm({ rubric }: { rubric: RubricData }) {
         )}>
           <FontAwesomeIcon icon={result.type === 'success' ? faCheckCircle : faTriangleExclamation} className="w-4 h-4 mt-0.5 shrink-0" />
           {result.message}
+        </div>
+      )}
+
+      {/* Info draft tersimpan lokal */}
+      {hasDraft && !result && (
+        <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-700">
+          <p>Ada perubahan yang belum disimpan ke server — tersimpan sementara di browser ini.</p>
         </div>
       )}
 
@@ -158,7 +205,13 @@ export function EditRubricForm({ rubric }: { rubric: RubricData }) {
         </div>
       ))}
 
-      <div className="flex justify-end rounded-xl border bg-white px-6 py-4 shadow-sm">
+      <div className="flex items-center justify-between rounded-xl border bg-white px-6 py-4 shadow-sm">
+        <span className="flex items-center gap-1.5 text-xs text-gray-400">
+          {autoSaved
+            ? <><FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3 text-green-500" /> <span className="text-green-600">Tersimpan sementara di browser</span></>
+            : <><span className="h-1.5 w-1.5 rounded-full bg-gray-300 inline-block" /> Perubahan disimpan otomatis ke browser</>
+          }
+        </span>
         <button type="button" disabled={saving} onClick={handleSave}
           className="flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50">
           {saving ? <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin" /> : <FontAwesomeIcon icon={faFloppyDisk} className="w-4 h-4" />}
