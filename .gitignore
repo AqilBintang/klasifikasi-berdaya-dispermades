@@ -87,3 +87,14 @@ fontawesome-inventory.md
 # OS files
 .DS_Store
 desktop.ini
+# temporary auth/cookie files
+cookies*.txt
+login*.txt
+resp.txt
+verbose.txt
+form.html
+*_cookies.txt
+ kecamatan_cookies.txt
+login_cookies.txt
+login_output.txt
+login_response.txt
