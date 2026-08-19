@@ -342,11 +342,14 @@ export function CreateAssessmentForm({ draftId: initialDraftId }: { draftId?: nu
   const [saving, setSaving]         = useState(false)
   const [checking, setChecking]     = useState(false)
   const [draftId, setDraftId]       = useState<number | null>(initialDraftId ?? null)
-  const [autoSaving, setAutoSaving] = useState(false)
   const autoSaveTimer               = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isFirstRender               = useRef(true)
 
   // ── Auto save ke draft ────────────────────────────────────
+  // ponytail: Auto-save dinonaktifkan untuk form create baru. Data cukup
+  // disimpan di client state sampai user eksplisit klik Konfirmasi & Simpan.
+  // Kalau auto-save buat draft otomatis, handleConfirm tidak bisa PATCH
+  // (PATCH tidak terima categories), dan kalau POST maka periode conflict.
 
   const buildPayload = () => ({
     title: title.trim() || 'Draft Assessment',
@@ -365,38 +368,9 @@ export function CreateAssessmentForm({ draftId: initialDraftId }: { draftId?: nu
     })).filter((cat) => cat.indicators.length > 0),
   })
 
-  const saveDraft = async () => {
-    const payload = buildPayload()
-    // Jangan save jika tidak ada konten sama sekali
-    if (!payload.title || payload.categories.length === 0) return
-
-    try {
-      setAutoSaving(true)
-      if (!draftId) {
-        // Buat draft baru
-        const res = await fetch('/api/assessment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        })
-        if (res.ok) {
-          const json = await res.json()
-          setDraftId(json.data.id)
-        }
-      } else {
-        // Update draft yang sudah ada
-        await fetch(`/api/assessment/${draftId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        })
-      }
-    } catch {
-      // Silent fail — auto save tidak perlu menampilkan error
-    } finally {
-      setAutoSaving(false)
-    }
-  }
+  // Auto-save dinonaktifkan — tidak digunakan
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const saveDraft = async () => {}
 
   // Trigger auto save dengan debounce 2 detik setiap kali form berubah
   const scheduleAutoSave = () => {
@@ -511,25 +485,22 @@ export function CreateAssessmentForm({ draftId: initialDraftId }: { draftId?: nu
         })),
       }
 
-      let res: Response
-      if (draftId) {
-        // Update draft yang sudah ada
-        res = await fetch(`/api/assessment/${draftId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        })
-      } else {
-        // Buat baru
-        res = await fetch('/api/assessment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        })
-      }
+      // Selalu POST baru dengan full payload (categories).
+      // PATCH hanya update metadata — tidak menerima categories — sehingga
+      // tidak bisa dipakai di sini. Draft auto-save yang tersimpan sebelumnya
+      // akan dihapus setelah POST berhasil agar tidak duplikat.
+      const res = await fetch('/api/assessment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
 
       const json = await res.json()
       if (res.ok) {
+        // Hapus draft auto-save jika ada (tidak ada jawaban kecamatan, aman dihapus)
+        if (draftId && json.data?.id !== draftId) {
+          fetch(`/api/assessment/${draftId}`, { method: 'DELETE' }).catch(() => {})
+        }
         setShowConfirm(false)
         toast.success(status === 'DRAFT' ? 'Assessment berhasil disimpan sebagai draft.' : 'Assessment berhasil dipublikasikan.')
         setTimeout(() => router.push('/admin/assessment/create'), 800)
@@ -558,16 +529,6 @@ export function CreateAssessmentForm({ draftId: initialDraftId }: { draftId?: nu
       )}
 
       <StepBar step={step} />
-
-      {/* Auto save indicator */}
-      {(autoSaving || draftId) && (
-        <div className="flex items-center gap-1.5 text-xs text-gray-400">
-          {autoSaving
-            ? <><Loader2 className="w-3 h-3 animate-spin" /> Menyimpan draft...</>
-            : <><span className="h-1.5 w-1.5 rounded-full bg-green-400 inline-block" /> Draft tersimpan</>
-          }
-        </div>
-      )}
 
       {/* ── STEP 1: Form ── */}
       {step === 1 && (
