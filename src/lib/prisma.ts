@@ -12,7 +12,7 @@ function createPrismaClient() {
   // ponytail: naikkan ke 5 jika ada query paralel yang sering timeout.
   const url = new URL(baseUrl)
   url.searchParams.set('connection_limit', '5')
-  url.searchParams.set('pool_timeout', '20')
+  url.searchParams.set('pool_timeout', '30')
 
   return new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
