@@ -362,3 +362,7 @@ Temporary Items
 
 # testing sql
 diagnostic-queries.sql
+
+# vercel
+.vercelignore
+vercel.json

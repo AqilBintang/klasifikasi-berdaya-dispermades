@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import { prisma } from '@/lib/prisma'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAward, faChartBar } from '@fortawesome/free-solid-svg-icons'
-import { getKlasifikasiPerKategori, getStatusAkhir } from '@/lib/scoring'
+import { calculateWeightedScore, getKlasifikasiPerKategori, getStatusAkhir } from '@/lib/scoring'
 import { YearFilter } from '@/components/shared/ui/YearFilter'
 import { RekapitulasiClient } from '@/components/admin/RekapitulasiClient'
 
@@ -103,11 +103,14 @@ async function getRekapitulasi(periodeFilter?: string) {
       maxScore: c.maxScore
     }))
     
+    const { weightedScore } = calculateWeightedScore(categoryScores)
+
     return {
       ...g, key,
       userId:       parseInt(userId, 10),
       assessmentId: parseInt(assessmentId, 10),
       statusAkhir:  getStatusAkhir(g.totalScore, g.maxPossibleTotal, categoryScores),
+      finalScore: weightedScore,
       categories:   Object.values(g.catScores).map((c) => ({
         ...c, klasifikasi: getKlasifikasiPerKategori(c.code, c.totalScore),
       })),
@@ -134,7 +137,7 @@ export default async function RekapitulasiPage({
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Rekapitulasi Assessment</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Data hasil assessment semua kecamatan. Klik kartu untuk melihat detail isian.
+            Data hasil assessment semua kecamatan. Klik nama kecamatan untuk melihat detail isian.
           </p>
         </div>
         <div className="flex items-center gap-3">

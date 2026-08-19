@@ -2,8 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowRight, faCalendarDays } from '@fortawesome/free-solid-svg-icons'
 import { KLASIFIKASI_CONFIG, type KlasifikasiLevel } from '@/lib/scoring'
 import { Pagination } from '@/components/shared/ui/Pagination'
 
@@ -25,6 +23,7 @@ interface RekapItem {
   assessment: { id: number; title: string; periode: string }
   totalScore: number
   maxScore: number
+  finalScore: number
   statusAkhir: KlasifikasiLevel | null
   categories: {
     code: string
@@ -37,6 +36,18 @@ interface RekapItem {
 
 const PAGE_SIZE = 12
 
+const categoryCodes = ['A', 'B', 'C', 'D', 'E', 'F']
+
+function CategoryScore({ item, code }: { item: RekapItem; code: string }) {
+  const category = item.categories.find((cat) => cat.code.toUpperCase() === code)
+  return <>{category ? category.totalScore : '—'}</>
+}
+
+function CategoryStatus({ item, code }: { item: RekapItem; code: string }) {
+  const category = item.categories.find((cat) => cat.code.toUpperCase() === code)
+  return <KlasifikasiBadge level={category?.klasifikasi ?? null} />
+}
+
 export function RekapitulasiClient({ data }: { data: RekapItem[] }) {
   const [page, setPage] = useState(1)
   const totalPages = Math.ceil(data.length / PAGE_SIZE)
@@ -44,72 +55,49 @@ export function RekapitulasiClient({ data }: { data: RekapItem[] }) {
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {paged.map((item) => {
-          const pct = item.maxScore > 0 ? Math.round((item.totalScore / item.maxScore) * 100) : 0
-
-          return (
-            <Link
-              key={item.key}
-              href={`/admin/assessment/results/${item.userId}/${item.assessmentId}?periode=${item.assessment.periode}`}
-              className="group rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition-all hover:border-gray-300"
-            >
-              {/* Header */}
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="font-bold text-gray-900 group-hover:text-gray-700 transition-colors">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+        <table className="min-w-max w-full text-sm">
+          <thead className="bg-gray-50 text-xs font-semibold text-gray-500">
+            <tr className="border-b border-gray-200">
+              <th className="px-4 py-3 text-center">No.</th>
+              <th className="px-4 py-3 text-left">Kabupaten/Kota</th>
+              <th className="px-4 py-3 text-left">Kecamatan</th>
+              {categoryCodes.slice(0, 4).flatMap((code) => [
+                <th key={`score-${code}`} className="px-4 py-3 text-center whitespace-nowrap">Skor Kategori {code}</th>,
+                <th key={`status-${code}`} className="px-4 py-3 text-center whitespace-nowrap">Status Kategori {code}</th>,
+              ])}
+              {categoryCodes.slice(4).map((code) => (
+                <th key={`score-${code}`} className="px-4 py-3 text-center whitespace-nowrap">Skor Kategori {code}</th>
+              ))}
+              <th className="px-4 py-3 text-center">Verifikasi</th>
+              <th className="px-4 py-3 text-center whitespace-nowrap">Skor Final</th>
+              <th className="px-4 py-3 text-center">Klasifikasi</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {paged.map((item, index) => (
+              <tr key={item.key} className="hover:bg-gray-50/70">
+                <td className="px-4 py-3 text-center text-gray-500">{(page - 1) * PAGE_SIZE + index + 1}</td>
+                <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{item.user.kabupaten ?? '—'}</td>
+                <td className="px-4 py-3 font-semibold whitespace-nowrap">
+                  <Link href={`/admin/assessment/results/${item.userId}/${item.assessmentId}?periode=${item.assessment.periode}`} className="text-gray-900 hover:text-sky-700 hover:underline">
                     {item.user.kecamatan ?? item.user.name}
-                  </p>
-                  {item.user.kabupaten && (
-                    <p className="text-xs text-gray-400">{item.user.kabupaten}</p>
-                  )}
-                </div>
-                <FontAwesomeIcon icon={faArrowRight} className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors mt-0.5 shrink-0" />
-              </div>
-
-              {/* Assessment info */}
-              <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-3">
-                <FontAwesomeIcon icon={faCalendarDays} className="w-3 h-3" />
-                {item.assessment.title} · Periode {item.assessment.periode}
-              </div>
-
-              {/* Score bar */}
-              <div className="mb-3">
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>Total Skor</span>
-                  <span className="font-semibold text-gray-700">
-                    {item.totalScore}/{item.maxScore}{' '}
-                    <span className="text-gray-400 font-normal">({pct}%)</span>
-                  </span>
-                </div>
-                <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                  <div className="h-full rounded-full bg-gray-400 transition-all" style={{ width: `${pct}%` }} />
-                </div>
-              </div>
-
-              {/* Per kategori */}
-              <div className="space-y-1.5 mb-3 pt-2 border-t">
-                {item.categories.map((cat) => (
-                  <div key={cat.code} className="flex items-center justify-between text-xs">
-                    <span className="text-gray-500 truncate max-w-[40%]">
-                      <span className="font-medium text-gray-700">{cat.code}.</span> {cat.name}
-                    </span>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-gray-500">{cat.totalScore}/{cat.maxScore}</span>
-                      <KlasifikasiBadge level={cat.klasifikasi} />
-                    </div>
-                  </div>
+                  </Link>
+                </td>
+                {categoryCodes.slice(0, 4).flatMap((code) => [
+                  <td key={`score-${code}`} className="px-4 py-3 text-center font-medium tabular-nums"><CategoryScore item={item} code={code} /></td>,
+                  <td key={`status-${code}`} className="px-4 py-3 text-center"><CategoryStatus item={item} code={code} /></td>,
+                ])}
+                {categoryCodes.slice(4).map((code) => (
+                  <td key={`score-${code}`} className="px-4 py-3 text-center font-medium tabular-nums"><CategoryScore item={item} code={code} /></td>
                 ))}
-              </div>
-
-              {/* Status akhir */}
-              <div className="flex items-center justify-between border-t pt-3">
-                <span className="text-xs font-medium text-gray-500">Status Akhir</span>
-                <KlasifikasiBadge level={item.statusAkhir} />
-              </div>
-            </Link>
-          )
-        })}
+                <td className="px-4 py-3 text-center"><span className="inline-flex rounded-full bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700">Terverifikasi</span></td>
+                <td className="px-4 py-3 text-center font-bold tabular-nums">{item.finalScore.toFixed(2)}</td>
+                <td className="px-4 py-3 text-center"><KlasifikasiBadge level={item.statusAkhir} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
