@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
-import type { AuditAction } from '@prisma/client'
+import type { AuditAction, Prisma } from '@prisma/client'
 
 interface AuditLogData {
   action: AuditAction
@@ -34,7 +34,7 @@ export async function createAuditLog({
         userId,
         targetId,
         targetType,
-        details,
+        details: details ? JSON.parse(JSON.stringify(details)) as Prisma.InputJsonValue : undefined,
         metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
       },
     })

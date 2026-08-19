@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { z } from 'zod'
+import { AuditAction, Prisma } from '@prisma/client'
 
 const auditLogQuerySchema = z.object({
   page: z.coerce.number().min(1).default(1),
   limit: z.coerce.number().min(1).max(100).default(20),
-  action: z.string().optional(),
+  action: z.nativeEnum(AuditAction).optional(),
   userId: z.coerce.number().positive().optional(),
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
@@ -36,11 +37,7 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit
 
     // Build where clause
-    const where: {
-      action?: string
-      userId?: number  
-      createdAt?: { gte?: Date; lte?: Date }
-    } = {}
+    const where: Prisma.AuditLogWhereInput = {}
     
     if (action) {
       where.action = action

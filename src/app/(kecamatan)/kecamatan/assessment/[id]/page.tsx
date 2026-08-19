@@ -105,14 +105,6 @@ export default async function KecamatanAssessmentDetailPage({
   const hasUpdate = userStatus.latestVersion > userStatus.currentVersion
   const templateNeedsRevision = needsRevision && hasUpdate
   
-  console.log('[DEBUG] UserStatus:', {
-    currentVersion: userStatus.currentVersion,
-    latestVersion: userStatus.latestVersion,
-    status: userStatus.status,
-    hasUpdate,
-    needsRevision
-  })
-  
   // Determine which version to load
   // If user has update available and needs revision, load LATEST structure
   // Otherwise load user's current version
@@ -121,8 +113,6 @@ export default async function KecamatanAssessmentDetailPage({
     versionToLoad = userStatus.latestVersion
   }
   
-  console.log('[DEBUG] VersionToLoad:', versionToLoad, 'vs currentVersion:', userStatus.currentVersion)
-
   // Fetch version record
   const versionRecord = await prisma.assessmentVersion.findFirst({
     where: {

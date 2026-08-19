@@ -27,8 +27,7 @@ export async function GET(req: NextRequest) {
         'Cache-Control': 'no-store',
       },
     })
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Gagal membuat laporan'
-    return NextResponse.json({ error: msg }, { status: 500 })
+  } catch {
+    return NextResponse.json({ error: 'Gagal membuat laporan' }, { status: 500 })
   }
 }

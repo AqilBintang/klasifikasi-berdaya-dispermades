@@ -9,7 +9,7 @@ const UPLOAD_DIR = path.join(process.cwd(), 'public', 'banners')
 
 export async function POST(request: Request) {
   const session = await auth()
-  if (!session || session.user?.role !== 'ADMIN') {
+  if (!session || !['ADMIN', 'SUPER_ADMIN'].includes(session.user?.role ?? '')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -49,6 +49,15 @@ export async function POST(request: Request) {
   const filePath = path.join(UPLOAD_DIR, safeName)
 
   const buffer = Buffer.from(await file.arrayBuffer())
+  const signatures: Record<string, number[]> = {
+    'image/jpeg': [0xff, 0xd8, 0xff],
+    'image/png': [0x89, 0x50, 0x4e, 0x47],
+    'image/gif': [0x47, 0x49, 0x46, 0x38],
+    'image/webp': [0x52, 0x49, 0x46, 0x46],
+  }
+  if (!signatures[file.type].every((byte, index) => buffer[index] === byte)) {
+    return NextResponse.json({ error: 'Isi file tidak sesuai dengan tipe gambar.' }, { status: 400 })
+  }
   await fs.writeFile(filePath, buffer)
 
   return NextResponse.json({ url: `/banners/${safeName}` })

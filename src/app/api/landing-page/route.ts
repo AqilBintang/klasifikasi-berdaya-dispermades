@@ -21,7 +21,7 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   const session = await auth()
-  if (!session || session.user?.role !== 'ADMIN') {
+  if (!session || !['ADMIN', 'SUPER_ADMIN'].includes(session.user?.role ?? '')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

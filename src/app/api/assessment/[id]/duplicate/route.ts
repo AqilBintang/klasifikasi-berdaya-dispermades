@@ -33,6 +33,7 @@ export async function POST(
       categories: {
         orderBy: { order: 'asc' },
         include: {
+          version: { select: { versionNumber: true } },
           indicators: { orderBy: { number: 'asc' } },
         },
       },
@@ -51,10 +52,21 @@ export async function POST(
       },
     })
 
-    for (const cat of source.categories) {
+    const version = await tx.assessmentVersion.create({
+      data: {
+        assessmentId: newAssessment.id,
+        versionNumber: 1,
+        title: source.title,
+        changesSummary: `Duplikat dari assessment ${source.id}`,
+        createdById: parseInt(session.user.id, 10),
+      },
+    })
+
+    for (const cat of source.categories.filter((category) => category.version.versionNumber === source.currentVersion)) {
       const newCat = await tx.assessmentCategory.create({
         data: {
           assessmentId: newAssessment.id,
+          versionId:    version.id,
           code:         cat.code,
           name:         cat.name,
           description:  cat.description,
@@ -65,6 +77,8 @@ export async function POST(
       if (cat.indicators.length > 0) {
         await tx.assessmentIndicator.createMany({
           data: cat.indicators.map((ind) => ({
+            assessmentId: newAssessment.id,
+            versionId:    version.id,
             categoryId: newCat.id,
             number:     ind.number,
             indicator:  ind.indicator,

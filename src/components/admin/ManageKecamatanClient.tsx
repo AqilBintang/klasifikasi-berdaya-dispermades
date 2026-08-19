@@ -8,12 +8,13 @@ import {
 import { cn } from '@/lib/utils'
 import { Pagination } from '@/components/shared/ui/Pagination'
 import type { KabKotaJateng, KecamatanJateng } from '@/types/wilayah'
+import type { UserRole } from '@prisma/client'
 
 interface KecamatanUserRow {
   id: number
   name: string
   email: string
-  role: 'USER'
+  role: UserRole
   kabupaten: string | null
   kecamatan: string | null
   kabupatenKode: string | null
@@ -302,7 +303,7 @@ export function ManageKecamatanClient({ initialUsers }: ManageKecamatanClientPro
       {totalPages > 1 && (
         <div className="flex justify-center">
           <Pagination
-            currentPage={currentPage}
+            page={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
           />
