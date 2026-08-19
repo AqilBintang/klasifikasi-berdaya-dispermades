@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
           },
         },
       })
-    })
+    }, { timeout: 120000 }) // 2 menit — cukup untuk assessment dengan banyak indikator
 
     return NextResponse.json({ data: assessment }, { status: 201 })
   } catch (err) {
