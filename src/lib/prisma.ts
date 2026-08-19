@@ -11,7 +11,7 @@ function createPrismaClient() {
   // Setiap function instance hanya boleh buka 2 koneksi ke MySQL.
   // ponytail: naikkan ke 5 jika ada query paralel yang sering timeout.
   const url = new URL(baseUrl)
-  url.searchParams.set('connection_limit', '2')
+  url.searchParams.set('connection_limit', '10')
   url.searchParams.set('pool_timeout', '10')
 
   return new PrismaClient({
