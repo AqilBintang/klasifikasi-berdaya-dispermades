@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
@@ -7,7 +7,7 @@ import { buildRekapStatusAkhir } from '@/lib/export/assessment-export'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -117,15 +117,15 @@ export async function GET(_req: NextRequest) {
     ])
 
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, jsonToSheet(users as any[], { freezeHeader: true }), '01_users')
-  XLSX.utils.book_append_sheet(wb, jsonToSheet(assessments as any[], { freezeHeader: true }), '02_assessments')
-  XLSX.utils.book_append_sheet(wb, jsonToSheet(categories as any[], { freezeHeader: true }), '03_categories')
-  XLSX.utils.book_append_sheet(wb, jsonToSheet(indicators as any[], { freezeHeader: true }), '04_indicators')
-  XLSX.utils.book_append_sheet(wb, jsonToSheet(rubrics as any[], { freezeHeader: true }), '05_rubrics')
-  XLSX.utils.book_append_sheet(wb, jsonToSheet(rubricItems as any[], { freezeHeader: true }), '06_rubric_items')
-  XLSX.utils.book_append_sheet(wb, jsonToSheet(selfAssessments as any[], { freezeHeader: true }), '07_self_assessments')
-  XLSX.utils.book_append_sheet(wb, jsonToSheet(validations as any[], { freezeHeader: true }), '08_validations')
-  XLSX.utils.book_append_sheet(wb, jsonToSheet(rekapStatusAkhir as any[], { freezeHeader: true }), '09_rekap_status_akhir')
+  XLSX.utils.book_append_sheet(wb, jsonToSheet(users, { freezeHeader: true }), '01_users')
+  XLSX.utils.book_append_sheet(wb, jsonToSheet(assessments, { freezeHeader: true }), '02_assessments')
+  XLSX.utils.book_append_sheet(wb, jsonToSheet(categories, { freezeHeader: true }), '03_categories')
+  XLSX.utils.book_append_sheet(wb, jsonToSheet(indicators, { freezeHeader: true }), '04_indicators')
+  XLSX.utils.book_append_sheet(wb, jsonToSheet(rubrics, { freezeHeader: true }), '05_rubrics')
+  XLSX.utils.book_append_sheet(wb, jsonToSheet(rubricItems, { freezeHeader: true }), '06_rubric_items')
+  XLSX.utils.book_append_sheet(wb, jsonToSheet(selfAssessments, { freezeHeader: true }), '07_self_assessments')
+  XLSX.utils.book_append_sheet(wb, jsonToSheet(validations, { freezeHeader: true }), '08_validations')
+  XLSX.utils.book_append_sheet(wb, jsonToSheet(rekapStatusAkhir, { freezeHeader: true }), '09_rekap_status_akhir')
 
   const stamp = new Date().toISOString().slice(0, 10)
   const filename = `backup-full-${stamp}.xlsx`

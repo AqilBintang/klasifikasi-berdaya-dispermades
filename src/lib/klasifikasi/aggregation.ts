@@ -7,6 +7,9 @@ type RekapGroup = {
   userId: number
   assessmentId: number
   periode: string
+  versionId: number
+  versionNumber: number
+  indicatorCount: number
   totalScore: number
   maxPossibleTotal: number
   statusAkhir: KlasifikasiLevel | null
@@ -46,6 +49,7 @@ function isNewerPeriode(a: RekapGroup, b: RekapGroup) {
   const yb = getPeriodeYear(b.periode) ?? -1
   if (ya !== yb) return ya > yb
   if (a.periode !== b.periode) return a.periode.localeCompare(b.periode, 'id') > 0
+  if (a.assessmentId === b.assessmentId && a.versionNumber !== b.versionNumber) return a.versionNumber > b.versionNumber
   return a.assessmentId > b.assessmentId
 }
 
@@ -78,7 +82,7 @@ async function _getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFilter =
       submittedById: { in: userIds },
     },
     include: {
-      indicator: { select: { maxScore: true, category: { select: { assessmentId: true, code: true } } } },
+      indicator: { select: { maxScore: true, versionId: true, version: { select: { versionNumber: true } }, category: { select: { assessmentId: true, code: true } } } },
       validations: { orderBy: { validatedAt: 'desc' }, take: 1, select: { validatedScore: true } },
     },
     orderBy: [
@@ -88,10 +92,17 @@ async function _getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFilter =
     ],
   })
 
+  const indicatorCountsByVersion = new Map(
+    (await prisma.assessmentVersion.findMany({
+      where: { id: { in: [...new Set(entries.map(entry => entry.indicator.versionId))] } },
+      select: { id: true, indicators: { select: { id: true } } },
+    })).map(version => [version.id, version.indicators.length])
+  )
+
   const groupsMap: Record<string, Omit<RekapGroup, 'statusAkhir'> & { catMap: Record<string, { code: string; score: number; maxScore: number }> }> = {}
   for (const e of entries) {
     const assessmentId = e.indicator.category.assessmentId
-    const key = `${e.submittedById}_${assessmentId}_${e.periode}`
+    const key = `${e.submittedById}_${assessmentId}_${e.periode}_${e.indicator.versionId}`
     const effScore = e.validations[0]?.validatedScore ?? e.score
 
     if (!groupsMap[key]) {
@@ -99,6 +110,9 @@ async function _getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFilter =
         userId: e.submittedById,
         assessmentId,
         periode: e.periode,
+        versionId: e.indicator.versionId,
+        versionNumber: e.indicator.version.versionNumber,
+        indicatorCount: 0,
         totalScore: 0,
         maxPossibleTotal: 0,
         catMap: {},
@@ -106,6 +120,7 @@ async function _getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFilter =
     }
 
     const g = groupsMap[key]!
+    g.indicatorCount += 1
     g.totalScore += effScore
     g.maxPossibleTotal += e.indicator.maxScore
 
@@ -118,10 +133,14 @@ async function _getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFilter =
     g.catMap[catCode].maxScore += e.indicator.maxScore
   }
 
-  const groups: RekapGroup[] = Object.values(groupsMap).map(({ catMap, ...g }) => ({
-    ...g,
-    statusAkhir: getStatusAkhir(g.totalScore, g.maxPossibleTotal, Object.values(catMap)),
-  }))
+  const completeGroups = Object.values(groupsMap)
+    .filter(group => group.indicatorCount === indicatorCountsByVersion.get(group.versionId))
+
+  const groups: RekapGroup[] = completeGroups
+    .map(({ catMap, ...g }) => ({
+      ...g,
+      statusAkhir: getStatusAkhir(g.totalScore, g.maxPossibleTotal, Object.values(catMap)),
+    }))
 
   const latestOverallByUser = new Map<number, RekapGroup>()
   for (const g of groups) {
@@ -130,7 +149,7 @@ async function _getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFilter =
   }
 
   const latestByUserYear = new Map<string, RekapGroup & { catMap: Record<string, { code: string; score: number; maxScore: number }> }>()
-  for (const gRaw of Object.values(groupsMap)) {
+  for (const gRaw of completeGroups) {
     const g = { ...gRaw, statusAkhir: getStatusAkhir(gRaw.totalScore, gRaw.maxPossibleTotal, Object.values(gRaw.catMap)) }
     const year = getPeriodeYear(g.periode)
     if (!year) continue

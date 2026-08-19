@@ -41,9 +41,9 @@ function toYearFromPeriode(periode: string): number | null {
   return Number.isNaN(year) ? null : year
 }
 
-export async function upsertBackupIfComplete(input: { submittedById: number; periode: string; assessmentId: number }) {
+export async function upsertBackupIfComplete(input: { submittedById: number; periode: string; assessmentId: number; versionId: number; versionNumber: number }) {
   const totalIndicators = await prisma.assessmentIndicator.count({
-    where: { category: { assessmentId: input.assessmentId } },
+    where: { assessmentId: input.assessmentId, versionId: input.versionId },
   })
 
   const validatedIndicators = await prisma.selfAssessment.count({
@@ -51,7 +51,7 @@ export async function upsertBackupIfComplete(input: { submittedById: number; per
       submittedById: input.submittedById,
       periode: input.periode,
       status: 'VALIDATED',
-      indicator: { category: { assessmentId: input.assessmentId } },
+      indicator: { assessmentId: input.assessmentId, versionId: input.versionId },
     },
   })
 
@@ -62,7 +62,7 @@ export async function upsertBackupIfComplete(input: { submittedById: number; per
       submittedById: input.submittedById,
       periode: input.periode,
       status: 'VALIDATED',
-      indicator: { category: { assessmentId: input.assessmentId } },
+      indicator: { assessmentId: input.assessmentId, versionId: input.versionId },
     },
     include: {
       submittedBy: {
@@ -152,10 +152,11 @@ export async function upsertBackupIfComplete(input: { submittedById: number; per
   }
 
   await prisma.assessmentBackup.upsert({
-    where: { assessmentTitle_periode_kecamatan: { assessmentTitle, periode: input.periode, kecamatan } },
+    where: { assessmentTitle_periode_kecamatan_versionNumber: { assessmentTitle, periode: input.periode, kecamatan, versionNumber: input.versionNumber } },
     create: {
       assessmentTitle,
       periode: input.periode,
+      versionNumber: input.versionNumber,
       tahun: snapshot.tahun,
       kabupaten,
       kecamatan,
@@ -183,18 +184,18 @@ export async function upsertBackupsForSelfAssessmentIds(selfAssessmentIds: numbe
     select: {
       submittedById: true,
       periode: true,
-      indicator: { select: { category: { select: { assessmentId: true } } } },
+      indicator: { select: { assessmentId: true, versionId: true, version: { select: { versionNumber: true } } } },
     },
   })
 
-  const keys = new Map<string, { submittedById: number; periode: string; assessmentId: number }>()
+  const keys = new Map<string, { submittedById: number; periode: string; assessmentId: number; versionId: number; versionNumber: number }>()
   for (const s of submissions) {
-    const assessmentId = s.indicator.category.assessmentId
-    const k = `${s.submittedById}_${assessmentId}_${s.periode}`
-    if (!keys.has(k)) keys.set(k, { submittedById: s.submittedById, periode: s.periode, assessmentId })
+    const { assessmentId, versionId, version } = s.indicator
+    const k = `${s.submittedById}_${assessmentId}_${s.periode}_${versionId}`
+    if (!keys.has(k)) keys.set(k, { submittedById: s.submittedById, periode: s.periode, assessmentId, versionId, versionNumber: version.versionNumber })
   }
 
-  const results: Array<{ submittedById: number; periode: string; assessmentId: number; ok: boolean }> = []
+  const results: Array<{ submittedById: number; periode: string; assessmentId: number; versionId: number; versionNumber: number; ok: boolean }> = []
   for (const key of keys.values()) {
     const r = await upsertBackupIfComplete(key)
     results.push({ ...key, ok: r.ok })
@@ -202,7 +203,7 @@ export async function upsertBackupsForSelfAssessmentIds(selfAssessmentIds: numbe
   return results
 }
 
-export async function deleteBackupForGroup(input: { submittedById: number; periode: string; assessmentId: number }) {
+export async function deleteBackupForGroup(input: { submittedById: number; periode: string; assessmentId: number; versionNumber: number }) {
   const [user, assessment] = await Promise.all([
     prisma.user.findUnique({
       where: { id: input.submittedById },
@@ -216,7 +217,7 @@ export async function deleteBackupForGroup(input: { submittedById: number; perio
   if (!kecamatan || !assessmentTitle) return
 
   await prisma.assessmentBackup.deleteMany({
-    where: { assessmentTitle, periode: input.periode, kecamatan },
+    where: { assessmentTitle, periode: input.periode, kecamatan, versionNumber: input.versionNumber },
   })
 }
 
@@ -226,15 +227,15 @@ export async function deleteBackupsForSelfAssessmentIds(selfAssessmentIds: numbe
     select: {
       submittedById: true,
       periode: true,
-      indicator: { select: { category: { select: { assessmentId: true } } } },
+      indicator: { select: { assessmentId: true, version: { select: { versionNumber: true } } } },
     },
   })
 
-  const keys = new Map<string, { submittedById: number; periode: string; assessmentId: number }>()
+  const keys = new Map<string, { submittedById: number; periode: string; assessmentId: number; versionNumber: number }>()
   for (const s of submissions) {
-    const assessmentId = s.indicator.category.assessmentId
-    const k = `${s.submittedById}_${assessmentId}_${s.periode}`
-    if (!keys.has(k)) keys.set(k, { submittedById: s.submittedById, periode: s.periode, assessmentId })
+    const { assessmentId, version } = s.indicator
+    const k = `${s.submittedById}_${assessmentId}_${s.periode}_${version.versionNumber}`
+    if (!keys.has(k)) keys.set(k, { submittedById: s.submittedById, periode: s.periode, assessmentId, versionNumber: version.versionNumber })
   }
 
   for (const key of keys.values()) {

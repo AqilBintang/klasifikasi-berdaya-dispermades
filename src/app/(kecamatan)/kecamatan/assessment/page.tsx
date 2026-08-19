@@ -11,7 +11,7 @@ import {
 
 // ─── Status badge ──────────────────────────────────────────────────────────
 
-type AssessmentStatus = 'BELUM_DIISI' | 'DRAFT' | 'SUBMITTED' | 'VALIDATED' | 'PARTIAL' | 'NEEDS_REVISION'
+type AssessmentStatus = 'BELUM_DIISI' | 'DRAFT' | 'SUBMITTED' | 'VALIDATED' | 'PARTIAL' | 'NEEDS_REVISION' | 'HAS_UPDATE'
 
 const STATUS_CONFIG: Record<AssessmentStatus, {
   label: string
@@ -24,6 +24,7 @@ const STATUS_CONFIG: Record<AssessmentStatus, {
   SUBMITTED:      { label: 'Menunggu Validasi', icon: faHourglass,         cls: 'bg-amber-50 text-amber-700 border-amber-200' },
   VALIDATED:      { label: 'Disetujui',         icon: faCircleCheck,       cls: 'bg-green-50 text-green-700 border-green-200' },
   NEEDS_REVISION: { label: 'Perlu Revisi',      icon: faCircleExclamation, cls: 'bg-red-50 text-red-700 border-red-200' },
+  HAS_UPDATE:     { label: 'Ada Update',        icon: faClock,             cls: 'bg-blue-50 text-blue-700 border-blue-200' },
 }
 
 function StatusBadge({ status }: { status: AssessmentStatus }) {
@@ -41,9 +42,11 @@ function StatusBadge({ status }: { status: AssessmentStatus }) {
 function deriveStatus(
   totalIndicators: number,
   entries: { status: string }[],
-  needsRevision: boolean
+  needsRevision: boolean,
+  hasUpdate: boolean
 ): AssessmentStatus {
   if (needsRevision) return 'NEEDS_REVISION'
+  if (hasUpdate) return 'HAS_UPDATE'
   if (entries.length === 0) return 'BELUM_DIISI'
   if (entries.every((e) => e.status === 'VALIDATED')) return 'VALIDATED'
   const allDone = entries.every((e) => e.status === 'SUBMITTED' || e.status === 'VALIDATED')
@@ -77,29 +80,56 @@ export default async function KecamatanAssessmentPage() {
     select: {
       id: true,
       status: true,
-      indicator: { select: { category: { select: { assessmentId: true } } } },
+      indicator: {
+        select: {
+          version: { select: { versionNumber: true } },
+          category: { select: { assessmentId: true } },
+        },
+      },
+      validations: {
+        orderBy: { validatedAt: 'desc' },
+        take: 1,
+        select: { status: true },
+      },
     },
   })
 
-  const entriesByAssessment: Record<number, { status: string }[]> = {}
+  const entriesByAssessment: Record<number, { status: string; versionNumber: number }[]> = {}
   for (const e of allEntries) {
     const aId = e.indicator.category.assessmentId
     if (!entriesByAssessment[aId]) entriesByAssessment[aId] = []
-    entriesByAssessment[aId].push({ status: e.status })
+    entriesByAssessment[aId].push({ status: e.status, versionNumber: e.indicator.version.versionNumber })
   }
 
-  // Cek NEEDS_REVISION dari UserAssessmentStatus
+  // Cek NEEDS_REVISION dan HAS_UPDATE dari UserAssessmentStatus
   const userStatuses = await prisma.userAssessmentStatus.findMany({
     where: {
       userId,
       assessmentId: { in: assessments.map((a) => a.id) },
     },
-    select: { assessmentId: true, status: true }
+    select: { assessmentId: true, status: true, currentVersion: true, latestVersion: true }
   })
   const needsRevisionSet = new Set(
     userStatuses
       .filter(s => s.status === 'NEEDS_REVISION')
       .map(s => s.assessmentId)
+  )
+  const hasUpdateSet = new Set(
+    userStatuses
+      .filter(s => s.status === 'HAS_UPDATE' || s.latestVersion > s.currentVersion)
+      .map(s => s.assessmentId)
+  )
+  const currentVersionByAssessment = new Map(assessments.map((assessment) => [assessment.id, assessment.currentVersion]))
+  for (const status of userStatuses) currentVersionByAssessment.set(status.assessmentId, status.currentVersion)
+  const validatorFeedbackSet = new Set(
+    allEntries
+      .filter((entry) => {
+        const decision = entry.validations[0]?.status
+        return !hasUpdateSet.has(entry.indicator.category.assessmentId)
+          && entry.indicator.version.versionNumber === currentVersionByAssessment.get(entry.indicator.category.assessmentId)
+          && (decision === 'REJECTED' || decision === 'REVISION_NEEDED')
+      })
+      .map((entry) => entry.indicator.category.assessmentId)
   )
 
   return (
@@ -120,9 +150,13 @@ export default async function KecamatanAssessmentPage() {
           {assessments.map((a) => {
             const isUpdating = a.status === 'REVISION'
             const totalInd = a.categories.reduce((s, c) => s + c.indicators.length, 0)
-            const entries  = entriesByAssessment[a.id] ?? []
-            const needsRevision = needsRevisionSet.has(a.id)
-            const status = deriveStatus(totalInd, entries, needsRevision)
+            const entries = (entriesByAssessment[a.id] ?? []).filter(
+              (entry) => entry.versionNumber === currentVersionByAssessment.get(a.id)
+            )
+            const hasValidatorFeedback = validatorFeedbackSet.has(a.id)
+            const needsRevision = needsRevisionSet.has(a.id) || hasValidatorFeedback
+            const hasUpdate = hasUpdateSet.has(a.id)
+            const status = deriveStatus(totalInd, entries, needsRevision, hasUpdate)
             const isLocked = status === 'VALIDATED'
 
             // Assessment sedang diperbarui admin — tampilkan tapi disable link
@@ -160,6 +194,8 @@ export default async function KecamatanAssessmentPage() {
                 className={`rounded-xl border bg-white p-5 transition-all group ${
                   needsRevision
                     ? 'border-red-300 hover:border-red-400 hover:shadow-sm'
+                    : hasUpdate
+                    ? 'border-blue-300 hover:border-blue-400 hover:shadow-sm'
                     : 'border-slate-200 hover:border-sky-300 hover:shadow-sm'
                 }`}
               >
@@ -174,6 +210,8 @@ export default async function KecamatanAssessmentPage() {
                 <h3 className={`font-semibold leading-snug transition-colors ${
                   needsRevision
                     ? 'text-slate-900 group-hover:text-red-600'
+                    : hasUpdate
+                    ? 'text-slate-900 group-hover:text-blue-600'
                     : 'text-slate-900 group-hover:text-sky-600'
                 }`}>
                   {a.title}
@@ -184,7 +222,15 @@ export default async function KecamatanAssessmentPage() {
 
                 {needsRevision && (
                   <p className="mt-2 text-xs text-red-600 font-medium">
-                    ⚠️ Ada perubahan dari admin. Silakan lengkapi indikator yang baru/diperbarui.
+                    ⚠️ {hasValidatorFeedback
+                      ? 'Tim teknis meminta perbaikan. Buka assessment untuk mengisi ulang indikator yang ditandai.'
+                      : 'Ada perubahan dari admin. Silakan lengkapi indikator yang baru/diperbarui.'}
+                  </p>
+                )}
+
+                {hasUpdate && !needsRevision && (
+                  <p className="mt-2 text-xs text-blue-600 font-medium">
+                    📋 Assessment diperbarui admin. Silakan lengkapi indikator baru yang tersedia.
                   </p>
                 )}
 
@@ -199,7 +245,8 @@ export default async function KecamatanAssessmentPage() {
                         className={`h-full rounded-full transition-all ${
                           status === 'VALIDATED'    ? 'bg-green-500' :
                           status === 'SUBMITTED'    ? 'bg-amber-400' :
-                          status === 'NEEDS_REVISION' ? 'bg-red-400'  : 'bg-sky-500'
+                          status === 'NEEDS_REVISION' ? 'bg-red-400'  :
+                          status === 'HAS_UPDATE'   ? 'bg-blue-400'  : 'bg-sky-500'
                         }`}
                         style={{ width: `${(entries.length / totalInd) * 100}%` }}
                       />
@@ -213,10 +260,12 @@ export default async function KecamatanAssessmentPage() {
                   </span>
                   <span className={`flex items-center gap-1 text-sm font-medium ${
                     isLocked        ? 'text-green-600' :
-                    needsRevision   ? 'text-red-600'   : 'text-sky-600'
+                    needsRevision   ? 'text-red-600'   :
+                    hasUpdate       ? 'text-blue-600'  : 'text-sky-600'
                   }`}>
-                    {isLocked      ? 'Lihat Detail' :
-                     needsRevision ? 'Isi Revisi'   :
+                    {isLocked        ? 'Lihat Detail'  :
+                     needsRevision   ? 'Isi Revisi'    :
+                     hasUpdate       ? 'Lihat Update'  :
                      status === 'BELUM_DIISI' ? 'Mulai Isi' : 'Lanjutkan'}
                     <FontAwesomeIcon icon={faArrowRight} className="w-3.5 h-3.5" />
                   </span>

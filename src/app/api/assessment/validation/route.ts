@@ -4,12 +4,13 @@ import { auth } from '@/auth'
 import { z } from 'zod'
 import { deleteBackupForGroup, upsertBackupIfComplete } from '@/lib/export/backup-snapshot'
 import { auditLog } from '@/lib/audit'
+import { revalidateTag } from 'next/cache'
 
 const validateSchema = z.object({
   selfAssessmentId: z.number().int().positive(),
   // validatorId diambil dari session, bukan dari body — cegah audit trail palsu
   status:           z.enum(['APPROVED', 'REJECTED', 'REVISION_NEEDED']),
-  validatedScore:   z.number().int().min(0).max(10).optional().nullable(),
+  validatedScore:   z.number().int().min(1).max(4).optional().nullable(),
   notes:            z.string().max(2000).trim().optional().nullable(),
 })
 
@@ -143,7 +144,7 @@ export async function POST(req: NextRequest) {
         status: true,
         submittedById: true,
         periode: true,
-        indicator: { select: { category: { select: { assessmentId: true } } } },
+        indicator: { select: { assessmentId: true, versionId: true, version: { select: { versionNumber: true } }, category: { select: { assessmentId: true } } } },
       },
     })
     if (!sa) {
@@ -156,26 +157,10 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Blokir validasi jika kecamatan sedang NEEDS_REVISION — artinya admin baru
-    // update indikator dan jawaban ini sudah tidak relevan. Validator harus
-    // menunggu kecamatan menyelesaikan revisi terlebih dahulu.
+    // The indicator relation is the submission's immutable version snapshot.
+    // Do not infer its version from Assessment.currentVersion or a user's
+    // latest status: V1 submissions must remain reviewable as V1 history.
     const assessmentId = sa.indicator.category.assessmentId
-    const userAssessmentStatus = await prisma.userAssessmentStatus.findUnique({
-      where: {
-        userId_assessmentId: { userId: sa.submittedById, assessmentId },
-      },
-      select: { status: true },
-    })
-    if (userAssessmentStatus?.status === 'NEEDS_REVISION') {
-      return NextResponse.json(
-        {
-          error:
-            'Kecamatan ini sedang diminta revisi akibat pembaruan assessment oleh admin. Validasi ditangguhkan hingga kecamatan menyelesaikan revisi.',
-          outdated: true,
-        },
-        { status: 409 }
-      )
-    }
 
     // Simpan validasi + update status self assessment dalam satu transaksi
     const result = await prisma.$transaction(async (tx) => {
@@ -192,7 +177,7 @@ export async function POST(req: NextRequest) {
       // Update status self assessment berdasarkan hasil validasi
       const newStatus =
         status === 'APPROVED' ? 'VALIDATED' :
-        status === 'REJECTED' ? 'REJECTED'  : 'SUBMITTED' // REVISION_NEEDED tetap SUBMITTED
+        status === 'REJECTED' ? 'REJECTED' : 'DRAFT'
 
       await tx.selfAssessment.update({
         where: { id: selfAssessmentId },
@@ -219,8 +204,9 @@ export async function POST(req: NextRequest) {
       console.error('Failed to log assessment validation:', err)
     }
 
-    if (status === 'APPROVED') await upsertBackupIfComplete({ submittedById: sa.submittedById, periode: sa.periode, assessmentId })
-    else await deleteBackupForGroup({ submittedById: sa.submittedById, periode: sa.periode, assessmentId })
+    if (status === 'APPROVED') await upsertBackupIfComplete({ submittedById: sa.submittedById, periode: sa.periode, assessmentId, versionId: sa.indicator.versionId, versionNumber: sa.indicator.version.versionNumber })
+    else await deleteBackupForGroup({ submittedById: sa.submittedById, periode: sa.periode, assessmentId, versionNumber: sa.indicator.version.versionNumber })
+    revalidateTag('klasifikasi-agg', 'max')
 
     return NextResponse.json({ data: result }, { status: 201 })
   } catch (err) {

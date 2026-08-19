@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ScoringRuleEntry } from '@/types/assessment'
+import { IndicatorChangeType } from '@prisma/client'
 
 interface IndicatorRow {
   tempId: string
@@ -103,66 +104,18 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
   )
   const [saving, setSaving] = useState(false)
   const [result, setResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
-  const [autoSaving, setAutoSaving] = useState(false)
-  const [autoSaved, setAutoSaved] = useState(false)
-  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const isFirstRender = useRef(true)
-
+  
   // REVISION mode: admin sudah klik "Mulai Edit", assessment sedang di-lock
   const [isRevisionMode, setIsRevisionMode] = useState(assessment.status === 'REVISION')
   const [lockingRevision, setLockingRevision] = useState(false)
+  const [publishingVersion, setPublishingVersion] = useState(false)
 
-  const [isPublishing, setIsPublishing] = useState(false)
-
-  // Assessment PUBLISHED dengan jawaban masuk — harus lock dulu sebelum bisa edit
+  // Assessment PUBLISHED dengan jawaban masuk — harus lock dulu sebelum bisa edit structure
   const needsLockBeforeEdit = isLocked && !isRevisionMode && assessment.status === 'PUBLISHED'
 
-  // ── Auto save (hanya saat status DRAFT) ────────────────────────────────────
-  const scheduleAutoSave = () => {
-    if (status !== 'DRAFT') return
-    if (isFirstRender.current) { isFirstRender.current = false; return }
-    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
-    autoSaveTimer.current = setTimeout(async () => {
-      setAutoSaving(true)
-      try {
-        await fetch(`/api/assessment/${assessment.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: title.trim() || assessment.title,
-            description: description.trim() || null,
-            periode: periode.trim() || assessment.periode,
-            status: 'DRAFT',
-            categories: categories.map((cat) => ({
-              code: cat.code,
-              name: cat.name.trim() || `Kategori ${cat.code}`,
-              description: cat.description.trim() || null,
-              order: cat.order,
-              indicators: cat.indicators.map((ind) => ({
-                number: ind.number,
-                indicator: ind.indicator.trim(),
-                maxScore: ind.maxScore,
-              })),
-              scoringRule: cat.scoringRule.length > 0 ? cat.scoringRule : null,
-            })),
-          }),
-        })
-        setAutoSaved(true)
-        setTimeout(() => setAutoSaved(false), 2500)
-      } catch {
-        // silent fail
-      } finally {
-        setAutoSaving(false)
-      }
-    }, 2000)
-  }
-
-  // Trigger auto save setiap kali konten form berubah
-  useEffect(() => {
-    scheduleAutoSave()
-    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, description, periode, categories])
+  // Saat REVISION, categories di-edit di state saja (tidak auto-save ke server).
+  // Hanya metadata (title/desc/periode) yang bisa di-save sementara.
+  // Submit Update akan kirim categories ke POST /api/assessment/[id]/version
 
   const addCategory = () =>
     setCategories((p) => [...p, newCategory(p.length)])
@@ -256,103 +209,92 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
     }
   }
 
-  // Calculate changes between original and current data
-  const calculateChanges = () => {
+  // Calculate indicator-level diff between original and current state
+  const calculateIndicatorDiff = () => {
+    const originalMap = new Map<string, { id: number; indicator: string; maxScore: number }>()
+    // Build map dari original: key = 'categoryCode:number'
+    assessment.categories.forEach(cat => {
+      cat.indicators.forEach(ind => {
+        originalMap.set(`${cat.code}:${ind.number}`, {
+          id: ind.id,
+          indicator: ind.indicator,
+          maxScore: ind.maxScore,
+        })
+      })
+    })
+
     const changes: Array<{
       type: IndicatorChangeType
       indicatorId?: number
       oldValue?: any
       newValue?: any
-      requiresResubmit?: boolean
+      requiresResubmit: boolean
     }> = []
 
-    const originalIndicators = new Map<number, { indicator: string; maxScore: number; categoryId: number }>()
-    assessment.categories.forEach(cat => {
+    // Cek ADDED dan MODIFIED
+    const currentKeys = new Set<string>()
+    categories.forEach(cat => {
       cat.indicators.forEach(ind => {
-        originalIndicators.set(ind.id, {
-          indicator: ind.indicator,
-          maxScore: ind.maxScore,
-          categoryId: cat.id
-        })
+        const key = `${cat.code}:${ind.number}`
+        currentKeys.add(key)
+        const orig = originalMap.get(key)
+        if (!orig) {
+          // ADDED
+          changes.push({
+            type: IndicatorChangeType.ADDED,
+            requiresResubmit: true,
+            newValue: { categoryCode: cat.code, number: ind.number, indicator: ind.indicator, maxScore: ind.maxScore },
+          })
+        } else if (orig.indicator !== ind.indicator.trim() || orig.maxScore !== ind.maxScore) {
+          // MODIFIED
+          changes.push({
+            type: IndicatorChangeType.MODIFIED,
+            indicatorId: orig.id,
+            oldValue: { indicator: orig.indicator, maxScore: orig.maxScore },
+            newValue: { indicator: ind.indicator.trim(), maxScore: ind.maxScore },
+            requiresResubmit: true, // teks indicator berubah = perlu isi ulang
+          })
+        }
       })
     })
 
-    const originalCount = originalIndicators.size
-    const currentCount = categories.reduce((s, c) => s + c.indicators.length, 0)
-
-    if (currentCount > originalCount) {
-      for (let i = originalCount; i < currentCount; i++) {
-        changes.push({ type: IndicatorChangeType.ADDED, requiresResubmit: true })
+    // Cek REMOVED
+    for (const [key, orig] of originalMap) {
+      if (!currentKeys.has(key)) {
+        changes.push({
+          type: IndicatorChangeType.REMOVED,
+          indicatorId: orig.id,
+          oldValue: { indicator: orig.indicator, maxScore: orig.maxScore },
+          requiresResubmit: false,
+        })
       }
-    } else if (currentCount < originalCount) {
-      for (let i = currentCount; i < originalCount; i++) {
-        changes.push({ type: IndicatorChangeType.REMOVED, requiresResubmit: false })
-      }
-    }
-
-    if (title !== assessment.title || description !== (assessment.description ?? '')) {
-      changes.push({ type: IndicatorChangeType.MODIFIED, requiresResubmit: false })
     }
 
     return changes
   }
 
-  const handleSave = async (withMigration = false) => {
+  // Save metadata (title/desc/periode) — tidak menyentuh categories
+  const handleSaveMetadata = async () => {
     if (!title.trim()) { setResult({ type: 'error', message: 'Judul wajib diisi.' }); return }
-    for (const cat of categories) {
-      if (!cat.name.trim()) { setResult({ type: 'error', message: `Nama kategori "${cat.code}" wajib diisi.` }); return }
-      for (const ind of cat.indicators) {
-        if (!ind.indicator.trim()) { setResult({ type: 'error', message: `Indikator nomor ${ind.number} di kategori "${cat.code}" belum diisi.` }); return }
-      }
-    }
-
-    // Kalau assessment sedang di-lock (REVISION) dan mau publish, wajib pakai migration flow
-    if (isRevisionMode && status === 'PUBLISHED' && !withMigration) {
-      // Proceed directly to save without preview impact
-    }
-
-    // Assessment baru (belum ada jawaban) publish biasa
-    if (status === 'PUBLISHED' && assessment.status !== 'PUBLISHED' && !isRevisionMode && !withMigration) {
-      // Proceed directly to save without preview impact
-    }
 
     setSaving(true)
     setResult(null)
     try {
-      const payload = {
-        title: title.trim(),
-        description: description.trim() || null,
-        periode: periode.trim(),
-        status,
-        withMigration,
-        changes: withMigration ? calculateChanges() : undefined,
-        categories: categories.map((cat) => ({
-          code: cat.code,
-          name: cat.name.trim(),
-          description: cat.description.trim() || null,
-          order: cat.order,
-          indicators: cat.indicators.map((ind) => ({
-            number: ind.number,
-            indicator: ind.indicator.trim(),
-            maxScore: ind.maxScore,
-          })),
-          scoringRule: cat.scoringRule.length > 0 ? cat.scoringRule : null,
-        })),
-      }
-
       const res = await fetch(`/api/assessment/${assessment.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim() || null,
+          periode: periode.trim(),
+          // Kirim status hanya jika berubah ke ARCHIVED (satu-satunya perubahan yang valid dari form)
+          ...(status === 'ARCHIVED' && { status: 'ARCHIVED' }),
+        }),
       })
 
       const json = await res.json()
       if (res.ok) {
-        const message = withMigration
-          ? 'Assessment berhasil dipublish. Kecamatan yang sudah submit akan diminta revisi untuk indikator baru.'
-          : 'Assessment berhasil disimpan.'
-        setResult({ type: 'success', message })
-        setTimeout(() => router.push('/admin/assessment/create'), 1500)
+        setResult({ type: 'success', message: 'Metadata assessment berhasil disimpan.' })
       } else {
         setResult({ type: 'error', message: json.error ?? 'Gagal menyimpan.' })
       }
@@ -363,8 +305,65 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
     }
   }
 
+  // Submit Update: publish version baru dengan categories baru
+  const handleSubmitUpdate = async () => {
+    if (!title.trim()) { setResult({ type: 'error', message: 'Judul wajib diisi.' }); return }
+    for (const cat of categories) {
+      if (!cat.name.trim()) { setResult({ type: 'error', message: `Nama kategori "${cat.code}" wajib diisi.` }); return }
+      for (const ind of cat.indicators) {
+        if (!ind.indicator.trim()) { setResult({ type: 'error', message: `Indikator nomor ${ind.number} di kategori "${cat.code}" belum diisi.` }); return }
+      }
+    }
+
+    setPublishingVersion(true)
+    setResult(null)
+    try {
+      const indicatorChanges = calculateIndicatorDiff()
+      const changesSummary = `Update assessment: ${categories.reduce((s, c) => s + c.indicators.length, 0)} total indikator` +
+        (indicatorChanges.filter(c => c.type === 'ADDED').length > 0 ? `, ${indicatorChanges.filter(c => c.type === 'ADDED').length} ditambah` : '') +
+        (indicatorChanges.filter(c => c.type === 'MODIFIED').length > 0 ? `, ${indicatorChanges.filter(c => c.type === 'MODIFIED').length} dimodifikasi` : '') +
+        (indicatorChanges.filter(c => c.type === 'REMOVED').length > 0 ? `, ${indicatorChanges.filter(c => c.type === 'REMOVED').length} dihapus` : '')
+
+      const res = await fetch(`/api/assessment/${assessment.id}/version`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          changesSummary,
+          categories: categories.map((cat) => ({
+            code: cat.code,
+            name: cat.name.trim(),
+            description: cat.description.trim() || null,
+            order: cat.order,
+            indicators: cat.indicators.map((ind) => ({
+              number: ind.number,
+              indicator: ind.indicator.trim(),
+              maxScore: ind.maxScore,
+            })),
+            scoringRule: cat.scoringRule.length > 0 ? cat.scoringRule : null,
+          })),
+          indicatorChanges,
+        }),
+      })
+
+      const json = await res.json()
+      if (res.ok) {
+        setResult({ type: 'success', message: json.message ?? 'Version baru berhasil dipublish.' })
+        setTimeout(() => router.push('/admin/assessment/create'), 1500)
+      } else {
+        setResult({ type: 'error', message: json.error ?? 'Gagal publish version baru.' })
+      }
+    } catch {
+      setResult({ type: 'error', message: 'Terjadi kesalahan jaringan.' })
+    } finally {
+      setPublishingVersion(false)
+    }
+  }
+
   // Form tidak bisa diedit kalau: (1) belum di-lock padahal ada jawaban, atau (2) ARCHIVED
   const formDisabled = needsLockBeforeEdit || assessment.status === 'ARCHIVED'
+  
+  // Categories bisa diedit hanya saat REVISION atau DRAFT
+  const canEditStructure = (isRevisionMode || assessment.status === 'DRAFT') && !formDisabled
 
   return (
     <div className="space-y-6">
@@ -426,12 +425,7 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
       {/* Auto save indicator (hanya untuk DRAFT) */}
       {assessment.status === 'DRAFT' && (
         <div className="flex items-center gap-1.5 text-xs text-gray-400">
-          {autoSaving
-            ? <><Loader2 className="w-3 h-3 animate-spin" /> Menyimpan draft otomatis...</>
-            : autoSaved
-              ? <><CheckCircle className="w-3 h-3 text-green-500" /> <span className="text-green-600">Draft tersimpan otomatis</span></>
-              : <><span className="h-1.5 w-1.5 rounded-full bg-gray-300 inline-block" /> Draft disimpan otomatis saat ada perubahan</>
-          }
+          <span className="h-1.5 w-1.5 rounded-full bg-gray-300 inline-block" /> Save metadata untuk update title/description/periode
         </div>
       )}
 
@@ -501,17 +495,17 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
                 <textarea value={ind.indicator} onChange={(e) => updateIndicator(cat.tempId, ind.tempId, 'indicator', e.target.value)}
                   placeholder="Tuliskan indikator penilaian..."
                   rows={2} maxLength={2000}
-                  disabled={formDisabled}
+                  disabled={!canEditStructure}
                   className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed" />
                 <button type="button" onClick={() => removeIndicator(cat.tempId, ind.tempId)}
-                  disabled={cat.indicators.length === 1 || formDisabled}
+                  disabled={cat.indicators.length === 1 || !canEditStructure}
                   className="mt-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             ))}
             <button type="button" onClick={() => addIndicator(cat.tempId)}
-              disabled={formDisabled}
+              disabled={!canEditStructure}
               className="mt-1 flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-sky-400 hover:text-sky-600 w-full justify-center">
               <Plus className="w-3.5 h-3.5" /> Tambah Indikator
             </button>
@@ -609,7 +603,8 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
 
       {!formDisabled && (
         <button type="button" onClick={addCategory}
-          className="flex items-center gap-2 rounded-xl border-2 border-dashed border-gray-300 px-6 py-4 text-sm font-medium text-gray-500 hover:border-sky-400 hover:text-sky-600 w-full justify-center">
+          disabled={!canEditStructure}
+          className="flex items-center gap-2 rounded-xl border-2 border-dashed border-gray-300 px-6 py-4 text-sm font-medium text-gray-500 hover:border-sky-400 hover:text-sky-600 w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed">
           <FolderPlus className="w-4 h-4" /> Tambah Kategori Baru
         </button>
       )}
@@ -623,14 +618,27 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
             </button>
           )}
 
+          {/* Save Metadata (hanya title/desc/periode, tidak sentuh categories) */}
           <button
             type="button"
-            disabled={saving || isPublishing}
-            onClick={() => handleSave()}
-            className="flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50">
-            {(saving || isPublishing) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {isPublishing ? 'Publishing...' : 'Simpan Perubahan'}
+            disabled={saving}
+            onClick={handleSaveMetadata}
+            className="flex items-center gap-2 rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Save Metadata
           </button>
+
+          {/* Submit Update (publish version baru dengan categories) */}
+          {isRevisionMode && (
+            <button
+              type="button"
+              disabled={publishingVersion || saving}
+              onClick={handleSubmitUpdate}
+              className="flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50">
+              {publishingVersion ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+              {publishingVersion ? 'Publishing...' : 'Submit Update'}
+            </button>
+          )}
         </div>
       )}
     </div>

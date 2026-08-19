@@ -99,6 +99,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Indikator tidak ditemukan.' }, { status: 404 })
     }
 
+    const existing = await prisma.selfAssessment.findUnique({
+      where: { indicatorId_submittedById_periode: { indicatorId, submittedById, periode } },
+      select: { status: true },
+    })
+    if (existing?.status === 'VALIDATED') {
+      return NextResponse.json({ error: 'Jawaban yang sudah divalidasi tidak dapat diubah.' }, { status: 403 })
+    }
+
     // Validasi skor tidak melebihi maxScore indikator
     if (score > indicator.maxScore) {
       return NextResponse.json(

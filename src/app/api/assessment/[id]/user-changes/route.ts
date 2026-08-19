@@ -51,8 +51,14 @@ export async function GET(
       }
     })
 
-    // If user needs revision, get specific indicators they need to fill
-    let indicatorsToResubmit: any[] = []
+    // Get indicators user perlu isi ulang (NEEDS_REVISION: dari IndicatorChange; HAS_UPDATE: cari indicator baru/berubah di latestVersion)
+    let indicatorsToResubmit: Array<{
+      id: number
+      number: number
+      indicator: string
+      maxScore: number
+      category: { code: string; name: string }
+    }> = []
     if (userStatus.status === 'NEEDS_REVISION' && pendingChanges.length > 0) {
       const indicatorIds = pendingChanges
         .filter(change => change.indicatorId)
@@ -70,6 +76,48 @@ export async function GET(
           { number: 'asc' }
         ]
       })
+    } else if (userStatus.status === 'HAS_UPDATE' && userStatus.latestVersion > userStatus.currentVersion) {
+      // Untuk HAS_UPDATE: cari indicator baru di latestVersion yang belum punya jawaban dari user
+      const latestVersionRecord = await prisma.assessmentVersion.findFirst({
+        where: { assessmentId: numId, versionNumber: userStatus.latestVersion },
+        select: { id: true }
+      })
+      if (latestVersionRecord) {
+        // Ambil semua indicator di latest version
+        const latestIndicators = await prisma.assessmentIndicator.findMany({
+          where: { assessmentId: numId, versionId: latestVersionRecord.id, isActive: true },
+          include: {
+            category: { select: { code: true, name: true } }
+          },
+          orderBy: [{ category: { order: 'asc' } }, { number: 'asc' }]
+        })
+
+        // Ambil jawaban existing user berdasarkan logical key
+        const existingAnswers = await prisma.selfAssessment.findMany({
+          where: {
+            submittedById: parseInt(session.user.id, 10),
+            indicator: { category: { assessmentId: numId } }
+          },
+          include: {
+            indicator: {
+              select: {
+                number: true,
+                category: { select: { code: true } }
+              }
+            }
+          }
+        })
+
+        const answerKeys = new Set(existingAnswers.map(a =>
+          `${a.indicator.category.code}:${a.indicator.number}`
+        ))
+
+        // Indicator yang belum ada jawabannya = indicator baru
+        indicatorsToResubmit = latestIndicators.filter(ind => {
+          const key = `${ind.category.code}:${ind.number}`
+          return !answerKeys.has(key)
+        })
+      }
     }
 
     return NextResponse.json({
@@ -114,36 +162,43 @@ export async function POST(
       }
     })
 
-    if (!userStatus || userStatus.status !== 'NEEDS_REVISION') {
+    if (!userStatus || (userStatus.status !== 'NEEDS_REVISION' && userStatus.status !== 'HAS_UPDATE')) {
       return NextResponse.json({ 
-        error: 'User tidak dalam status NEEDS_REVISION.' 
+        error: 'User tidak dalam status yang memerlukan update.' 
       }, { status: 400 })
     }
 
-    // Verify that user has actually filled the required indicators
-    const pendingChanges = await getUserPendingChanges(parseInt(session.user.id, 10), numId)
-    const indicatorIds = pendingChanges
-      .filter(change => change.indicatorId && change.requiresResubmit)
-      .map(change => change.indicatorId!)
-
-    if (indicatorIds.length > 0) {
-      const submittedAnswers = await prisma.selfAssessment.count({
-        where: {
-          indicatorId: { in: indicatorIds },
-          submittedById: parseInt(session.user.id, 10),
-          status: 'SUBMITTED'
-        }
-      })
-
-      if (submittedAnswers < indicatorIds.length) {
-        return NextResponse.json({ 
-          error: `Masih ada ${indicatorIds.length - submittedAnswers} indikator yang perlu diisi ulang.` 
-        }, { status: 400 })
-      }
+    // A completed update is a submission against the latest immutable
+    // structure.  The form copies unchanged answers into V+1 and requires
+    // user input only for new/changed rows; this guard prevents a status move
+    // to V+1 when that V+1 submission is incomplete.
+    const userId = parseInt(session.user.id, 10)
+    const latestVersionRecord = await prisma.assessmentVersion.findFirst({
+      where: { assessmentId: numId, versionNumber: userStatus.latestVersion },
+      select: { id: true },
+    })
+    if (!latestVersionRecord) {
+      return NextResponse.json({ error: 'Versi assessment terbaru tidak ditemukan.' }, { status: 404 })
+    }
+    const latestIndicators = await prisma.assessmentIndicator.findMany({
+      where: { assessmentId: numId, versionId: latestVersionRecord.id },
+      select: { id: true },
+    })
+    const submittedAnswers = await prisma.selfAssessment.count({
+      where: {
+        indicatorId: { in: latestIndicators.map(indicator => indicator.id) },
+        submittedById: userId,
+        status: 'SUBMITTED',
+      },
+    })
+    if (submittedAnswers < latestIndicators.length) {
+      return NextResponse.json({
+        error: `Masih ada ${latestIndicators.length - submittedAnswers} indikator versi baru yang belum disubmit.`,
+      }, { status: 400 })
     }
 
     // Complete resubmission
-    await completeUserResubmission(parseInt(session.user.id, 10), numId)
+    await completeUserResubmission(userId, numId)
 
     return NextResponse.json({ 
       message: 'Resubmission berhasil diselesaikan.',

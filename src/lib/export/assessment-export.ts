@@ -68,7 +68,7 @@ export async function buildRekapStatusAkhir(filters?: {
 }) {
   const entries = await prisma.selfAssessment.findMany({
     where: {
-      status: { in: ['VALIDATED', 'SUBMITTED'] },
+      status: 'VALIDATED',
       ...(filters?.periode ? { periode: filters.periode } : {}),
       ...(filters?.assessmentId
         ? { indicator: { category: { assessmentId: filters.assessmentId } } }
@@ -87,6 +87,8 @@ export async function buildRekapStatusAkhir(filters?: {
       indicator: {
         select: {
           maxScore: true,
+          versionId: true,
+          version: { select: { versionNumber: true } },
           category: {
             select: {
               code: true,
@@ -107,13 +109,25 @@ export async function buildRekapStatusAkhir(filters?: {
     ],
   })
 
-  // map key → row aggregator
-  const map: Record<string, Omit<RekapStatusAkhirRow, 'statusAkhir' | 'categoryScores'> & { catMap: Record<string, CategoryScore> }> = {}
+  const indicatorCountsByVersion = new Map(
+    (await prisma.assessmentVersion.findMany({
+      where: { id: { in: [...new Set(entries.map((entry) => entry.indicator.versionId))] } },
+      select: { id: true, indicators: { select: { id: true } } },
+    })).map((version) => [version.id, version.indicators.length])
+  )
+
+  type RekapGroup = Omit<RekapStatusAkhirRow, 'statusAkhir' | 'categoryScores'> & {
+    versionId: number
+    versionNumber: number
+    indicatorCount: number
+    catMap: Record<string, CategoryScore>
+  }
+  const map: Record<string, RekapGroup> = {}
 
   for (const e of entries) {
     const cat = e.indicator.category
     const assessmentId = cat.assessmentId
-    const key = `${e.submittedById}_${assessmentId}_${e.periode}`
+    const key = `${e.submittedById}_${assessmentId}_${e.periode}_${e.indicator.versionId}`
     const effScore = e.validations[0]?.validatedScore ?? e.score
 
     if (!map[key]) {
@@ -126,6 +140,9 @@ export async function buildRekapStatusAkhir(filters?: {
         assessmentTitle: cat.assessment.title,
         periode: e.periode,
         tahun: toYearFromPeriode(e.periode),
+        versionId: e.indicator.versionId,
+        versionNumber: e.indicator.version.versionNumber,
+        indicatorCount: 0,
         totalScore: 0,
         maxPossibleTotal: 0,
         catMap: {},
@@ -133,6 +150,7 @@ export async function buildRekapStatusAkhir(filters?: {
     }
 
     const row = map[key]!
+    row.indicatorCount += 1
     row.totalScore += effScore
     row.maxPossibleTotal += e.indicator.maxScore
 
@@ -143,10 +161,26 @@ export async function buildRekapStatusAkhir(filters?: {
     row.catMap[cat.code]!.maxScore += e.indicator.maxScore
   }
 
-  return Object.values(map).map(({ catMap, ...g }) => ({
-    ...g,
-    categoryScores: Object.values(catMap).sort((a, b) => a.order - b.order),
-    statusAkhir: getStatusAkhir(g.totalScore, g.maxPossibleTotal, Object.values(catMap)),
+  const latestValidated = new Map<string, RekapGroup>()
+  for (const group of Object.values(map).filter((item) => item.indicatorCount === indicatorCountsByVersion.get(item.versionId))) {
+    const key = `${group.userId}_${group.assessmentId}_${group.periode}`
+    const current = latestValidated.get(key)
+    if (!current || group.versionNumber > current.versionNumber) latestValidated.set(key, group)
+  }
+
+  return Array.from(latestValidated.values()).map((group) => ({
+    userId: group.userId,
+    userName: group.userName,
+    kabupaten: group.kabupaten,
+    kecamatan: group.kecamatan,
+    assessmentId: group.assessmentId,
+    assessmentTitle: group.assessmentTitle,
+    periode: group.periode,
+    tahun: group.tahun,
+    totalScore: group.totalScore,
+    maxPossibleTotal: group.maxPossibleTotal,
+    categoryScores: Object.values(group.catMap).sort((a, b) => a.order - b.order),
+    statusAkhir: getStatusAkhir(group.totalScore, group.maxPossibleTotal, Object.values(group.catMap)),
   }))
 }
 

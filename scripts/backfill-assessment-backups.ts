@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { Prisma, PrismaClient } from '@prisma/client'
 import { getKlasifikasi, getStatusAkhir } from '../src/lib/scoring'
 
 const prisma = new PrismaClient()
@@ -26,6 +26,7 @@ type SnapshotCategory = {
 
 type BackupSnapshot = {
   assessmentTitle: string
+  versionNumber: number
   periode: string
   tahun: number | null
   kabupaten: string | null
@@ -43,9 +44,9 @@ function toYearFromPeriode(periode: string): number | null {
   return Number.isNaN(year) ? null : year
 }
 
-async function upsertBackupIfComplete(input: { submittedById: number; periode: string; assessmentId: number }) {
+async function upsertBackupIfComplete(input: { submittedById: number; periode: string; assessmentId: number; versionId: number; versionNumber: number }) {
   const totalIndicators = await prisma.assessmentIndicator.count({
-    where: { category: { assessmentId: input.assessmentId } },
+    where: { assessmentId: input.assessmentId, versionId: input.versionId },
   })
 
   const validatedIndicators = await prisma.selfAssessment.count({
@@ -53,7 +54,7 @@ async function upsertBackupIfComplete(input: { submittedById: number; periode: s
       submittedById: input.submittedById,
       periode: input.periode,
       status: 'VALIDATED',
-      indicator: { category: { assessmentId: input.assessmentId } },
+      indicator: { assessmentId: input.assessmentId, versionId: input.versionId },
     },
   })
 
@@ -64,7 +65,7 @@ async function upsertBackupIfComplete(input: { submittedById: number; periode: s
       submittedById: input.submittedById,
       periode: input.periode,
       status: 'VALIDATED',
-      indicator: { category: { assessmentId: input.assessmentId } },
+      indicator: { assessmentId: input.assessmentId, versionId: input.versionId },
     },
     include: {
       submittedBy: { select: { kabupatenName: true, kecamatanName: true } },
@@ -137,6 +138,7 @@ async function upsertBackupIfComplete(input: { submittedById: number; periode: s
 
   const snapshot: BackupSnapshot = {
     assessmentTitle,
+    versionNumber: input.versionNumber,
     periode: input.periode,
     tahun: toYearFromPeriode(input.periode),
     kabupaten,
@@ -148,17 +150,18 @@ async function upsertBackupIfComplete(input: { submittedById: number; periode: s
   }
 
   await prisma.assessmentBackup.upsert({
-    where: { assessmentTitle_periode_kecamatan: { assessmentTitle, periode: input.periode, kecamatan } },
+    where: { assessmentTitle_periode_kecamatan_versionNumber: { assessmentTitle, periode: input.periode, kecamatan, versionNumber: input.versionNumber } },
     create: {
       assessmentTitle,
       periode: input.periode,
+      versionNumber: input.versionNumber,
       tahun: snapshot.tahun,
       kabupaten,
       kecamatan,
       totalScore,
       maxPossibleTotal,
       statusAkhir,
-      snapshot: snapshot as any,
+      snapshot: snapshot as unknown as Prisma.InputJsonValue,
     },
     update: {
       tahun: snapshot.tahun,
@@ -166,7 +169,7 @@ async function upsertBackupIfComplete(input: { submittedById: number; periode: s
       totalScore,
       maxPossibleTotal,
       statusAkhir,
-      snapshot: snapshot as any,
+      snapshot: snapshot as unknown as Prisma.InputJsonValue,
     },
   })
 
@@ -179,15 +182,21 @@ async function main() {
     select: {
       submittedById: true,
       periode: true,
-      indicator: { select: { category: { select: { assessmentId: true } } } },
+      indicator: { select: { versionId: true, version: { select: { versionNumber: true } }, category: { select: { assessmentId: true } } } },
     },
   })
 
-  const keys = new Map<string, { submittedById: number; periode: string; assessmentId: number }>()
+  const keys = new Map<string, { submittedById: number; periode: string; assessmentId: number; versionId: number; versionNumber: number }>()
   for (const e of entries) {
     const assessmentId = e.indicator.category.assessmentId
-    const k = `${e.submittedById}_${assessmentId}_${e.periode}`
-    if (!keys.has(k)) keys.set(k, { submittedById: e.submittedById, periode: e.periode, assessmentId })
+    const k = `${e.submittedById}_${assessmentId}_${e.periode}_${e.indicator.versionId}`
+    if (!keys.has(k)) keys.set(k, {
+      submittedById: e.submittedById,
+      periode: e.periode,
+      assessmentId,
+      versionId: e.indicator.versionId,
+      versionNumber: e.indicator.version.versionNumber,
+    })
   }
 
   let ok = 0

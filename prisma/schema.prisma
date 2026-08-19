@@ -65,7 +65,7 @@ model Wilayah {
   lat         Float?   @db.Double                // Latitude in degrees
   lng         Float?   @db.Double                // Longitude in degrees
   luas        Float?   @db.Double                // Area in km2
-  penduduk    Float?   @db.Double                // Population
+  penduduk    Float?   @db.Double               // Population
   path        String?  @db.LongText              // Boundaries/polygon area (GeoJSON or WKT)
   status      Int?     @db.Int                   // Status kode wilayah
 
@@ -102,10 +102,11 @@ model Assessment {
   updatedAt   DateTime                 @updatedAt
 
   categories  AssessmentCategory[]
-  rubrics     AssessmentRubric[]
+  rubrics     AssessmentRubric[] @relation("AssessmentRubrics")
   versions    AssessmentVersion[]
   userStatuses UserAssessmentStatus[]
   draftBackups AssessmentDraftBackup[]
+  indicators  AssessmentIndicator[] @relation("AssessmentIndicators")
 
   @@map("assessments")
 }
@@ -117,18 +118,21 @@ model Assessment {
 model AssessmentCategory {
   id           Int        @id @default(autoincrement())
   assessmentId Int
+  versionId    Int        @default(1)   // will be set when created
   code         String     @db.VarChar(10)    // contoh: "A", "B"
   name         String     @db.VarChar(255)
   description  String?    @db.Text
   order        Int        @default(0)
   scoringRule  Json?      @map("scoring_rule") // custom threshold: [{ max: 5, label: "Belum Berdaya" }, ...]
+  isActive     Boolean    @default(true)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  indicators AssessmentIndicator[]
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  version      AssessmentVersion @relation("VersionCategories", fields: [versionId], references: [id])
+  indicators   AssessmentIndicator[] @relation("CategoryIndicators")
 
-  @@unique([assessmentId, code])
+  @@unique([assessmentId, versionId, code], name: "assessment_cat_assessment_version_code_key")
   @@map("assessment_categories")
 }
 
@@ -138,25 +142,31 @@ model AssessmentCategory {
 
 model AssessmentIndicator {
   id          Int      @id @default(autoincrement())
+  assessmentId Int
   categoryId  Int
+  versionId   Int      @default(1)   // will be set when created
   number      Int
   indicator   String   @db.Text
   maxScore    Int      @default(4)
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  category        AssessmentCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  // Relations
+  assessment    Assessment @relation("AssessmentIndicators", fields: [assessmentId], references: [id])
+  category      AssessmentCategory @relation("CategoryIndicators", fields: [categoryId], references: [id])
+  version       AssessmentVersion @relation("VersionIndicators", fields: [versionId], references: [id])
   selfAssessments SelfAssessment[]
   rubricItems     RubricItem[]
   changes         IndicatorChange[]
 
-  @@unique([categoryId, number])
+  @@unique([assessmentId, versionId, categoryId, number], name: "assessment_ind_assessment_version_cat_num_key")
   @@map("assessment_indicators")
 }
 
 // ─────────────────────────────────────────────────────────────
 // RUBRIK PENILAIAN (panduan skor per indikator)
-// ─────────────────────────────────────────────────────────────
+// ────────────────────────────────……………………………………
 
 model AssessmentRubric {
   id           Int      @id @default(autoincrement())
@@ -166,8 +176,8 @@ model AssessmentRubric {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  assessment Assessment        @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  items      RubricItem[]
+  assessment Assessment        @relation("AssessmentRubrics", fields: [assessmentId], references: [id])
+  items      RubricItem[] @relation("RubricItems")
 
   @@map("assessment_rubrics")
 }
@@ -183,7 +193,7 @@ model RubricItem {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  rubric    AssessmentRubric    @relation(fields: [rubricId], references: [id], onDelete: Cascade)
+  rubric    AssessmentRubric    @relation("RubricItems", fields: [rubricId], references: [id])
   indicator AssessmentIndicator @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
 
   @@unique([rubricId, indicatorId])
@@ -191,10 +201,8 @@ model RubricItem {
 }
 
 // ─────────────────────────────────────────────────────────────
-
-// ─────────────────────────────────────────────────────────────
 // ASSESSMENT UPDATE TRACKING
-// ─────────────────────────────────────────────────────────────
+// ────────────────………………………………………………
 
 model AssessmentVersion {
   id               Int      @id @default(autoincrement())
@@ -208,9 +216,11 @@ model AssessmentVersion {
 
   assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
   createdBy  User       @relation("AssessmentVersionCreator", fields: [createdById], references: [id])
-  
+
   // Relasi ke perubahan indikator
-  indicatorChanges IndicatorChange[]
+  indicatorChanges IndicatorChange[] @relation("IndicatorChanges")
+  categories       AssessmentCategory[] @relation("VersionCategories")
+  indicators       AssessmentIndicator[] @relation("VersionIndicators")
 
   @@unique([assessmentId, versionNumber])
   @@map("assessment_versions")
@@ -232,7 +242,7 @@ model IndicatorChange {
   requiresResubmit Boolean               @default(true) @map("requires_resubmit")
   createdAt        DateTime              @default(now()) @map("created_at")
 
-  version   AssessmentVersion    @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  version   AssessmentVersion    @relation("IndicatorChanges", fields: [versionId], references: [id])
   indicator AssessmentIndicator? @relation(fields: [indicatorId], references: [id], onDelete: SetNull)
 
   @@map("indicator_changes")
@@ -268,7 +278,7 @@ model UserAssessmentStatus {
 
 // ─────────────────────────────────────────────────────────────
 // SELF ASSESSMENT (jawaban kecamatan)
-// ─────────────────────────────────────────────────────────────
+// ────────────………………………………………………
 
 enum AssessmentStatus {
   DRAFT
@@ -283,7 +293,7 @@ model SelfAssessment {
   submittedById Int
   periode       String            @db.VarChar(20)
   description   String            @db.Text
-  score         Int
+  score         Int               // stored score for the indicator
   supportingDoc String?           @db.VarChar(500)
   status        AssessmentStatus  @default(DRAFT)
   submittedAt   DateTime?
@@ -300,12 +310,12 @@ model SelfAssessment {
 
 // ─────────────────────────────────────────────────────────────
 // ASSESSMENT DRAFT BACKUP (untuk migration)
-// ─────────────────────────────────────────────────────────────
+// ────────────………………………………………………
 
 model AssessmentDraftBackup {
   id              String   @id @db.VarChar(36)   // UUID
   userId          Int      @map("user_id")
-  assessmentId    Int      @map("assessment_id")  
+  assessmentId    Int      @map("assessment_id")
   versionNumber   Int      @map("version_number")
   answersJson     Json     @map("answers_json")   // Backup jawaban dalam JSON
   reason          String?  @db.VarChar(100)      // Alasan backup (migration, manual, etc)
@@ -321,7 +331,7 @@ model AssessmentDraftBackup {
 
 // ─────────────────────────────────────────────────────────────
 // VALIDATION
-// ─────────────────────────────────────────────────────────────
+// ────────────………………………………………………
 
 enum ValidationStatus {
   APPROVED
@@ -348,6 +358,7 @@ model AssessmentBackup {
   id             Int      @id @default(autoincrement())
   assessmentTitle String   @db.VarChar(255)
   periode         String   @db.VarChar(20)
+  versionNumber  Int      @default(1) @map("version_number")
   tahun           Int?
   kabupaten       String?  @db.VarChar(100)
   kecamatan       String?  @db.VarChar(100)
@@ -358,18 +369,18 @@ model AssessmentBackup {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  @@unique([assessmentTitle, periode, kecamatan])
+  @@unique([assessmentTitle, periode, kecamatan, versionNumber])
   @@map("assessment_backups")
 }
 
 // ─────────────────────────────────────────────────────────────
 // AUDIT LOG
-// ─────────────────────────────────────────────────────────────
+// ────────────………………………………………………
 
 enum AuditAction {
   USER_LOGIN
   USER_CREATED
-  USER_UPDATED  
+  USER_UPDATED
   USER_DEACTIVATED
   ASSESSMENT_SUBMITTED
   ASSESSMENT_VALIDATED

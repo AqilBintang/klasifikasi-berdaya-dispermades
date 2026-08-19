@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
         'Klasifikasi Akhir': r.statusAkhir,
       }
     })
-    XLSX.utils.book_append_sheet(wb, jsonToSheet(exportRows as any[], { freezeHeader: true }), sheetName(kab))
+    XLSX.utils.book_append_sheet(wb, jsonToSheet(exportRows, { freezeHeader: true }), sheetName(kab))
   }
 
   // Fallback: if no data at all

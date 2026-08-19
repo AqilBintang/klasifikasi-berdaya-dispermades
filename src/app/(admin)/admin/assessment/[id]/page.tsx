@@ -10,8 +10,14 @@ async function getAssessment(id: number) {
     where: { id },
     include: {
       categories: {
+        where: { isActive: true },
         orderBy: { order: 'asc' },
-        include: { indicators: { orderBy: { number: 'asc' } } },
+        include: {
+          indicators: {
+            where: { isActive: true },
+            orderBy: { number: 'asc' },
+          },
+        },
       },
     },
   })

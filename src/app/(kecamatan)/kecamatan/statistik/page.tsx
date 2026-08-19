@@ -21,7 +21,9 @@ export default async function KecamatanStatistikPage() {
       indicator: {
         select: {
           maxScore: true,
-          category: { select: { id: true, code: true, name: true, order: true } },
+          versionId: true,
+          version: { select: { versionNumber: true } },
+          category: { select: { id: true, assessmentId: true, code: true, name: true, order: true } },
         },
       },
       validations: {
@@ -33,10 +35,17 @@ export default async function KecamatanStatistikPage() {
     orderBy: { periode: 'asc' },
   })
 
-  // ── Group by periode → kategori ──────────────────────────────────────────
+  const indicatorCountsByVersion = new Map(
+    (await prisma.assessmentVersion.findMany({
+      where: { id: { in: [...new Set(entries.map((entry) => entry.indicator.versionId))] } },
+      select: { id: true, indicators: { select: { id: true } } },
+    })).map((version) => [version.id, version.indicators.length])
+  )
+
+  // ── Group by periode + version → kategori ────────────────────────────────
 
   const periodeMap: Record<string, {
-    total: number; max: number
+    assessmentId: number; periode: string; versionId: number; versionNumber: number; indicatorCount: number; total: number; max: number
     cats: Record<number, { code: string; name: string; order: number; total: number; max: number }>
   }> = {}
 
@@ -44,21 +53,30 @@ export default async function KecamatanStatistikPage() {
     const score = e.validations[0]?.validatedScore ?? e.score
     const cat   = e.indicator.category
     const p     = e.periode
+    const key   = `${e.indicator.category.assessmentId}_${p}_${e.indicator.versionId}`
 
-    if (!periodeMap[p]) periodeMap[p] = { total: 0, max: 0, cats: {} }
-    periodeMap[p].total += score
-    periodeMap[p].max   += e.indicator.maxScore
+    if (!periodeMap[key]) periodeMap[key] = { assessmentId: e.indicator.category.assessmentId, periode: p, versionId: e.indicator.versionId, versionNumber: e.indicator.version.versionNumber, indicatorCount: 0, total: 0, max: 0, cats: {} }
+    periodeMap[key].indicatorCount += 1
+    periodeMap[key].total += score
+    periodeMap[key].max   += e.indicator.maxScore
 
-    if (!periodeMap[p].cats[cat.id]) {
-      periodeMap[p].cats[cat.id] = { code: cat.code, name: cat.name, order: cat.order, total: 0, max: 0 }
+    if (!periodeMap[key].cats[cat.id]) {
+      periodeMap[key].cats[cat.id] = { code: cat.code, name: cat.name, order: cat.order, total: 0, max: 0 }
     }
-    periodeMap[p].cats[cat.id].total += score
-    periodeMap[p].cats[cat.id].max   += e.indicator.maxScore
+    periodeMap[key].cats[cat.id].total += score
+    periodeMap[key].cats[cat.id].max   += e.indicator.maxScore
   }
 
-  const riwayat: PeriodeStat[] = Object.entries(periodeMap)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([periode, { total, max, cats }]) => {
+  const latestValidatedBySubmission = new Map<string, (typeof periodeMap)[string]>()
+  for (const group of Object.values(periodeMap).filter((item) => item.indicatorCount === indicatorCountsByVersion.get(item.versionId))) {
+    const submissionKey = `${group.assessmentId}_${group.periode}`
+    const current = latestValidatedBySubmission.get(submissionKey)
+    if (!current || group.versionNumber > current.versionNumber) latestValidatedBySubmission.set(submissionKey, group)
+  }
+
+  const riwayat: PeriodeStat[] = Array.from(latestValidatedBySubmission.values())
+    .sort((a, b) => a.periode.localeCompare(b.periode))
+    .map(({ periode, total, max, cats }) => {
       const categories = Object.entries(cats)
         .map(([id, c]) => ({
           id: Number(id),

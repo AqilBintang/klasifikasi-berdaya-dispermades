@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { getKlasifikasiPerKategori } from '@/lib/scoring'
+import type { Prisma } from '@prisma/client'
 
 // GET /api/assessment/results?assessmentId=1&periode=2025&page=1&limit=50
 //
@@ -36,8 +37,8 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const where = {
-      status: { in: ['VALIDATED', 'SUBMITTED', 'REJECTED'] as ('VALIDATED' | 'SUBMITTED' | 'REJECTED')[] },
+    const where: Prisma.SelfAssessmentWhereInput = {
+      status: 'VALIDATED',
       ...(periode && { periode }),
       ...(assessmentId && {
         indicator: {
@@ -64,6 +65,7 @@ export async function GET(req: NextRequest) {
                 assessment: { select: { id: true, title: true } },
               },
             },
+            version: { select: { versionNumber: true } },
           },
         },
         validations: {
@@ -78,12 +80,22 @@ export async function GET(req: NextRequest) {
       ],
     })
 
+    const indicatorCountsByVersion = new Map(
+      (await prisma.assessmentVersion.findMany({
+        where: { id: { in: [...new Set(rows.map((row) => row.indicator.versionId))] } },
+        select: { id: true, indicators: { select: { id: true } } },
+      })).map((version) => [version.id, version.indicators.length])
+    )
+
     // Group by (submittedById, assessmentId, periode)
     type GroupKey = string
     const grouped: Record<GroupKey, {
       user: { id: number; name: string; kecamatan: string | null; kabupaten: string | null }
       assessment: { id: number; title: string }
       periode: string
+      versionId: number
+      versionNumber: number
+      indicatorCount: number
       categories: Record<string, {
         categoryId: number
         code: string
@@ -98,7 +110,7 @@ export async function GET(req: NextRequest) {
     }> = {}
 
     for (const r of rows) {
-      const key = `${r.submittedById}_${r.indicator.category.assessmentId}_${r.periode}`
+      const key = `${r.submittedById}_${r.indicator.category.assessmentId}_${r.periode}_${r.indicator.versionId}`
 
       if (!grouped[key]) {
         grouped[key] = {
@@ -109,6 +121,9 @@ export async function GET(req: NextRequest) {
           },
           assessment: r.indicator.category.assessment,
           periode: r.periode,
+          versionId: r.indicator.versionId,
+          versionNumber: r.indicator.version.versionNumber,
+          indicatorCount: 0,
           categories: {},
           totalScore: 0,
           maxTotalScore: 0,
@@ -132,6 +147,7 @@ export async function GET(req: NextRequest) {
       grouped[key].categories[catKey].totalScore  += effectiveScore
       grouped[key].categories[catKey].maxScore    += r.indicator.maxScore
       grouped[key].categories[catKey].entries.push(r)
+      grouped[key].indicatorCount += 1
       grouped[key].totalScore    += effectiveScore
       grouped[key].maxTotalScore += r.indicator.maxScore
     }
@@ -144,10 +160,17 @@ export async function GET(req: NextRequest) {
     }
 
     // Paginate groups (bukan rows)
-    const allGroups = Object.values(grouped).map((g) => ({
-      ...g,
-      categories: Object.values(g.categories),
-    }))
+    const allGroups = Object.values(grouped)
+      .filter((group) => group.indicatorCount === indicatorCountsByVersion.get(group.versionId))
+      .map((group) => ({
+      user: group.user,
+      assessment: group.assessment,
+      periode: group.periode,
+      versionNumber: group.versionNumber,
+      categories: Object.values(group.categories),
+      totalScore: group.totalScore,
+      maxTotalScore: group.maxTotalScore,
+      }))
 
     const totalGroups = allGroups.length
     const skip        = (page - 1) * limit

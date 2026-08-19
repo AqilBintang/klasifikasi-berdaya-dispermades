@@ -12,7 +12,7 @@ const scoringRuleEntrySchema = z.object({
 const indicatorSchema = z.object({
   number:    z.number().int().positive(),
   indicator: z.string().min(1).max(2000).trim(),
-  maxScore:  z.number().int().min(1).max(10).default(4),
+  maxScore:  z.number().int().min(1).max(4).default(4),
 })
 
 const categorySchema = z.object({
@@ -44,9 +44,13 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
       include: {
         categories: {
+          where: { isActive: true },
           orderBy: { order: 'asc' },
           include: {
-            indicators: { orderBy: { number: 'asc' } },
+            indicators: {
+              where: { isActive: true },
+              orderBy: { number: 'asc' },
+            },
           },
         },
       },
@@ -88,32 +92,68 @@ export async function POST(req: NextRequest) {
     }
 
     const assessment = await prisma.$transaction(async (tx) => {
-      return tx.assessment.create({
+      // 1. Buat assessment
+      const created = await tx.assessment.create({
         data: {
           title,
           description,
           periode,
           status,
-          categories: {
-            create: categories.map((cat) => ({
-              code: cat.code,
-              name: cat.name,
-              description: cat.description,
-              order: cat.order,
-              scoringRule: cat.scoringRule ?? Prisma.JsonNull,
-              indicators: {
-                create: cat.indicators.map((ind) => ({
-                  number: ind.number,
-                  indicator: ind.indicator,
-                  maxScore: ind.maxScore,
-                })),
-              },
-            })),
-          },
         },
+      })
+
+      // 2. Buat AssessmentVersion (baseline version 1)
+      const version = await tx.assessmentVersion.create({
+        data: {
+          assessmentId: created.id,
+          versionNumber: 1,
+          title,
+          changesSummary: 'Versi awal assessment',
+          createdById: parseInt(session.user.id, 10),
+        }
+      })
+
+      // 3. Buat categories dengan versionId
+      for (const cat of categories) {
+        const createdCat = await tx.assessmentCategory.create({
+          data: {
+            assessmentId: created.id,
+            versionId: version.id,
+            code: cat.code,
+            name: cat.name,
+            description: cat.description,
+            order: cat.order,
+            scoringRule: cat.scoringRule ?? Prisma.JsonNull,
+            isActive: true,
+          }
+        })
+
+        // 4. Buat indicators dengan versionId dan assessmentId
+        await tx.assessmentIndicator.createMany({
+          data: cat.indicators.map(ind => ({
+            assessmentId: created.id,
+            versionId: version.id,
+            categoryId: createdCat.id,
+            number: ind.number,
+            indicator: ind.indicator,
+            maxScore: ind.maxScore,
+            isActive: true,
+          }))
+        })
+      }
+
+      return tx.assessment.findUnique({
+        where: { id: created.id },
         include: {
           categories: {
-            include: { indicators: true },
+            where: { isActive: true },
+            orderBy: { order: 'asc' },
+            include: {
+              indicators: {
+                where: { isActive: true },
+                orderBy: { number: 'asc' }
+              }
+            },
           },
         },
       })

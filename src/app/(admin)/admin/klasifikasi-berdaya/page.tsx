@@ -35,25 +35,33 @@ async function getStats(yearFilter?: string) {
     where: { status: 'VALIDATED', submittedById: { in: userIds } },
     select: {
       submittedById: true, periode: true, score: true,
-      indicator: { select: { maxScore: true, category: { select: { assessmentId: true, code: true } } } },
+      indicator: { select: { maxScore: true, versionId: true, version: { select: { versionNumber: true } }, category: { select: { assessmentId: true, code: true } } } },
       validations: { orderBy: { validatedAt: 'desc' }, take: 1, select: { validatedScore: true } },
     },
   })
 
-  // Group by user + assessment + periode
+  const indicatorCountsByVersion = new Map(
+    (await prisma.assessmentVersion.findMany({
+      where: { id: { in: [...new Set(entries.map((entry) => entry.indicator.versionId))] } },
+      select: { id: true, indicators: { select: { id: true } } },
+    })).map((version) => [version.id, version.indicators.length])
+  )
+
+  // Group by user + assessment + periode + version snapshot
   const groupMap: Record<string, { 
-    userId: number; periode: string; totalScore: number; maxPossible: number;
+    userId: number; assessmentId: number; periode: string; versionId: number; versionNumber: number; indicatorCount: number; totalScore: number; maxPossible: number;
     catMap: Record<string, { code: string; score: number; maxScore: number }> 
   }> = {}
   for (const e of entries) {
-    const key = `${e.submittedById}_${e.indicator.category.assessmentId}_${e.periode}`
+    const key = `${e.submittedById}_${e.indicator.category.assessmentId}_${e.periode}_${e.indicator.versionId}`
     const eff = e.validations[0]?.validatedScore ?? e.score
     if (!groupMap[key]) {
       groupMap[key] = { 
-        userId: e.submittedById, periode: e.periode, totalScore: 0, maxPossible: 0, catMap: {} 
+        userId: e.submittedById, assessmentId: e.indicator.category.assessmentId, periode: e.periode, versionId: e.indicator.versionId, versionNumber: e.indicator.version.versionNumber, indicatorCount: 0, totalScore: 0, maxPossible: 0, catMap: {} 
       }
     }
     
+    groupMap[key].indicatorCount += 1
     groupMap[key].totalScore  += eff
     groupMap[key].maxPossible += e.indicator.maxScore
     
@@ -69,20 +77,27 @@ async function getStats(yearFilter?: string) {
   const userMap = new Map(users.map((u) => [u.id, u]))
 
   type StatusEntry = {
-    userId: number; year: string; status: KlasifikasiLevel | null
+    userId: number; year: string; periode: string; versionNumber: number; status: KlasifikasiLevel | null
     kabupatenId: number | null; kabupatenNama: string | null; kecamatanNama: string | null
   }
   const latestByUserYear = new Map<string, StatusEntry>()
 
-  for (const g of Object.values(groupMap)) {
+  const latestValidatedBySubmission = new Map<string, (typeof groupMap)[string]>()
+  for (const g of Object.values(groupMap).filter((group) => group.indicatorCount === indicatorCountsByVersion.get(group.versionId))) {
+    const submissionKey = `${g.userId}_${g.assessmentId}_${g.periode}`
+    const current = latestValidatedBySubmission.get(submissionKey)
+    if (!current || g.versionNumber > current.versionNumber) latestValidatedBySubmission.set(submissionKey, g)
+  }
+
+  for (const g of latestValidatedBySubmission.values()) {
     const year = g.periode.match(/\d{4}/)?.[0]
     if (!year) continue
     const mapKey = `${g.userId}_${year}`
     const existing = latestByUserYear.get(mapKey)
-    if (!existing || g.periode > existing.year) {
+    if (!existing || g.periode > existing.periode || (g.periode === existing.periode && g.versionNumber > existing.versionNumber)) {
       const u = userMap.get(g.userId)
       latestByUserYear.set(mapKey, {
-        userId: g.userId, year,
+        userId: g.userId, year, periode: g.periode, versionNumber: g.versionNumber,
         status: getStatusAkhir(g.totalScore, g.maxPossible, Object.values(g.catMap)),
         kabupatenId: u?.kabupaten?.id ?? null,
         kabupatenNama: u?.kabupaten?.nama ?? null,

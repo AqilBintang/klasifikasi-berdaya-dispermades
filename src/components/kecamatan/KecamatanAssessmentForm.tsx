@@ -13,8 +13,19 @@ import { useUnsavedWarning } from '@/hooks/useUnsavedWarning'
 interface Indicator { id: number; number: number; indicator: string; maxScore: number }
 interface Category   { id: number; code: string; name: string; indicators: Indicator[] }
 interface ExistingEntry {
-  id: number; indicatorId: number; description: string
-  score: number; supportingDoc: string | null; status: string
+  id: number
+  indicatorId: number
+  description: string
+  score: number
+  supportingDoc: string | null
+  status: string
+  indicator: {
+    id: number
+    number: number
+    category: {
+      code: string
+    }
+  }
 }
 
 interface Props {
@@ -24,6 +35,10 @@ interface Props {
   periode: string
   needsRevision?: boolean
   changedIndicatorIds?: number[]
+  newIndicatorIds?: number[]
+  hasUpdate?: boolean
+  validatorRevisionIndicatorIds?: number[]
+  validatorRejectedIndicatorIds?: number[]
 }
 
 interface RowState { description: string; score: string; supportingDoc: string }
@@ -37,15 +52,32 @@ export function KecamatanAssessmentForm({
   periode,
   needsRevision = false,
   changedIndicatorIds = [],
+  newIndicatorIds = [],
+  hasUpdate = false,
+  validatorRevisionIndicatorIds = [],
+  validatorRejectedIndicatorIds = [],
 }: Props) {
   const router = useRouter()
 
-  // Init rows dari existing
+  // Init rows dari existing USING LOGICAL KEY MAPPING
   const initRows = useCallback((): Record<number, RowState> => {
     const r: Record<number, RowState> = {}
+    
+    // Build answer map by logical key
+    const answerMap = new Map<string, ExistingEntry>()
+    for (const entry of existingEntries) {
+      const logicalKey = `${assessment.id}:${entry.indicator.category.code}:${entry.indicator.number}`
+      // existingEntries is newest-first, so a V+1 draft must win over its V1
+      // source answer on a later visit.
+      if (!answerMap.has(logicalKey)) answerMap.set(logicalKey, entry)
+    }
+    
+    // Map indicators to answers using logical key
     for (const cat of assessment.categories) {
       for (const ind of cat.indicators) {
-        const ex = existingEntries.find((e) => e.indicatorId === ind.id)
+        const logicalKey = `${assessment.id}:${cat.code}:${ind.number}`
+        const ex = answerMap.get(logicalKey)
+        
         r[ind.id] = {
           description:   ex?.description    ?? '',
           score:         ex?.score != null   ? String(ex.score) : '1',
@@ -54,7 +86,7 @@ export function KecamatanAssessmentForm({
       }
     }
     return r
-  }, [assessment.categories, existingEntries])
+  }, [assessment.categories, assessment.id, existingEntries])
 
   const [rows, setRows]           = useState<Record<number, RowState>>(initRows)
   const [isDirty, setIsDirty]     = useState(false)
@@ -72,24 +104,46 @@ export function KecamatanAssessmentForm({
   const allSubmitted = existingEntries.length > 0 &&
     existingEntries.every((e) => e.status === 'SUBMITTED' || e.status === 'VALIDATED')
 
-  // Saat needsRevision, user harus mengisi ulang indikator baru meski sebelumnya sudah submit
-  const isFormLocked = allSubmitted && !needsRevision
+  // Form terkunci jika semua sudah submit DAN tidak ada yang perlu diisi ulang.
+  // hasUpdate dengan newIndicatorIds.length > 0 = ada indicator baru → jangan kunci.
+  const hasNewOrChangedIndicators = newIndicatorIds.length > 0
+  const hasValidatorFeedback = validatorRevisionIndicatorIds.length > 0 || validatorRejectedIndicatorIds.length > 0
+  const requiresRevision = needsRevision || hasValidatorFeedback
+  const isFormLocked = allSubmitted && !requiresRevision && !(hasUpdate && hasNewOrChangedIndicators)
 
   useUnsavedWarning(isDirty && !isFormLocked)
 
   // ── Auto-save logic ───────────────────────────────────────────
 
   const doSaveDraft = useCallback(async (currentRows: Record<number, RowState>) => {
+    // Build lookup maxScore per indicatorId dari assessment
+    const maxScoreMap = new Map<number, number>()
+    for (const cat of assessment.categories) {
+      for (const ind of cat.indicators) {
+        maxScoreMap.set(ind.id, ind.maxScore)
+      }
+    }
+
     const entries = Object.entries(currentRows)
-      .filter(([, r]) => r.description.trim() || (r.score && r.score !== ''))
+      .filter(([indId, r]) => {
+        if (!r.description.trim() && !(r.score && r.score !== '')) return false
+
+        // Jangan kirim ulang jawaban pada indikator yang sama dan sudah final.
+        // Jawaban versi baru tetap dikirim karena mempunyai indicatorId berbeda.
+        return !existingEntries.some(
+          (entry) => entry.indicatorId === Number.parseInt(indId, 10)
+            && (entry.status === 'SUBMITTED' || entry.status === 'VALIDATED')
+        )
+      })
       .map(([indId, r]) => {
-        // Parse score, default to 1 if empty or invalid, cap at 4 for API compatibility
+        const numIndId = parseInt(indId, 10)
+        const maxScore = maxScoreMap.get(numIndId) ?? 4
+        // Parse score, default to 1 if empty or invalid, cap at maxScore
         const scoreValue = parseInt(r.score, 10)
-        let score = isNaN(scoreValue) || scoreValue < 1 ? 1 : scoreValue
-        score = score > 4 ? 4 : score // Cap at 4 for API validation
+        const score = isNaN(scoreValue) || scoreValue < 1 ? 1 : Math.min(scoreValue, maxScore)
 
         return {
-          indicatorId:   parseInt(indId, 10),
+          indicatorId:   numIndId,
           submittedById,
           periode,
           description:   r.description.trim() || '-',
@@ -103,13 +157,14 @@ export function KecamatanAssessmentForm({
     setAutoSave('saving')
     try {
       await Promise.all(
-        entries.map((e) =>
-          fetch('/api/assessment/self-assessment', {
+        entries.map(async (e) => {
+          const response = await fetch('/api/assessment/self-assessment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(e),
           })
-        )
+          if (!response.ok) throw new Error('Gagal menyimpan draft.')
+        })
       )
       setAutoSave('saved')
       setIsDirty(false)
@@ -118,7 +173,7 @@ export function KecamatanAssessmentForm({
       setAutoSave('error')
       setTimeout(() => setAutoSave('idle'), 3000)
     }
-  }, [submittedById, periode])
+  }, [assessment.categories, existingEntries, submittedById, periode])
 
   useEffect(() => {
     if (isFirstMount.current) { isFirstMount.current = false; return }
@@ -160,18 +215,25 @@ export function KecamatanAssessmentForm({
     const entriesToSave = Object.entries(rows)
       .filter(([indId, r]) => {
         if (!r.description.trim() && !(r.score && r.score !== '')) return false
-        // Kalau revisi: prioritaskan indikator yang perlu diisi ulang
-        // tapi tetap simpan semua yang diisi
-        return true
+        return !existingEntries.some(
+          (entry) => entry.indicatorId === Number.parseInt(indId, 10)
+            && (entry.status === 'SUBMITTED' || entry.status === 'VALIDATED')
+        )
       })
       .map(([indId, r]) => {
-        // Parse score, default to 1 if empty or invalid, cap at 4 for API compatibility
+        const numIndId = parseInt(indId, 10)
+        // Cari maxScore dari assessment categories
+        let maxScore = 4
+        for (const cat of assessment.categories) {
+          const found = cat.indicators.find(i => i.id === numIndId)
+          if (found) { maxScore = found.maxScore; break }
+        }
+        // Parse score, default to 1 if empty or invalid, cap at maxScore
         const scoreValue = parseInt(r.score, 10)
-        let score = isNaN(scoreValue) || scoreValue < 1 ? 1 : scoreValue
-        score = score > 4 ? 4 : score // Cap at 4 for API validation
+        const score = isNaN(scoreValue) || scoreValue < 1 ? 1 : Math.min(scoreValue, maxScore)
 
         return {
-          indicatorId:   parseInt(indId, 10),
+          indicatorId:   numIndId,
           submittedById,
           periode,
           description:   r.description.trim() || '-',
@@ -186,9 +248,17 @@ export function KecamatanAssessmentForm({
       return
     }
 
-    // Kalau revisi dan mau submit, pastikan semua indikator yang berubah sudah diisi
-    if (needsRevision && status === 'SUBMITTED' && changedIndicatorIds.length > 0) {
-      const missingRevisionIndicators = changedIndicatorIds.filter(id => {
+    // A version update merges old answers, but only new/changed indicators are
+    // mandatory.  Unchanged rows retain their merged values without requiring
+    // the user to re-enter them.
+    const requiredUpdateIndicatorIds = [...new Set([
+      ...(requiresRevision ? changedIndicatorIds : []),
+      ...validatorRevisionIndicatorIds,
+      ...validatorRejectedIndicatorIds,
+      ...(hasUpdate ? newIndicatorIds : []),
+    ])]
+    if (status === 'SUBMITTED' && requiredUpdateIndicatorIds.length > 0) {
+      const missingRevisionIndicators = requiredUpdateIndicatorIds.filter(id => {
         const row = rows[id]
         return !row || !row.description.trim() || !row.score
       })
@@ -209,7 +279,11 @@ export function KecamatanAssessmentForm({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(e),
-          }).then((r) => r.json())
+          }).then(async (response) => {
+            const body = await response.json()
+            if (!response.ok) throw new Error(body.error ?? 'Gagal menyimpan assessment.')
+            return body
+          })
         )
       )
 
@@ -221,13 +295,18 @@ export function KecamatanAssessmentForm({
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ status: 'SUBMITTED' }),
+                }).then(async (response) => {
+                  if (!response.ok) {
+                    const body = await response.json()
+                    throw new Error(body.error ?? 'Gagal mengirim assessment.')
+                  }
                 })
               : Promise.resolve()
           )
         )
 
-        // Skenario 1: jika ini adalah revisi, mark user sebagai up-to-date
-        if (needsRevision) {
+        // Skenario 1: jika ini adalah revisi atau update dengan indicator baru, mark user sebagai up-to-date
+        if (hasUpdate && hasNewOrChangedIndicators) {
           await fetch(`/api/assessment/${assessment.id}/user-changes`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -242,9 +321,11 @@ export function KecamatanAssessmentForm({
         type: 'success',
         message: status === 'DRAFT'
           ? 'Berhasil disimpan sebagai draft.'
-          : needsRevision
+          : requiresRevision
             ? 'Revisi berhasil disubmit! Terima kasih telah melengkapi indikator yang diperbarui.'
-            : 'Assessment berhasil disubmit untuk divalidasi!',
+            : (hasUpdate && hasNewOrChangedIndicators)
+              ? 'Update assessment berhasil disubmit! Indikator baru Anda telah dikirimkan ke validator.'
+              : 'Assessment berhasil disubmit untuk divalidasi!',
       })
       if (status === 'SUBMITTED') {
         setTimeout(() => router.refresh(), 1200)
@@ -261,17 +342,17 @@ export function KecamatanAssessmentForm({
   return (
     <div className="space-y-6">
       {/* Banner: perlu revisi */}
-      {needsRevision && (
+      {requiresRevision && (
         <div className="flex items-start gap-3 rounded-xl border border-red-300 bg-red-50 px-5 py-4">
-          <span className="text-xl">⚠️</span>
+          <span className="text-xl">WARN</span>
           <div>
-            <p className="font-semibold text-red-800 text-sm">Assessment Telah Diperbarui — Diperlukan Revisi</p>
+            <p className="font-semibold text-red-800 text-sm">Assessment Memerlukan Perbaikan</p>
             <p className="text-red-700 text-sm mt-0.5">
-              Admin telah melakukan pembaruan pada assessment ini.
-              {changedIndicatorIds.length > 0
-                ? ` Ada ${changedIndicatorIds.length} indikator baru/berubah yang perlu Anda isi ulang (ditandai dengan border merah).`
-                : ' Silakan tinjau dan submit ulang assessment Anda.'
-              }
+              {hasValidatorFeedback
+                ? `${validatorRejectedIndicatorIds.length > 0 ? `${validatorRejectedIndicatorIds.length} indikator ditolak` : ''}${validatorRejectedIndicatorIds.length > 0 && validatorRevisionIndicatorIds.length > 0 ? ' dan ' : ''}${validatorRevisionIndicatorIds.length > 0 ? `${validatorRevisionIndicatorIds.length} indikator perlu revisi` : ''} oleh tim teknis. Hanya indikator yang ditandai perlu diperbaiki.`
+                : changedIndicatorIds.length > 0
+                  ? `Admin memperbarui ${changedIndicatorIds.length} indikator yang perlu Anda isi ulang.`
+                  : 'Silakan tinjau dan submit ulang assessment Anda.'}
             </p>
           </div>
         </div>
@@ -341,26 +422,49 @@ export function KecamatanAssessmentForm({
               <tbody className="divide-y divide-gray-100">
                 {cat.indicators.map((ind) => {
                   const row = rows[ind.id]
-                  const existing = existingEntries.find((e) => e.indicatorId === ind.id)
-                  const isSubmittedLocked = (existing?.status === 'SUBMITTED' || existing?.status === 'VALIDATED') && !needsRevision
-                  // Saat revisi: indikator yang berubah harus bisa diedit ulang
+                  
+                  // Build logical key for this indicator
+                  const logicalKey = `${assessment.id}:${cat.code}:${ind.number}`
+                  
+                  // Find existing answer by logical key
+                  const existing = existingEntries.find((e) => {
+                    const exKey = `${assessment.id}:${e.indicator.category.code}:${e.indicator.number}`
+                    return exKey === logicalKey
+                  })
+                  
+                  const isSubmittedLocked = existing?.status === 'SUBMITTED' || existing?.status === 'VALIDATED'
+                  // Saat revisi atau hasUpdate: indikator yang berubah/baru harus bisa diedit ulang
                   const isChangedIndicator = changedIndicatorIds.includes(ind.id)
-                  const isLocked = isSubmittedLocked && !isChangedIndicator
+                  const isNewIndicator = newIndicatorIds.includes(ind.id)
+                  const isValidatorRevision = validatorRevisionIndicatorIds.includes(ind.id)
+                  const isValidatorRejected = validatorRejectedIndicatorIds.includes(ind.id)
+                  const isLocked = isSubmittedLocked && !isChangedIndicator && !isNewIndicator && !isValidatorRevision && !isValidatorRejected
 
                   return (
                     <tr
                       key={ind.id}
                       className={cn(
                         'hover:bg-gray-50',
-                        isChangedIndicator && needsRevision && 'bg-red-50/30'
+                        (isChangedIndicator && needsRevision || isValidatorRevision || isValidatorRejected) && 'bg-red-50/30',
+                        isNewIndicator && hasUpdate && !needsRevision && 'bg-blue-50/30'
                       )}
                     >
                       <td className="px-3 py-3 text-center text-gray-500 font-medium">{ind.number}</td>
                       <td className="px-4 py-3 text-gray-700 leading-relaxed">
                         {ind.indicator}
-                        {isChangedIndicator && needsRevision && (
+                        {(isChangedIndicator && needsRevision || isValidatorRevision) && (
                           <span className="ml-2 inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
                             Perlu diisi ulang
+                          </span>
+                        )}
+                        {isValidatorRejected && (
+                          <span className="ml-2 inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                            Ditolak — isi ulang
+                          </span>
+                        )}
+                        {isNewIndicator && hasUpdate && !needsRevision && (
+                          <span className="ml-2 inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                            BARU
                           </span>
                         )}
                       </td>
@@ -374,7 +478,7 @@ export function KecamatanAssessmentForm({
                           placeholder="Deskripsi pencapaian..."
                           className={cn(
                             'w-full resize-none rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 disabled:bg-gray-50 disabled:text-gray-400',
-                            isChangedIndicator && needsRevision
+                            (isChangedIndicator && needsRevision || isValidatorRevision || isValidatorRejected)
                               ? 'border-red-300 focus:border-red-400 focus:ring-red-400/20'
                               : 'border-gray-300 focus:border-sky-400 focus:ring-sky-400/20'
                           )}
@@ -388,7 +492,7 @@ export function KecamatanAssessmentForm({
                           disabled={isLocked}
                           className={cn(
                             'w-16 rounded-lg border bg-white px-2 py-1.5 text-sm focus:outline-none disabled:bg-gray-50',
-                            isChangedIndicator && needsRevision
+                            (isChangedIndicator && needsRevision || isValidatorRevision || isValidatorRejected)
                               ? 'border-red-300 focus:border-red-400'
                               : 'border-gray-300 focus:border-sky-400'
                           )}
@@ -410,7 +514,7 @@ export function KecamatanAssessmentForm({
                           maxLength={500}
                           className={cn(
                             'w-full rounded-lg border px-3 py-2 text-sm focus:outline-none disabled:bg-gray-50 disabled:text-gray-400',
-                            isChangedIndicator && needsRevision
+                            (isChangedIndicator && needsRevision || isValidatorRevision || isValidatorRejected)
                               ? 'border-red-300 focus:border-red-400'
                               : 'border-gray-300 focus:border-sky-400'
                           )}
@@ -429,7 +533,7 @@ export function KecamatanAssessmentForm({
       {!isFormLocked && (
         <div className="flex flex-col sm:flex-row items-center justify-end gap-3 rounded-xl border bg-white px-6 py-4 shadow-sm">
           <p className="text-xs text-gray-400 mr-auto">
-            {needsRevision
+            {requiresRevision
               ? 'Isi semua indikator yang ditandai lalu submit untuk menyelesaikan revisi.'
               : 'Draft: tersimpan, belum dikirim ke admin. Submit: dikirim ke admin untuk divalidasi.'
             }
@@ -444,12 +548,12 @@ export function KecamatanAssessmentForm({
           <button type="button" disabled={submitting} onClick={() => handleSave('SUBMITTED')}
             className={cn(
               'flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium text-white disabled:opacity-50',
-              needsRevision ? 'bg-red-600 hover:bg-red-700' : 'bg-sky-600 hover:bg-sky-700'
+              requiresRevision ? 'bg-red-600 hover:bg-red-700' : 'bg-sky-600 hover:bg-sky-700'
             )}>
             {submitting && submitType === 'submit'
               ? <Loader2 className="w-4 h-4 animate-spin" />
               : <Send className="w-4 h-4" />}
-            {needsRevision ? 'Submit Revisi' : 'Submit Assessment'}
+            {requiresRevision ? 'Submit Revisi' : 'Submit Assessment'}
           </button>
         </div>
       )}

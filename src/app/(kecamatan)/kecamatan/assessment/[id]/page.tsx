@@ -23,14 +23,7 @@ export default async function KecamatanAssessmentDetailPage({
 
   const assessment = await prisma.assessment.findUnique({
     where: { id: assessmentId },
-    include: {
-      categories: {
-        orderBy: { order: 'asc' },
-        include: {
-          indicators: { orderBy: { number: 'asc' } },
-        },
-      },
-    },
+    select: { id: true, title: true, periode: true, status: true, currentVersion: true }
   })
 
   if (!assessment) notFound()
@@ -63,7 +56,7 @@ export default async function KecamatanAssessmentDetailPage({
             </Link>
           </div>
           <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-amber-200 bg-amber-50 py-20 text-center px-6">
-            <span className="text-4xl mb-4">🔄</span>
+            <span className="text-4xl mb-4">UPDATING</span>
             <h3 className="font-semibold text-amber-800 text-lg mb-2">Assessment Sedang Diperbarui</h3>
             <p className="text-amber-700 text-sm max-w-md">
               Admin sedang melakukan pembaruan pada assessment ini. Silakan kembali beberapa saat lagi setelah pembaruan selesai.
@@ -83,10 +76,95 @@ export default async function KecamatanAssessmentDetailPage({
     // Tampilkan banner peringatan bahwa assessment sedang diupdate
   }
 
-  // Hanya PUBLISHED yang bisa diakses
-  if (assessment.status !== 'PUBLISHED') notFound()
+  // Hanya PUBLISHED atau REVISION (dengan progress existing) yang bisa diakses
+  if (assessment.status !== 'PUBLISHED' && assessment.status !== 'REVISION') notFound()
 
-  // Ambil self assessment yang sudah diisi user ini
+  // Cek UserAssessmentStatus untuk tahu version mana yang harus diambil
+  let userStatus = await prisma.userAssessmentStatus.findUnique({
+    where: {
+      userId_assessmentId: { userId, assessmentId: assessment.id }
+    },
+    select: { status: true, currentVersion: true, latestVersion: true }
+  })
+
+  // Jika belum ada status, buat baru (NOT_STARTED, pakai currentVersion dari assessment)
+  if (!userStatus) {
+    userStatus = await prisma.userAssessmentStatus.create({
+      data: {
+        userId,
+        assessmentId: assessment.id,
+        status: 'NOT_STARTED',
+        currentVersion: assessment.currentVersion,
+        latestVersion: assessment.currentVersion,
+      },
+      select: { status: true, currentVersion: true, latestVersion: true }
+    })
+  }
+
+  const needsRevision = userStatus.status === 'NEEDS_REVISION'
+  const hasUpdate = userStatus.latestVersion > userStatus.currentVersion
+  const templateNeedsRevision = needsRevision && hasUpdate
+  
+  console.log('[DEBUG] UserStatus:', {
+    currentVersion: userStatus.currentVersion,
+    latestVersion: userStatus.latestVersion,
+    status: userStatus.status,
+    hasUpdate,
+    needsRevision
+  })
+  
+  // Determine which version to load
+  // If user has update available and needs revision, load LATEST structure
+  // Otherwise load user's current version
+  let versionToLoad = userStatus.currentVersion
+  if (hasUpdate && (needsRevision || userStatus.status === 'HAS_UPDATE')) {
+    versionToLoad = userStatus.latestVersion
+  }
+  
+  console.log('[DEBUG] VersionToLoad:', versionToLoad, 'vs currentVersion:', userStatus.currentVersion)
+
+  // Fetch version record
+  const versionRecord = await prisma.assessmentVersion.findFirst({
+    where: {
+      assessmentId: assessment.id,
+      versionNumber: versionToLoad
+    },
+    select: { id: true }
+  })
+
+  let versionId: number
+  if (!versionRecord) {
+    // Fallback jika version record tidak ditemukan (data lama sebelum versioning)
+    const fallbackVersion = await prisma.assessmentVersion.findFirst({
+      where: { assessmentId: assessment.id, versionNumber: 1 },
+      select: { id: true }
+    })
+    if (!fallbackVersion) notFound()
+    versionId = fallbackVersion.id
+  } else {
+    versionId = versionRecord.id
+  }
+
+  // Fetch categories+indicators for target version
+  const categories = await prisma.assessmentCategory.findMany({
+    where: {
+      assessmentId: assessment.id,
+      versionId,
+    },
+    orderBy: { order: 'asc' },
+    include: {
+      indicators: {
+        orderBy: { number: 'asc' },
+      },
+    },
+  })
+
+  const assessmentWithCategories = {
+    ...assessment,
+    categories,
+  }
+
+  // Fetch ALL user's answers (from any version) WITH indicator info for logical mapping
   const existingEntries = await prisma.selfAssessment.findMany({
     where: {
       submittedById: userId,
@@ -95,20 +173,54 @@ export default async function KecamatanAssessmentDetailPage({
         category: { assessmentId: assessment.id },
       },
     },
-  })
-
-  // Cek apakah user perlu revisi (Skenario 1)
-  const userStatus = await prisma.userAssessmentStatus.findUnique({
-    where: {
-      userId_assessmentId: { userId, assessmentId: assessment.id }
+    include: {
+      indicator: {
+        select: {
+          id: true,
+          versionId: true,
+          number: true,
+          category: {
+            select: {
+              code: true,
+            }
+          }
+        },
+      },
+      validations: {
+        orderBy: { validatedAt: 'desc' },
+        take: 1,
+        select: { status: true },
+      },
     },
-    select: { status: true, latestVersion: true, currentVersion: true }
+    // Prefer an answer already saved against the target version over the
+    // historical value used as its merge fallback.
+    orderBy: { updatedAt: 'desc' },
   })
-  const needsRevision = userStatus?.status === 'NEEDS_REVISION'
 
-  // Ambil indikator yang berubah di versi terbaru jika perlu revisi
+  // Calculate new indicators (for marking in UI)
+  let newIndicatorIds: number[] = []
+  if (hasUpdate) {
+    // Build answer map by logical key to find which indicators are new
+    const answerMap = new Map<string, (typeof existingEntries)[number]>()
+    for (const entry of existingEntries) {
+      const key = `${assessment.id}:${entry.indicator.category.code}:${entry.indicator.number}`
+      answerMap.set(key, entry)
+    }
+    
+    // Find indicators without answers (new indicators)
+    for (const cat of categories) {
+      for (const ind of cat.indicators) {
+        const key = `${assessment.id}:${cat.code}:${ind.number}`
+        if (!answerMap.has(key)) {
+          newIndicatorIds.push(ind.id)
+        }
+      }
+    }
+  }
+
+  // For NEEDS_REVISION: also get changed indicator IDs from IndicatorChange
   let changedIndicatorIds: number[] = []
-  if (needsRevision && userStatus) {
+  if (templateNeedsRevision) {
     const latestVersion = await prisma.assessmentVersion.findFirst({
       where: {
         assessmentId: assessment.id,
@@ -124,7 +236,19 @@ export default async function KecamatanAssessmentDetailPage({
     changedIndicatorIds = latestVersion?.indicatorChanges
       .filter(c => c.indicatorId !== null)
       .map(c => c.indicatorId!) ?? []
+    
+    // Merge with newIndicatorIds
+    newIndicatorIds = [...new Set([...newIndicatorIds, ...changedIndicatorIds])]
   }
+
+  // Keputusan validator selalu dibaca dari versi yang sedang dibuka. Riwayat
+  // versi lain tidak boleh membuat user mengubah submission historis.
+  const validatorRevisionIndicatorIds = existingEntries
+    .filter((entry) => entry.indicator.versionId === versionId && entry.validations[0]?.status === 'REVISION_NEEDED')
+    .map((entry) => entry.indicatorId)
+  const validatorRejectedIndicatorIds = existingEntries
+    .filter((entry) => entry.indicator.versionId === versionId && entry.validations[0]?.status === 'REJECTED')
+    .map((entry) => entry.indicatorId)
 
   const periode = assessment.periode
 
@@ -147,11 +271,29 @@ export default async function KecamatanAssessmentDetailPage({
         </div>
       </div>
 
+      {/* Banner: Assessment diperbarui - ada update tersedia */}
+      {hasUpdate && !needsRevision && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+          <div className="flex items-start gap-3">
+            <span className="text-blue-600 text-lg">INFO</span>
+            <div className="text-sm flex-1">
+              <h4 className="font-medium text-blue-800 mb-1">Assessment Diperbarui</h4>
+              <p className="text-blue-700">
+                Admin telah memperbarui assessment ini. 
+                Jawaban Anda sebelumnya tetap tersimpan. 
+                {newIndicatorIds.length > 0 && ` Ada ${newIndicatorIds.length} indikator baru yang perlu Anda isi (ditandai dengan label "BARU").`}
+                {newIndicatorIds.length === 0 && ' Silakan tinjau perubahan dan submit ulang jika diperlukan.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Banner peringatan jika assessment dalam status REVISION */}
       {assessment.status === 'REVISION' && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
           <div className="flex items-start gap-3">
-            <span className="text-amber-600 text-lg">⚠️</span>
+            <span className="text-amber-600 text-lg">WARN</span>
             <div className="text-sm">
               <h4 className="font-medium text-amber-800 mb-1">Assessment Sedang Diperbarui</h4>
               <p className="text-amber-700">
@@ -164,12 +306,16 @@ export default async function KecamatanAssessmentDetailPage({
       )}
 
       <KecamatanAssessmentForm
-        assessment={assessment}
+        assessment={assessmentWithCategories}
         existingEntries={existingEntries}
         submittedById={userId}
         periode={periode}
-        needsRevision={needsRevision}
-        changedIndicatorIds={changedIndicatorIds}
+        needsRevision={templateNeedsRevision}
+        changedIndicatorIds={templateNeedsRevision ? newIndicatorIds : []}
+        newIndicatorIds={newIndicatorIds}
+        hasUpdate={hasUpdate}
+        validatorRevisionIndicatorIds={validatorRevisionIndicatorIds}
+        validatorRejectedIndicatorIds={validatorRejectedIndicatorIds}
       />
     </div>
   )

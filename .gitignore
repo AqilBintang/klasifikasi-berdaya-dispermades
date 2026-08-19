@@ -55,6 +55,15 @@ AGENTS.md
 .claude/
 .claude-plugin/
 skills-lock.json
+.codex-plugin/
+BADGE_DEBUG_GUIDE.md
+BADGE_ISSUE_SUMMARY.md
+COMPLETE_VERSIONING_AUDIT.md
+ROOT_CAUSE_ANALYSIS.md
+VALIDATOR_VERSIONING_ANALYSIS.md
+FINAL_SUMMARY.md
+IMPLEMENTATION_REPORT.md
+RINGKASAN_IMPLEMENTASI.md
 
 # temporary scripts (one-off migration/check scripts)
 tmp-*.mjs
@@ -350,3 +359,6 @@ CTestTestfile.cmake
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# testing sql
+diagnostic-queries.sql

@@ -1,0 +1,3 @@
+-- This migration originally recovered a partial run of 20260817170305.
+-- That migration now creates the final indexes and foreign keys itself, so
+-- running the recovery DDL again would duplicate constraints. Intentionally no-op.

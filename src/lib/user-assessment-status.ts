@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { UserAssessmentStatusEnum, AssessmentStatus } from '@prisma/client'
+import { UserAssessmentStatus, UserAssessmentStatusEnum, AssessmentStatus } from '@prisma/client'
 
 export interface UserAssessmentStatusInfo {
   userId: number
@@ -228,7 +228,7 @@ export class UserAssessmentStatusService {
    */
   async getUserAssessmentOverview(userId: number): Promise<UserAssessmentStatusInfo[]> {
     const publishedAssessments = await prisma.assessment.findMany({
-      where: { status: 'PUBLISHED' },
+      where: { status: { in: ['PUBLISHED', 'REVISION'] } },
       orderBy: { createdAt: 'desc' }
     })
 
@@ -246,9 +246,11 @@ export class UserAssessmentStatusService {
    * Helper: Enrich status dengan progress info
    */
   private async enrichUserStatusWithProgress(
-    userStatus: any
+    userStatus: UserAssessmentStatus
   ): Promise<UserAssessmentStatusInfo> {
-    const progress = await this.calculateUserProgress(userStatus.userId, userStatus.assessmentId)
+    // Pass user's currentVersion agar progress dihitung berdasarkan version yang sedang diisi user,
+    // bukan assessment.currentVersion yang bisa sudah maju ke version berikutnya
+    const progress = await this.calculateUserProgress(userStatus.userId, userStatus.assessmentId, userStatus.currentVersion)
     
     return {
       userId: userStatus.userId,
@@ -269,50 +271,63 @@ export class UserAssessmentStatusService {
    * Helper: Hitung progress user untuk version tertentu
    */
   private async calculateUserProgress(userId: number, assessmentId: number, forVersion?: number) {
-    // Jika tidak ada version spesifik, gunakan currentVersion dari assessment
-    let targetVersion = forVersion
-    if (!targetVersion) {
-      const assessment = await prisma.assessment.findUnique({
-        where: { id: assessmentId },
+    let targetVersionNumber = forVersion
+    if (!targetVersionNumber) {
+      // Prioritas: pakai currentVersion dari UserAssessmentStatus user, bukan assessment.currentVersion
+      const userStatus = await prisma.userAssessmentStatus.findUnique({
+        where: { userId_assessmentId: { userId, assessmentId } },
         select: { currentVersion: true }
       })
-      targetVersion = assessment?.currentVersion || 1
+      if (userStatus) {
+        targetVersionNumber = userStatus.currentVersion
+      } else {
+        const assessment = await prisma.assessment.findUnique({
+          where: { id: assessmentId },
+          select: { currentVersion: true }
+        })
+        targetVersionNumber = assessment?.currentVersion || 1
+      }
     }
 
-    // Hitung indikator aktif untuk version ini (yang belum di-remove)
-    const totalIndicators = await prisma.assessmentIndicator.count({
-      where: {
-        category: { assessmentId },
-        // ponytail: Asumsi indikator yang tidak ada di IndicatorChange.REMOVED masih aktif
-        // Upgrade path: tambah field isActive atau gunakan version-specific indicator mapping
-        NOT: {
-          changes: {
-            some: {
-              changeType: 'REMOVED',
-              version: { versionNumber: { lte: targetVersion } }
-            }
-          }
-        }
-      }
+    // Cari AssessmentVersion record untuk version number ini
+    const versionRecord = await prisma.assessmentVersion.findFirst({
+      where: { assessmentId, versionNumber: targetVersionNumber }
     })
+
+    // Hitung total indicators untuk version yang tepat menggunakan versionId
+    const totalIndicators = versionRecord
+      ? await prisma.assessmentIndicator.count({
+          where: {
+            assessmentId,
+            versionId: versionRecord.id,
+            isActive: true,
+          }
+        })
+      : await prisma.assessmentIndicator.count({
+          where: {
+            assessmentId,
+            isActive: true,
+          }
+        })
 
     // Hitung jawaban yang sudah diisi untuk assessment ini
     const completedIndicators = await prisma.selfAssessment.count({
       where: {
         submittedById: userId,
         indicator: {
-          category: { assessmentId }
+          assessmentId,
+          ...(versionRecord && { versionId: versionRecord.id }),
         }
       }
     })
 
-    const progressPercentage = totalIndicators > 0 
-      ? Math.round((completedIndicators / totalIndicators) * 100)
+    const progressPercentage = totalIndicators > 0
+      ? Math.round((Math.min(completedIndicators, totalIndicators) / totalIndicators) * 100)
       : 0
 
     return {
       totalIndicators,
-      completedIndicators, 
+      completedIndicators: Math.min(completedIndicators, totalIndicators),
       progressPercentage
     }
   }

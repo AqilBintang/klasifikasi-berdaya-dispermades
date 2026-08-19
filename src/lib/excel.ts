@@ -9,7 +9,7 @@ function normalizeCellValue(value: unknown) {
   return value
 }
 
-export function jsonToSheet(rows: JsonRow[], options?: { header?: string[]; freezeHeader?: boolean }) {
+export function jsonToSheet(rows: readonly object[], options?: { header?: string[]; freezeHeader?: boolean }) {
   const safeRows =
     rows.length === 0
       ? [{}]

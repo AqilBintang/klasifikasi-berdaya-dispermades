@@ -53,8 +53,8 @@ export async function GET(req: NextRequest) {
   })
 
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, jsonToSheet(rekapRows as any[], { freezeHeader: true }), 'rekap_status_akhir')
-  XLSX.utils.book_append_sheet(wb, jsonToSheet(detailRows as any[], { freezeHeader: true }), 'detail_isian')
+  XLSX.utils.book_append_sheet(wb, jsonToSheet(rekapRows, { freezeHeader: true }), 'rekap_status_akhir')
+  XLSX.utils.book_append_sheet(wb, jsonToSheet(detailRows, { freezeHeader: true }), 'detail_isian')
 
   const stamp = new Date().toISOString().slice(0, 10)
   const parts = [

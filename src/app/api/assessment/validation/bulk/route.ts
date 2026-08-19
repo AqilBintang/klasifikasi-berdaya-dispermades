@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { z } from 'zod'
 import { deleteBackupsForSelfAssessmentIds, upsertBackupsForSelfAssessmentIds } from '@/lib/export/backup-snapshot'
+import { revalidateTag } from 'next/cache'
 
 const bulkSchema = z.object({
   selfAssessmentIds: z.array(z.number().int().positive()).min(1),
@@ -46,33 +47,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Tidak ada submission yang bisa divalidasi.' }, { status: 400 })
     }
 
-    // Saring: buang submission milik kecamatan yang sedang NEEDS_REVISION —
-    // jawaban mereka sudah outdated karena admin baru update indikator.
-    const userIds = [...new Set(submissions.map((s) => s.submittedById))]
-    const outdatedStatuses = await prisma.userAssessmentStatus.findMany({
-      where: {
-        userId: { in: userIds },
-        status: 'NEEDS_REVISION',
-      },
-      select: { userId: true },
-    })
-    const outdatedUserIds = new Set(outdatedStatuses.map((u) => u.userId))
-
-    const validSubmissions = submissions.filter((s) => !outdatedUserIds.has(s.submittedById))
-    const skippedCount = submissions.length - validSubmissions.length
-
-    if (validSubmissions.length === 0) {
-      return NextResponse.json({
-        error:
-          'Semua kecamatan dalam batch ini sedang diminta revisi. Validasi ditangguhkan hingga revisi selesai.',
-        outdated: true,
-        skippedCount,
-      }, { status: 409 })
-    }
+    // Each row already carries its version through indicatorId.  A newer
+    // template must not hide or invalidate submitted historical rows.
+    const validSubmissions = submissions
+    const skippedCount = 0
 
     const newStatus =
       status === 'APPROVED'       ? 'VALIDATED' :
-      status === 'REJECTED'       ? 'REJECTED'  : 'SUBMITTED'
+      status === 'REJECTED'       ? 'REJECTED' : 'DRAFT'
 
     await prisma.$transaction(async (tx) => {
       // Buat validation record untuk setiap submission
@@ -95,6 +77,7 @@ export async function POST(req: NextRequest) {
     const ids = validSubmissions.map((s) => s.id)
     if (newStatus === 'VALIDATED') await upsertBackupsForSelfAssessmentIds(ids)
     else await deleteBackupsForSelfAssessmentIds(ids)
+    revalidateTag('klasifikasi-agg', 'max')
 
     return NextResponse.json({
       message: `${validSubmissions.length} submission berhasil divalidasi.${skippedCount > 0 ? ` ${skippedCount} dilewati karena kecamatan sedang revisi.` : ''}`,
