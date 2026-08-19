@@ -156,16 +156,12 @@ export function KecamatanAssessmentForm({
 
     setAutoSave('saving')
     try {
-      await Promise.all(
-        entries.map(async (e) => {
-          const response = await fetch('/api/assessment/self-assessment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(e),
-          })
-          if (!response.ok) throw new Error('Gagal menyimpan draft.')
-        })
-      )
+      const response = await fetch('/api/assessment/self-assessment/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: entries, status: 'DRAFT' }),
+      })
+      if (!response.ok) throw new Error('Gagal menyimpan draft.')
       setAutoSave('saved')
       setIsDirty(false)
       setTimeout(() => setAutoSave('idle'), 2500)
@@ -273,38 +269,17 @@ export function KecamatanAssessmentForm({
     }
 
     try {
-      const saves = await Promise.all(
-        entriesToSave.map((e) =>
-          fetch('/api/assessment/self-assessment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(e),
-          }).then(async (response) => {
-            const body = await response.json()
-            if (!response.ok) throw new Error(body.error ?? 'Gagal menyimpan assessment.')
-            return body
-          })
-        )
-      )
+      const res = await fetch('/api/assessment/self-assessment/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: entriesToSave, status }),
+      })
+      if (!res.ok) {
+        const body = await res.json()
+        throw new Error(body.error ?? 'Gagal menyimpan assessment.')
+      }
 
       if (status === 'SUBMITTED') {
-        await Promise.all(
-          saves.map((s) =>
-            s.data?.id
-              ? fetch(`/api/assessment/self-assessment/${s.data.id}`, {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ status: 'SUBMITTED' }),
-                }).then(async (response) => {
-                  if (!response.ok) {
-                    const body = await response.json()
-                    throw new Error(body.error ?? 'Gagal mengirim assessment.')
-                  }
-                })
-              : Promise.resolve()
-          )
-        )
-
         // Skenario 1: jika ini adalah revisi atau update dengan indicator baru, mark user sebagai up-to-date
         if (hasUpdate && hasNewOrChangedIndicators) {
           await fetch(`/api/assessment/${assessment.id}/user-changes`, {
