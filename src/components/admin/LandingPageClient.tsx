@@ -357,12 +357,12 @@ export function LandingPageClient({ initialData }: Props) {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Page header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Kelola Landing Page</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-0.5 text-sm text-gray-500">
             Ubah konten yang tampil di halaman publik.
           </p>
         </div>
@@ -412,7 +412,7 @@ export function LandingPageClient({ initialData }: Props) {
               type="button"
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                'flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors',
+                'flex items-center gap-2 px-5 py-2.5 text-sm font-medium border-b-2 transition-colors',
                 activeTab === tab.id
                   ? 'border-sky-500 text-sky-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -428,26 +428,24 @@ export function LandingPageClient({ initialData }: Props) {
 
       {/* ── Tab: Banner ── */}
       {activeTab === 'banner' && (
-        <div className="space-y-4">
-          <div className="rounded-lg bg-sky-50 border border-sky-100 px-4 py-3 text-xs text-sky-700 space-y-1.5">
-            <div className="mt-1.5 flex items-center gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-amber-700">
-              <svg className="size-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
-              </svg>
-              <span>
-                Ukuran gambar yang disarankan: <strong>1200 × 220 px</strong> (rasio ±16:3), format JPG atau PNG, maks 5 MB.
-                Gambar akan dipotong otomatis jika tidak sesuai rasio.
-              </span>
-            </div>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700">
+            <svg className="size-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
+            </svg>
+            <span>
+              Ukuran gambar yang disarankan: <strong>1200 × 220 px</strong> (rasio ±16:3), format JPG atau PNG, maks 5 MB.
+              Gambar akan dipotong otomatis jika tidak sesuai rasio.
+            </span>
           </div>
 
           {slides.length === 0 && (
-            <div className="rounded-xl border-2 border-dashed border-gray-200 py-10 text-center text-sm text-gray-400">
+            <div className="rounded-xl border-2 border-dashed border-gray-200 py-8 text-center text-sm text-gray-400">
               Belum ada slide. Tambahkan slide baru.
             </div>
           )}
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {slides.map((slide, idx) => (
               <SlideCard
                 key={slide.id}
@@ -473,13 +471,13 @@ export function LandingPageClient({ initialData }: Props) {
 
       {/* ── Tab: Tentang Platform ── */}
       {activeTab === 'tentang' && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <p className="text-sm text-gray-500">
             Ubah teks di bagian &ldquo;Tentang Platform&rdquo; pada landing page.
           </p>
 
           {/* Heading */}
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <label htmlFor="tentang-heading" className="block text-sm font-medium text-gray-700">
               Judul
             </label>
@@ -496,7 +494,7 @@ export function LandingPageClient({ initialData }: Props) {
           </div>
 
           {/* Description */}
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <label htmlFor="tentang-desc" className="block text-sm font-medium text-gray-700">
               Deskripsi
             </label>
@@ -513,10 +511,12 @@ export function LandingPageClient({ initialData }: Props) {
 
           {/* Points */}
           <div className="space-y-2">
-            <p className="text-sm font-medium text-gray-700">Poin-poin Utama</p>
-            <p className="text-xs text-gray-400">Tampil sebagai daftar bullet di landing page.</p>
+            <div>
+              <p className="text-sm font-medium text-gray-700">Poin-poin Utama</p>
+              <p className="text-xs text-gray-400">Tampil sebagai daftar bullet di landing page.</p>
+            </div>
 
-            <div className="space-y-2 max-w-xl">
+            <div className="space-y-1.5 max-w-xl">
               {tentang.points.map((point, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <span
