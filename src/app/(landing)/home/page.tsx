@@ -109,7 +109,7 @@ export default async function LandingPage() {
             <h1 className="w-full text-3xl md:text-5xl font-normal tracking-tight leading-tight drop-shadow-lg">
               Klasifikasi Indeks<br />Kecamatan Berdaya
             </h1>
-            <p className="text-base md:text-lg font-normal text-white/80 leading-relaxed">
+            <p className="text-base text-justify md:text-lg font-normal text-white/80 leading-relaxed">
               Klas Berdaya merupakan sistem penilaian yang digunakan untuk mengidentifikasi dan mengukur tingkat keberdayaan kecamatan di Jawa Tengah. Penilaian dilakukan melalui Self Assessment berdasarkan sejumlah indikator yang menggambarkan kondisi, kapasitas, serta potensi kecamatan dalam mendukung proses pemberdayaan masyarakat dan wilayah.
             </p>
             <a
