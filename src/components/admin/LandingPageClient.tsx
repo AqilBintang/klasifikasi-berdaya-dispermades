@@ -471,7 +471,7 @@ export function LandingPageClient({ initialData }: Props) {
 
       {/* ── Tab: Tentang Platform ── */}
       {activeTab === 'tentang' && (
-        <div className="space-y-3 max-w-xl">
+        <div className="space-y-2.5">
           <p className="text-sm text-gray-500">
             Ubah teks di bagian &ldquo;Tentang Platform&rdquo; pada landing page.
           </p>
@@ -504,13 +504,13 @@ export function LandingPageClient({ initialData }: Props) {
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
                 setTentang((t) => ({ ...t, description: e.target.value }))
               }
-              rows={3}
-              className={cn(inputCls, 'resize-none')}
+              rows={2}
+              className={cn(inputCls, 'resize-y')}
             />
           </div>
 
           {/* Points */}
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <div>
               <p className="text-sm font-medium text-gray-700">Poin-poin Utama</p>
               <p className="text-xs text-gray-400">Tampil sebagai daftar bullet di landing page.</p>
