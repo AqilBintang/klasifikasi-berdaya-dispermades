@@ -62,7 +62,7 @@ export function InfoBanner({
           /* Placeholder saat gambar belum diisi */
           <div className="w-full h-full flex items-center justify-center bg-gray-100 border-2 border-dashed border-gray-300">
             <span className="text-sm text-gray-400 select-none">
-              Banner {current + 1} — tambahkan gambar via prop imageUrl
+              Banner {current + 1} — banner info
             </span>
           </div>
         )}

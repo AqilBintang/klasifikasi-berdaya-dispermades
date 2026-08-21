@@ -58,6 +58,10 @@ async function main() {
   })
   console.log(`   - Admin: ${adminEmail}`)
 
+  // ── Landing Page default data ───────────────────────────────
+  console.log('🌍 Seeding landing page data...')
+  await seedLandingPage()
+
   // ── Wilayah Jawa Tengah ─────────────────────────────────────
   console.log('🌾 Seeding Jawa Tengah wilayah data...')
   await seedWilayahJawaTengah()
@@ -350,6 +354,46 @@ async function updateUserWilayahReferences() {
   }
 
   console.log('   - Updated user wilayah references')
+}
+
+async function seedLandingPage() {
+  // Coba baca dari JSON yang sudah ada sebagai nilai awal, lalu simpan ke DB
+  const jsonPath = path.join(process.cwd(), 'src/data/landing-page.json')
+  let landingData: { banner: unknown; tentangPlatform: unknown } | null = null
+  if (fs.existsSync(jsonPath)) {
+    landingData = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'))
+  }
+
+  const defaultBanner = {
+    slides: [
+      { id: 'banner-1', imageUrl: '', alt: 'Banner 1' },
+      { id: 'banner-2', imageUrl: '', alt: 'Banner 2' },
+      { id: 'banner-3', imageUrl: '', alt: 'Banner 3' },
+    ],
+  }
+  const defaultTentang = {
+    heading: 'Apa itu Klasifikasi Berdaya?',
+    description:
+      'Klasifikasi Kecamatan Berdaya adalah sistem penilaian mandiri berbasis indikator yang mengukur kapasitas dan kinerja kecamatan dalam menjalankan program pemberdayaan masyarakat di Jawa Tengah.',
+    points: [
+      'Penilaian dilakukan oleh kecamatan secara mandiri melalui self-assessment',
+      'Setiap indikator divalidasi oleh tim admin untuk menjamin akurasi data',
+      'Hasil klasifikasi dipublikasikan secara transparan kepada masyarakat',
+      'Data digunakan sebagai dasar pengambilan kebijakan pemberdayaan wilayah',
+    ],
+  }
+
+  await prisma.siteSetting.upsert({
+    where: { key: 'landing_banner' },
+    update: {},  // jangan overwrite data yang sudah ada di DB
+    create: { key: 'landing_banner', value: (landingData?.banner ?? defaultBanner) as object },
+  })
+  await prisma.siteSetting.upsert({
+    where: { key: 'landing_tentang_platform' },
+    update: {},  // jangan overwrite data yang sudah ada di DB
+    create: { key: 'landing_tentang_platform', value: (landingData?.tentangPlatform ?? defaultTentang) as object },
+  })
+  console.log('   - Landing page data seeded')
 }
 
 main()

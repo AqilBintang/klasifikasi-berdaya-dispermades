@@ -374,6 +374,18 @@ model AssessmentBackup {
 }
 
 // ─────────────────────────────────────────────────────────────
+// SITE SETTINGS (key-value store untuk konfigurasi, termasuk landing page)
+// ─────────────────────────────────────────────────────────────
+
+model SiteSetting {
+  key       String   @id @db.VarChar(100)
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("site_settings")
+}
+
+// ─────────────────────────────────────────────────────────────
 // AUDIT LOG
 // ────────────………………………………………………
 

@@ -75,6 +75,15 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
             </Link>
           </li>
 
+          {/* ── Separator: Konten ── */}
+          <li className="pt-2">
+            <div className="flex items-center gap-2 px-3 pb-1">
+              <div className="h-px flex-1 bg-gray-700/60" />
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Konten</span>
+              <div className="h-px flex-1 bg-gray-700/60" />
+            </div>
+          </li>
+
           {/* ── Landing Page ── */}
           <li>
             <Link
@@ -110,7 +119,16 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
               <span>Panduan Rubrik</span>
             </Link>
           </li>
-          
+
+          {/* ── Separator: Data ── */}
+          <li className="pt-2">
+            <div className="flex items-center gap-2 px-3 pb-1">
+              <div className="h-px flex-1 bg-gray-700/60" />
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Data</span>
+              <div className="h-px flex-1 bg-gray-700/60" />
+            </div>
+          </li>
+
           {/* ── Assessment group ── */}
           <li>
             <button
@@ -191,7 +209,16 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
               <span>Export Laporan Data</span>
             </Link>
           </li>
-          
+
+          {/* ── Separator: Pengguna ── */}
+          <li className="pt-2">
+            <div className="flex items-center gap-2 px-3 pb-1">
+              <div className="h-px flex-1 bg-gray-700/60" />
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Pengguna</span>
+              <div className="h-px flex-1 bg-gray-700/60" />
+            </div>
+          </li>
+
           {/* ── Manage User ── */}
           <li>
             <Link
