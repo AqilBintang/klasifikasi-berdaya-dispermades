@@ -110,8 +110,7 @@ export default async function LandingPage() {
               Klasifikasi Indeks<br />Kecamatan Berdaya
             </h1>
             <p className="text-base md:text-lg font-normal text-white/80 leading-relaxed">
-              Platform penilaian mandiri kecamatan untuk mengukur kapasitas dan
-              potensi pemberdayaan wilayah di Jawa Tengah.
+              Klas Berdaya merupakan sistem penilaian yang digunakan untuk mengidentifikasi dan mengukur tingkat keberdayaan kecamatan di Jawa Tengah. Penilaian dilakukan melalui Self Assessment berdasarkan sejumlah indikator yang menggambarkan kondisi, kapasitas, serta potensi kecamatan dalam mendukung proses pemberdayaan masyarakat dan wilayah.
             </p>
             <a
               href="#data"
