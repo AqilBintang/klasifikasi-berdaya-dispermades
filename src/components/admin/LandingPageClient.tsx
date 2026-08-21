@@ -471,7 +471,7 @@ export function LandingPageClient({ initialData }: Props) {
 
       {/* ── Tab: Tentang Platform ── */}
       {activeTab === 'tentang' && (
-        <div className="space-y-4">
+        <div className="space-y-3 max-w-xl">
           <p className="text-sm text-gray-500">
             Ubah teks di bagian &ldquo;Tentang Platform&rdquo; pada landing page.
           </p>
@@ -489,7 +489,7 @@ export function LandingPageClient({ initialData }: Props) {
                 setTentang((t) => ({ ...t, heading: e.target.value }))
               }
               placeholder="Apa itu Klasifikasi Berdaya?"
-              className={cn(inputCls, 'max-w-xl')}
+              className={inputCls}
             />
           </div>
 
@@ -504,19 +504,19 @@ export function LandingPageClient({ initialData }: Props) {
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
                 setTentang((t) => ({ ...t, description: e.target.value }))
               }
-              rows={4}
-              className={cn(inputCls, 'max-w-xl resize-none')}
+              rows={3}
+              className={cn(inputCls, 'resize-none')}
             />
           </div>
 
           {/* Points */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <div>
               <p className="text-sm font-medium text-gray-700">Poin-poin Utama</p>
               <p className="text-xs text-gray-400">Tampil sebagai daftar bullet di landing page.</p>
             </div>
 
-            <div className="space-y-1.5 max-w-xl">
+            <div className="space-y-1">
               {tentang.points.map((point, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <span
