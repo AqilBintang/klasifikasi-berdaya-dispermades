@@ -24,6 +24,7 @@ const DEFAULT_TENTANG = {
     'Hasil klasifikasi dipublikasikan secara transparan kepada masyarakat',
     'Data digunakan sebagai dasar pengambilan kebijakan pemberdayaan wilayah',
   ],
+  imageUrl: '',
 }
 
 async function getLandingContent() {
