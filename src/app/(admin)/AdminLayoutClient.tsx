@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SessionProvider } from 'next-auth/react'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { AdminHeader } from '@/components/admin/AdminHeader'
@@ -12,6 +12,16 @@ export default function AdminLayoutClient({
   children: React.ReactNode
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    const prev = { bg: document.body.style.backgroundColor, overflow: document.body.style.overflow }
+    document.body.style.backgroundColor = '#f3f4f6'
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.backgroundColor = prev.bg
+      document.body.style.overflow = prev.overflow
+    }
+  }, [])
 
   return (
     <SessionProvider>
