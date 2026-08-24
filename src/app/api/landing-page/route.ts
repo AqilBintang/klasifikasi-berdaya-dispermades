@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { revalidatePath } from 'next/cache'
 
 const DEFAULT_BANNER = {
   slides: [
@@ -70,6 +71,9 @@ export async function PATCH(request: Request) {
     }
 
     await Promise.all(ops)
+
+    // Bust cache landing page supaya perubahan langsung tampil
+    revalidatePath('/')
 
     // Kembalikan data terbaru
     const [bannerRow, tentangRow] = await Promise.all([

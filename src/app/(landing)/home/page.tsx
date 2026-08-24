@@ -7,6 +7,8 @@ import { getKlasifikasiKecamatanAggPerYear } from '@/lib/klasifikasi/aggregation
 import type { BannerSlide } from '@/components/shared/ui/InfoBanner'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
 const DEFAULT_BANNER = {
   slides: [
     { id: 'banner-1', imageUrl: '', alt: '' },
