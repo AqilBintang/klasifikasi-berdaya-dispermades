@@ -18,6 +18,7 @@ interface TentangPlatform {
   heading: string
   description: string
   points: string[]
+  imageUrl?: string
 }
 
 interface LandingPageData {
@@ -228,6 +229,140 @@ function SlideCard({ slide, idx, onUpdate, onRemove }: SlideCardProps) {
           <Trash2 className="size-4" />
         </button>
       </div>
+    </div>
+  )
+}
+
+// ─── TentangImageField ────────────────────────────────────────────────────────
+
+function TentangImageField({ imageUrl, onChange }: { imageUrl: string; onChange: (url: string) => void }) {
+  const [mode, setMode]           = useState<'url' | 'upload'>(imageUrl ? 'url' : 'upload')
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  async function handleFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadError('')
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/landing-page/upload', { method: 'POST', body: fd })
+      const json = await res.json() as { url?: string; error?: string }
+      if (!res.ok) throw new Error(json.error ?? 'Upload gagal')
+      onChange(json.url!)
+      setMode('url')
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload gagal')
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  return (
+    <div className="space-y-2 rounded-xl border border-gray-200 bg-white p-4">
+      <div>
+        <p className="text-sm font-medium text-gray-700">Gambar Ilustrasi</p>
+        <p className="text-xs text-gray-400">Tampil di sisi kanan section Tentang Platform. Rasio 4:3, maks 5 MB.</p>
+      </div>
+
+      {/* Preview */}
+      <div className="w-full aspect-[4/3] rounded-lg border-2 border-dashed border-sky-300/60 bg-gray-50 overflow-hidden flex items-center justify-center">
+        {imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={imageUrl} alt="Preview gambar Tentang Platform" className="w-full h-full object-cover" />
+        ) : (
+          <div className="flex flex-col items-center gap-2 text-sky-300">
+            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="1.5" />
+              <circle cx="8.5" cy="8.5" r="1.5" strokeWidth="1.5" />
+              <path d="M21 15l-5-5L5 21" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="text-xs font-medium">Belum ada gambar</span>
+          </div>
+        )}
+      </div>
+
+      {/* Mode toggle */}
+      <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
+        <button
+          type="button"
+          onClick={() => setMode('url')}
+          className={cn(
+            'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+            mode === 'url' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          )}
+        >
+          <Link2 className="size-3" />
+          URL
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('upload')}
+          className={cn(
+            'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+            mode === 'upload' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          )}
+        >
+          <Upload className="size-3" />
+          Upload
+        </button>
+      </div>
+
+      {/* URL input */}
+      {mode === 'url' && (
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={imageUrl}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
+            placeholder="https://… atau /banners/gambar.jpg"
+            className={inputCls}
+          />
+          {imageUrl && (
+            <button
+              type="button"
+              onClick={() => onChange('')}
+              aria-label="Hapus URL gambar"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Upload input */}
+      {mode === 'upload' && (
+        <div className="space-y-1.5">
+          <label
+            htmlFor="tentang-image-file"
+            className={cn(
+              'flex items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-3 text-sm cursor-pointer transition-colors',
+              uploading ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-sky-200 text-sky-600 hover:bg-sky-50'
+            )}
+          >
+            {uploading ? (
+              <><Loader2 className="size-4 animate-spin" /> Mengunggah…</>
+            ) : (
+              <><Upload className="size-4" /><span>Pilih gambar <span className="text-sky-400 font-normal">(JPG/PNG/WebP · rasio 4:3 · maks 5 MB)</span></span></>
+            )}
+          </label>
+          <input
+            ref={fileRef}
+            id="tentang-image-file"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            disabled={uploading}
+            onChange={handleFile}
+            className="sr-only"
+          />
+          {uploadError && <p role="alert" className="text-xs text-red-500">{uploadError}</p>}
+        </div>
+      )}
     </div>
   )
 }
@@ -554,6 +689,12 @@ export function LandingPageClient({ initialData }: Props) {
               Tambah Poin
             </Button>
           </div>
+
+          {/* Gambar */}
+          <TentangImageField
+            imageUrl={tentang.imageUrl ?? ''}
+            onChange={(url) => setTentang((t) => ({ ...t, imageUrl: url }))}
+          />
         </div>
       )}
     </div>

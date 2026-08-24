@@ -34,7 +34,7 @@ async function getLandingContent() {
   return {
     banner: (bannerRow?.value as { slides: BannerSlide[] } | null) ?? DEFAULT_BANNER,
     tentangPlatform:
-      (tentangRow?.value as { heading: string; description: string; points: string[] } | null) ??
+      (tentangRow?.value as { heading: string; description: string; points: string[]; imageUrl?: string } | null) ??
       DEFAULT_TENTANG,
   }
 }
@@ -188,14 +188,25 @@ export default async function LandingPage() {
               </ul>
             </div>
 
-            <div className="relative w-full aspect-[4/3] rounded-2xl border-2 border-dashed border-sky-300/60 bg-white/40 flex flex-col items-center justify-center gap-3">
-              <svg className="w-16 h-16 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="1.5" />
-                <circle cx="8.5" cy="8.5" r="1.5" strokeWidth="1.5" />
-                <path d="M21 15l-5-5L5 21" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <span className="text-sm text-sky-400 font-medium">Gambar</span>
-              <span className="text-xs text-sky-400">Rasio 4 : 3</span>
+            <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border-2 border-dashed border-sky-300/60 bg-white/40">
+              {tentang.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={tentang.imageUrl}
+                  alt="Ilustrasi Tentang Platform"
+                  className="w-full h-full object-cover rounded-2xl"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-3 w-full h-full">
+                  <svg className="w-16 h-16 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="1.5" />
+                    <circle cx="8.5" cy="8.5" r="1.5" strokeWidth="1.5" />
+                    <path d="M21 15l-5-5L5 21" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="text-sm text-sky-400 font-medium">Gambar</span>
+                  <span className="text-xs text-sky-400">Rasio 4 : 3</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

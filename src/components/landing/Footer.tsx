@@ -20,7 +20,7 @@ export function Footer() {
           {/* Kolom 1 — Brand */}
           <div className="flex flex-col gap-4">
             <Link
-            href="/dashboard"
+            href="/home"
             className="inline-flex w-fit items-center gap-1 rounded-xl border border-white/20 bg-white p-2 shadow-lg shadow-black/10"
             >
                 <Image
