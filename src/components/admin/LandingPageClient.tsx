@@ -492,7 +492,7 @@ export function LandingPageClient({ initialData }: Props) {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-4 bg-white rounded-xl p-6 min-h-full">
+    <div className="space-y-4 bg-white rounded-xl p-6">
       {/* Page header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
