@@ -11,5 +11,11 @@ export default async function AdminLayout({
   if (!session) redirect('/admin/login')
   if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN') redirect('/kecamatan/dashboard')
 
-  return <AdminLayoutClient>{children}</AdminLayoutClient>
+  return (
+    <>
+      {/* Override body background & scroll untuk halaman admin */}
+      <style>{`body { background-color: #f3f4f6 !important; overflow: hidden !important; }`}</style>
+      <AdminLayoutClient>{children}</AdminLayoutClient>
+    </>
+  )
 }
