@@ -269,19 +269,19 @@ function TentangImageField({ imageUrl, onChange }: { imageUrl: string; onChange:
         <p className="text-xs text-gray-400">Tampil di sisi kanan section Tentang Platform. Rasio 4:3, maks 5 MB.</p>
       </div>
 
-      {/* Preview */}
-      <div className="w-full aspect-[4/3] rounded-lg border-2 border-dashed border-sky-300/60 bg-gray-50 overflow-hidden flex items-center justify-center">
+      {/* Preview — thumbnail kecil, bukan full-width aspect ratio */}
+      <div className="w-40 h-[120px] rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center shrink-0">
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={imageUrl} alt="Preview gambar Tentang Platform" className="w-full h-full object-cover" />
         ) : (
-          <div className="flex flex-col items-center gap-2 text-sky-300">
-            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <div className="flex flex-col items-center gap-1.5 text-sky-300">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="1.5" />
               <circle cx="8.5" cy="8.5" r="1.5" strokeWidth="1.5" />
               <path d="M21 15l-5-5L5 21" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span className="text-xs font-medium">Belum ada gambar</span>
+            <span className="text-[10px] font-medium">Belum ada gambar</span>
           </div>
         )}
       </div>
@@ -492,7 +492,7 @@ export function LandingPageClient({ initialData }: Props) {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 bg-white rounded-xl p-6 min-h-full">
       {/* Page header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
