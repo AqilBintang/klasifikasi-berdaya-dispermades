@@ -3,7 +3,6 @@
 import { signOut } from 'next-auth/react'
 import {
   Menu,
-  Bell,
   LogOut,
 } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -42,20 +41,6 @@ export function AdminHeader({
           <h1 className="text-lg font-bold text-gray-800">{pageTitle}</h1>
         </div>
 
-        {/* Kanan */}
-        <div className="flex items-center gap-2">
-          {/* Notifikasi */}
-          <button
-            type="button"
-            className="relative flex items-center justify-center rounded-md p-2 text-gray-600 hover:bg-gray-100 transition-colors"
-            aria-label="Notifikasi"
-          >
-            <Bell className="w-5 h-5" />
-            <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-semibold text-white">
-              3
-            </span>
-          </button>
-
           {/* User dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-gray-100 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-sky-400">
@@ -80,7 +65,6 @@ export function AdminHeader({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
       </div>
     </header>
   )
