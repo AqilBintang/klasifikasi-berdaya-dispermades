@@ -96,7 +96,17 @@ export default async function AdminDashboardPage() {
     prisma.user.count({ where: { role: 'USER', isActive: true } }),
     prisma.assessment.count({ where: { status: 'PUBLISHED' } }),
     prisma.selfAssessment.count({ where: { status: 'SUBMITTED' } }),
-    prisma.selfAssessment.count({ where: { status: 'VALIDATED' } }),
+    // Kecamatan yang SEMUA self-assessment-nya sudah VALIDATED
+    prisma.user.count({
+      where: {
+        role: 'USER',
+        isActive: true,
+        selfAssessments: {
+          some: {},
+          none: { status: { not: 'VALIDATED' } },
+        },
+      },
+    }),
     prisma.assessment.findMany({
       orderBy: { createdAt: 'desc' },
       take: 5,
