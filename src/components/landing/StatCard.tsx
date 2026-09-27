@@ -62,16 +62,16 @@ export function StatCard({ icon, value, label, sub }: Props) {
   return (
     <div
       ref={nodeRef}
-      className="flex flex-col items-center gap-2 rounded-2xl bg-white/70 px-6 py-5 text-center shadow-sm backdrop-blur-sm"
+      className="flex flex-col items-center gap-1.5 rounded-2xl bg-white/70 px-3 py-4 sm:px-6 sm:py-5 text-center shadow-sm backdrop-blur-sm"
     >
-      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-100 text-sky-600">
+      <div className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-sky-100 text-sky-600">
         {icon}
       </div>
-      <p className="text-3xl font-bold text-gray-900 tabular-nums">
+      <p className="text-2xl sm:text-3xl font-bold text-gray-900 tabular-nums">
         {isNumeric ? count.toLocaleString('id-ID') : value}
       </p>
-      <p className="text-sm font-medium text-gray-700">{label}</p>
-      {sub && <p className="text-xs text-gray-500">{sub}</p>}
+      <p className="text-xs sm:text-sm font-medium text-gray-700 leading-tight">{label}</p>
+      {sub && <p className="text-[11px] sm:text-xs text-gray-500 leading-tight">{sub}</p>}
     </div>
   )
 }

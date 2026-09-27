@@ -48,11 +48,11 @@ export function Navbar() {
         aria-label="Navigasi Utama"
         className={cn(
           // Base styles
-          'mx-auto flex items-center justify-between px-6 py-3',
+          'mx-auto flex items-center justify-between px-4 sm:px-6 py-3',
           'transition-all duration-400 ease-in-out',
           // Scrolled state
           scrolled
-            ? 'mt-2.5 w-[80%] rounded-2xl bg-white shadow-[0_5px_20px_rgba(0,0,0,0.15)]'
+            ? 'mt-2.5 w-[95%] sm:w-[88%] md:w-[80%] rounded-2xl bg-white shadow-[0_5px_20px_rgba(0,0,0,0.15)]'
             : 'w-full bg-white border-b border-gray-100 shadow-sm'
         )}
       >
@@ -63,14 +63,14 @@ export function Navbar() {
             alt="Logo Kota"
             width={40}
             height={40}
-            className="h-10 w-auto object-contain"
+            className="h-8 sm:h-10 w-auto object-contain"
           />
           <Image
             src="/logo/kecamatan-berdaya.png"
             alt="Klas Berdaya"
             width={44}
             height={44}
-            className="h-11 w-auto object-contain translate-y-[1px]"
+            className="h-9 sm:h-11 w-auto object-contain translate-y-[1px]"
           />
         </div>
 

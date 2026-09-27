@@ -102,18 +102,18 @@ export default async function LandingPage() {
       >
         <div className="absolute inset-0 bg-black/55" aria-hidden="true" />
 
-        <div className="relative z-10 w-full max-w-6xl px-6 md:px-8 flex flex-col md:flex-row items-center gap-8 md:gap-16">
+        <div className="relative z-10 w-full max-w-6xl px-6 md:px-8 flex flex-col lg:flex-row items-center gap-8 lg:gap-16">
           {/* Caption — kiri */}
-          <div className="flex-1 flex flex-col items-start gap-5 text-white text-center md:text-left">
-            <h1 className="w-full text-3xl md:text-5xl font-normal tracking-tight leading-tight drop-shadow-lg">
+          <div className="flex-1 flex flex-col items-start gap-5 text-white text-center lg:text-left">
+            <h1 className="w-full text-3xl sm:text-4xl lg:text-5xl font-normal tracking-tight leading-tight drop-shadow-lg">
               Klasifikasi Indeks<br />Kecamatan Berdaya
             </h1>
-            <p className="text-base text-justify md:text-lg font-normal text-white/80 leading-relaxed">
+            <p className="text-base text-justify lg:text-lg font-normal text-white/80 leading-relaxed">
               Klas Berdaya merupakan sistem penilaian yang digunakan untuk mengidentifikasi dan mengukur tingkat keberdayaan kecamatan di Jawa Tengah. Penilaian dilakukan melalui Self Assessment berdasarkan sejumlah indikator yang menggambarkan kondisi, kapasitas, serta potensi kecamatan dalam mendukung proses pemberdayaan masyarakat dan wilayah.
             </p>
             <a
               href="#data"
-              className="inline-flex self-center md:self-start items-center gap-2 rounded-full bg-white/20 border border-white/30 px-6 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/30"
+              className="inline-flex self-center lg:self-start items-center gap-2 rounded-full bg-white/20 border border-white/30 px-6 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/30"
               aria-label="Lihat data klasifikasi"
             >
               Lihat Data Klasifikasi
@@ -123,8 +123,8 @@ export default async function LandingPage() {
             </a>
           </div>
 
-          {/* Banner — kanan */}
-          <div className="w-full md:w-[480px] shrink-0">
+          {/* Banner — kanan, hanya muncul di lg ke atas */}
+          <div className="hidden lg:block w-full lg:w-[480px] shrink-0">
             <InfoBanner slides={bannerSlides} />
           </div>
         </div>

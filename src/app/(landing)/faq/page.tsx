@@ -52,7 +52,7 @@ export default function FaqPage() {
   return (
     <div className="min-h-screen bg-white" >
       {/* ── Hero ── */}
-      <section className="pt-28 pb-12 px-4" >
+      <section className="pt-20 sm:pt-28 pb-10 sm:pb-12 px-4" >
         <div className="max-w-2xl mx-auto text-center">
           <div className="inline-flex items-center rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700 mb-4">
             Pusat Bantuan
@@ -80,7 +80,7 @@ export default function FaqPage() {
               </div>
 
               {/* Card */}
-              <div className="rounded-2xl border border-gray-100 bg-white shadow-sm px-5">
+              <div className="rounded-2xl border border-gray-100 bg-white shadow-sm px-3 sm:px-5">
                 {cat.items.map((item, ii) => (
                   <AccordionItem
                     key={item.question}

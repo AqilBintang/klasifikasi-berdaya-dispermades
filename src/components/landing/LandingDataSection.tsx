@@ -116,7 +116,7 @@ export function LandingDataSection({ kabKota, kecamatanByKabKota, initialChartDa
         <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-100 items-stretch">
 
           {/* Peta */}
-          <div className="p-3">
+          <div className="p-3 min-h-[280px] sm:min-h-[340px] lg:min-h-0">
             <WilayahMap
               kabKota={kabKota}
               kecamatanByKabKota={kecamatanByKabKota}
@@ -126,7 +126,7 @@ export function LandingDataSection({ kabKota, kecamatanByKabKota, initialChartDa
           </div>
 
           {/* Chart */}
-          <div className="p-4 flex flex-col justify-center">
+          <div className="p-4 min-h-[260px] lg:min-h-0 flex flex-col justify-center">
             {/* Header */}
             <div className="mb-3">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
