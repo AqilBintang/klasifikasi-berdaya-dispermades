@@ -18,7 +18,6 @@ export function KecamatanHeader({
   onMenuToggle,
   pageTitle = 'Dashboard',
 }: KecamatanHeaderProps) {
-  const location = [kecamatan, kabupaten].filter(Boolean).join(', ')
   const initials = userName.trim().charAt(0).toUpperCase()
 
   return (
@@ -26,28 +25,28 @@ export function KecamatanHeader({
       <div className="flex h-full items-center justify-between px-4">
 
         {/* Kiri */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             type="button"
-            className="md:hidden flex items-center justify-center rounded-md p-2 text-gray-600 hover:bg-gray-100 transition-colors"
+            className="md:hidden flex shrink-0 items-center justify-center rounded-md p-2 text-gray-600 hover:bg-gray-100 transition-colors"
             aria-label="Buka menu navigasi"
             onClick={onMenuToggle}
           >
             <Menu className="w-5 h-5" />
           </button>
-          <h1 className="text-lg font-bold text-gray-800">{pageTitle}</h1>
+          <h1 className="text-base md:text-lg font-bold text-gray-800 truncate">{pageTitle}</h1>
         </div>
 
         {/* Kanan */}
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Avatar className="size-8">
             <AvatarFallback className="bg-sky-500 text-white text-xs font-semibold">
               {initials}
             </AvatarFallback>
           </Avatar>
           <div className="hidden sm:flex flex-col items-start leading-tight">
-            <span className="text-sm font-medium text-gray-800">{userName}</span>
-            <span className="text-xs text-gray-500 truncate max-w-[180px]">{location || 'Kecamatan'}</span>
+            <span className="text-sm font-medium text-gray-800 truncate max-w-[160px]">{userName}</span>
+            <span className="text-xs text-gray-500 truncate max-w-[160px]">{kecamatan || 'Kecamatan'}</span>
           </div>
         </div>
 

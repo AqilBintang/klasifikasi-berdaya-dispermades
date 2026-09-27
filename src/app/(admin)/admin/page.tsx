@@ -139,7 +139,7 @@ export default async function AdminDashboardPage() {
         <StatisticCard title="Sudah Divalidasi"     value={totalDivalidasi}          icon={ValidatedIcon} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
         {/* Assessment terbaru */}
         <div className="rounded-xl border bg-white shadow-sm">

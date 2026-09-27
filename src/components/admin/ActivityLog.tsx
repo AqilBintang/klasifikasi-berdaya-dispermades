@@ -69,17 +69,19 @@ export function ActivityLog({ items }: { items: ActivityItem[] }) {
                       <FontAwesomeIcon icon={faPenToSquare} className="w-3 h-3 text-sky-600" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm text-gray-800 leading-snug">
-                        <span className="font-semibold">{item.kecamatan}</span>
-                        <span className="text-gray-500"> mengisi assessment</span>
-                      </p>
+                      <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                        <p className="text-sm text-gray-800 leading-snug min-w-0">
+                          <span className="font-semibold">{item.kecamatan}</span>
+                          <span className="text-gray-500"> mengisi assessment</span>
+                        </p>
+                        <span className="shrink-0 text-xs text-gray-400">{timeStr}</span>
+                      </div>
                       <p className="text-xs text-gray-400 mt-0.5 truncate">
                         {item.assessmentTitle}
                         {item.kabupaten ? ` · ${item.kabupaten}` : ''}
                         {' · '}Periode {item.periode}
                       </p>
                     </div>
-                    <span className="shrink-0 text-xs text-gray-400 whitespace-nowrap pt-0.5">{timeStr}</span>
                   </li>
                 )
               }
@@ -91,17 +93,19 @@ export function ActivityLog({ items }: { items: ActivityItem[] }) {
                     <FontAwesomeIcon icon={faCheckDouble} className="w-3 h-3 text-violet-600" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm text-gray-800 leading-snug">
-                      <span className="font-semibold">{item.validator}</span>
-                      <span className="text-gray-500"> memvalidasi </span>
-                      <span className="font-semibold">{item.kecamatan}</span>
-                    </p>
+                    <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                      <p className="text-sm text-gray-800 leading-snug min-w-0">
+                        <span className="font-semibold">{item.validator}</span>
+                        <span className="text-gray-500"> memvalidasi </span>
+                        <span className="font-semibold">{item.kecamatan}</span>
+                      </p>
+                      <span className="shrink-0 text-xs text-gray-400">{timeStr}</span>
+                    </div>
                     <p className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-500">
                       <span className={`inline-block h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
                       {cfg.label}
                     </p>
                   </div>
-                  <span className="shrink-0 text-xs text-gray-400 whitespace-nowrap pt-0.5">{timeStr}</span>
                 </li>
               )
             })}
