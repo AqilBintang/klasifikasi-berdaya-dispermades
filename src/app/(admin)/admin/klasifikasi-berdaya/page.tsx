@@ -114,7 +114,7 @@ async function getStats(yearFilter?: string) {
 
   // Chart data — selalu semua tahun agar tren terlihat
   const chartData: KlasifikasiBerdayaChartRow[] = years.map((year) => {
-    const counts = { rintisan: 0, berkembang: 0, maju: 0, berdaya: 0 }
+    const counts = { rintisan: 0, berkembang: 0, maju: 0, unggul: 0 }
     for (const u of users) {
       const entry = latestByUserYear.get(`${u.id}_${year}`)
       // Hanya hitung user yang punya data di tahun ini (konsisten dengan landing page)
