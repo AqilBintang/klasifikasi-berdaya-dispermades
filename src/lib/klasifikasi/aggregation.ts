@@ -175,7 +175,7 @@ async function _getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFilter =
     let rintisan = 0
     let berkembang = 0
     let maju = 0
-    let berdaya = 0
+    let unggul = 0
 
     for (const u of users) {
       const g = latestByUserYear.get(`${u.id}_${y}`)
@@ -185,10 +185,10 @@ async function _getKlasifikasiKecamatanAggPerYear(filter: KlasifikasiAggFilter =
       if (status === 'Rintisan') rintisan += 1
       else if (status === 'Berkembang') berkembang += 1
       else if (status === 'Maju') maju += 1
-      else if (status === 'Berdaya') berdaya += 1
+      else if (status === 'Unggul') unggul += 1
     }
 
-    return { year, rintisan, berkembang, maju, berdaya }
+    return { year, rintisan, berkembang, maju, unggul }
   })
 
   const uniqueUsersWithAnyData = new Set<number>()

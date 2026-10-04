@@ -7,7 +7,7 @@ export type DistribusiChartRow = {
   rintisan: number
   berkembang: number
   maju: number
-  berdaya: number
+  unggul: number
 }
 
 export type SkorPerTahunRow = {
@@ -22,14 +22,14 @@ const LEVELS = [
   { key: 'rintisan',   label: 'Rintisan',   color: '#f87171', muted: '#fca5a5' },
   { key: 'berkembang', label: 'Berkembang', color: '#fbbf24', muted: '#fde68a' },
   { key: 'maju',       label: 'Maju',       color: '#60a5fa', muted: '#93c5fd' },
-  { key: 'berdaya',    label: 'Berdaya',    color: '#4ade80', muted: '#86efac' },
+  { key: 'unggul',     label: 'Unggul',     color: '#4ade80', muted: '#86efac' },
 ] as const
 
 const STATUS_COLOR: Record<string, string> = {
   'Rintisan':   '#f87171',
   'Berkembang': '#fbbf24',
   'Maju':       '#60a5fa',
-  'Berdaya':    '#4ade80',
+  'Unggul':     '#4ade80',
 }
 
 // ─── Distribusi ───────────────────────────────────────────────────────────────

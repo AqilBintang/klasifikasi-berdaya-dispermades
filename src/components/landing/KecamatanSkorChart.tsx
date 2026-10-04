@@ -23,7 +23,7 @@ const STATUS_COLOR: Record<string, string> = {
   'Rintisan': '#ef4444',
   'Berkembang': '#f59e0b',
   'Maju': '#3b82f6',
-  'Berdaya': '#22c55e',
+  'Unggul': '#22c55e',
 }
 
 type TooltipProps = {
@@ -98,7 +98,7 @@ export function KecamatanSkorChart({ data, kabupaten, kecamatan }: Props) {
           { label: 'Rintisan',      color: '#ef4444' },
           { label: 'Berkembang',    color: '#f59e0b' },
           { label: 'Maju',          color: '#3b82f6' },
-          { label: 'Berdaya',       color: '#22c55e' },
+          { label: 'Unggul',        color: '#22c55e' },
         ].map((item) => (
           <span key={item.label} className="flex items-center gap-1.5">
             <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />

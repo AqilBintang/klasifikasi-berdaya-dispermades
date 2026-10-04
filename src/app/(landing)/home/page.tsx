@@ -62,7 +62,7 @@ const LEVEL_CONFIG = [
     desc: 'Telah memiliki sistem dan program pemberdayaan yang berjalan dengan baik dan terstruktur.',
   },
   {
-    level: 'Berdaya',
+    level: 'Unggul',
     range: 'Skor ≥ 43,24',
     accent: 'bg-green-500',
     desc: 'Kecamatan dengan kapasitas pemberdayaan optimal dan menjadi rujukan daerah sekitarnya.',

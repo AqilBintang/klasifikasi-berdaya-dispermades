@@ -7,14 +7,14 @@ import { KlasifikasiBerdayaChart } from '@/components/admin/KlasifikasiBerdayaCh
 import { YearFilter } from '@/components/shared/ui/YearFilter'
 import type { KlasifikasiBerdayaChartRow } from '@/components/admin/KlasifikasiBerdayaChart'
 
-const STATUS_ORDER: KlasifikasiLevel[] = ['Rintisan', 'Berkembang', 'Maju', 'Berdaya']
+const STATUS_ORDER: KlasifikasiLevel[] = ['Rintisan', 'Berkembang', 'Maju', 'Unggul']
 
 // Warna untuk progress bar (tetap berwarna karena semantik klasifikasi)
 const STATUS_BAR_COLOR: Record<KlasifikasiLevel, string> = {
   'Rintisan':    'bg-red-400',
   'Berkembang':  'bg-amber-400',
   'Maju':        'bg-blue-400',
-  'Berdaya':     'bg-green-500',
+  'Unggul':      'bg-green-500',
 }
 
 async function getStats(yearFilter?: string) {
@@ -123,13 +123,13 @@ async function getStats(yearFilter?: string) {
       if (s === 'Rintisan') counts.rintisan++
       else if (s === 'Berkembang') counts.berkembang++
       else if (s === 'Maju') counts.maju++
-      else if (s === 'Berdaya') counts.berdaya++
+      else if (s === 'Unggul') counts.unggul++
     }
     return { year, ...counts }
   })
 
   // Summary untuk tahun aktif
-  const summary = { 'Rintisan': 0, 'Berkembang': 0, 'Maju': 0, 'Berdaya': 0, belumAda: 0 }
+  const summary = { 'Rintisan': 0, 'Berkembang': 0, 'Maju': 0, 'Unggul': 0, belumAda: 0 }
   const validatedUserIds = new Set<number>()
   if (activeYear) {
     for (const u of users) {
@@ -146,7 +146,7 @@ async function getStats(yearFilter?: string) {
     const kabKey = u.kabupaten?.id?.toString() ?? 'unknown'
     if (!kabMap[kabKey]) kabMap[kabKey] = {
       id: u.kabupaten?.id ?? null, nama: u.kabupaten?.nama ?? 'Tidak Diketahui',
-      counts: { 'Rintisan': 0, 'Berkembang': 0, 'Maju': 0, 'Berdaya': 0 }, total: 0,
+      counts: { 'Rintisan': 0, 'Berkembang': 0, 'Maju': 0, 'Unggul': 0 }, total: 0,
     }
     const s = activeYear ? (latestByUserYear.get(`${u.id}_${activeYear}`)?.status ?? null) : null
     if (s) kabMap[kabKey].counts[s]++
@@ -289,8 +289,8 @@ export default async function KlasifikasiBerdayaPage({
               const cfg = KLASIFIKASI_CONFIG[level]
               return (
                 <div key={level} className="text-center">
-                  <div className={`mx-auto w-12 h-12 rounded-full ${cfg.bg} ${cfg.color} flex items-center justify-center text-lg font-bold mb-2`}>
-                    {cfg.emoji}
+                  <div className={`mx-auto w-12 h-12 rounded-full ${cfg.bg} ${cfg.color} flex items-center justify-center text-sm font-bold mb-2`}>
+                    {level[0]}
                   </div>
                   <p className="font-bold text-lg text-gray-900">{count}</p>
                   <p className="text-sm font-medium text-gray-700">{level}</p>
@@ -373,7 +373,6 @@ export default async function KlasifikasiBerdayaPage({
                   {STATUS_ORDER.map((s) => (
                     <th key={s} className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       <div className="flex flex-col items-center gap-1">
-                        <span>{KLASIFIKASI_CONFIG[s].emoji}</span>
                         <span className="text-[10px] font-normal">{s}</span>
                       </div>
                     </th>

@@ -1,7 +1,7 @@
 /**
  * Klasifikasi tingkat kecamatan berdasarkan weighted score dari kategori.
  * Formula weighted: A*0.31 + B*0.255 + C*0.16 + D*0.22 + E*0.01 + F*0.045
- * Threshold: ≤14.41 (Rintisan), ≤29.13 (Berkembang), ≤43.23 (Maju), ≥43.24 (Berdaya)
+ * Threshold: ≤14.41 (Rintisan), ≤29.13 (Berkembang), ≤43.23 (Maju), ≥43.24 (Unggul)
  */
 import type { ScoringRule } from '@/types/assessment'
 
@@ -20,7 +20,7 @@ export function evaluateScoringRule(score: number, rule: ScoringRule): string | 
   }
   return null
 }
-export type KlasifikasiLevel = 'Rintisan' | 'Berkembang' | 'Maju' | 'Berdaya'
+export type KlasifikasiLevel = 'Rintisan' | 'Berkembang' | 'Maju' | 'Unggul'
 
 // Bobot per kategori untuk weighted scoring
 export const CATEGORY_WEIGHTS: Record<string, number> = {
@@ -62,7 +62,7 @@ export function calculateWeightedScore(categoryScores: Array<{ code: string; sco
 /**
  * Klasifikasi berdasarkan weighted score sesuai rumus tim teknis.
  * Skor konversi = (A*0.31)+(B*0.255)+(C*0.16)+(D*0.22)+(E*0.01)+(F*0.045)
- * ≤14.41 Rintisan | ≤29.13 Berkembang | ≤43.23 Maju | ≥43.24 Berdaya
+ * ≤14.41 Rintisan | ≤29.13 Berkembang | ≤43.23 Maju | ≥43.24 Unggul
  */
 export function getKlasifikasiFromWeighted(weightedScore: number): KlasifikasiLevel | null {
   if (weightedScore < 0) return null
@@ -70,7 +70,7 @@ export function getKlasifikasiFromWeighted(weightedScore: number): KlasifikasiLe
   if (weightedScore <= 14.41) return 'Rintisan'
   if (weightedScore <= 29.13) return 'Berkembang'
   if (weightedScore <= 43.23) return 'Maju'
-  return 'Berdaya'
+  return 'Unggul'
 }
 
 /**
@@ -86,24 +86,24 @@ export function getKlasifikasi(totalScore: number, maxScore: number): Klasifikas
   if (totalScore <= 16) return 'Rintisan'
   if (totalScore <= 32) return 'Berkembang'
   if (totalScore <= 48) return 'Maju'
-  return 'Berdaya'
+  return 'Unggul'
 }
 
-export const KLASIFIKASI_CONFIG: Record<KlasifikasiLevel, { color: string; bg: string; border: string; emoji: string }> = {
-  'Rintisan':      { color: 'text-red-700',    bg: 'bg-red-100',    border: 'border-red-200',    emoji: '🔴' },
-  'Berkembang':    { color: 'text-amber-700',  bg: 'bg-amber-100',  border: 'border-amber-200',  emoji: '🟡' },
-  'Maju':          { color: 'text-blue-700',   bg: 'bg-blue-100',   border: 'border-blue-200',   emoji: '🔵' },
-  'Berdaya':       { color: 'text-green-700',  bg: 'bg-green-100',  border: 'border-green-200',  emoji: '🟢' },
+export const KLASIFIKASI_CONFIG: Record<KlasifikasiLevel, { color: string; bg: string; border: string }> = {
+  'Rintisan':      { color: 'text-red-700',    bg: 'bg-red-100',    border: 'border-red-200'    },
+  'Berkembang':    { color: 'text-amber-700',  bg: 'bg-amber-100',  border: 'border-amber-200'  },
+  'Maju':          { color: 'text-blue-700',   bg: 'bg-blue-100',   border: 'border-blue-200'   },
+  'Unggul':        { color: 'text-green-700',  bg: 'bg-green-100',  border: 'border-green-200'  },
 }
 
 /**
  * Threshold klasifikasi per kategori sesuai rumus tim teknis.
  * Kategori A–D punya threshold berbeda. Kategori lain (E, F, dst.) tidak diklasifikasi.
  *
- * A: ≤21 Rintisan | ≤42 Berkembang | ≤63 Maju | ≥64 Berdaya
- * B: ≤16 Rintisan | ≤32 Berkembang | ≤48 Maju | ≥49 Berdaya
- * C: ≤5  Rintisan | ≤10 Berkembang | ≤15 Maju | ≥16 Berdaya
- * D: ≤11 Rintisan | ≤22 Berkembang | ≤33 Maju | ≥34 Berdaya
+ * A: ≤21 Rintisan | ≤42 Berkembang | ≤63 Maju | ≥64 Unggul
+ * B: ≤16 Rintisan | ≤32 Berkembang | ≤48 Maju | ≥49 Unggul
+ * C: ≤5  Rintisan | ≤10 Berkembang | ≤15 Maju | ≥16 Unggul
+ * D: ≤11 Rintisan | ≤22 Berkembang | ≤33 Maju | ≥34 Unggul
  */
 const CATEGORY_THRESHOLDS: Record<string, [number, number, number]> = {
   // [Rintisan max, Berkembang max, Maju max] — di atas Maju max = Berdaya
@@ -125,7 +125,7 @@ export function getKlasifikasiPerKategori(code: string, score: number): Klasifik
   if (score <= rintisan)  return 'Rintisan'
   if (score <= berkembang) return 'Berkembang'
   if (score <= maju)      return 'Maju'
-  return 'Berdaya'
+  return 'Unggul'
 }
 
 /**

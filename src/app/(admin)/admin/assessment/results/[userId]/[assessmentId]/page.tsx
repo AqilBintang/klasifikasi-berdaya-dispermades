@@ -19,7 +19,7 @@ function KlasifikasiBadge({ level, size = 'sm' }: { level: KlasifikasiLevel | nu
       cfg.bg, cfg.color, cfg.border,
       size === 'lg' ? 'px-4 py-1.5 text-sm' : 'px-2.5 py-0.5 text-xs'
     )}>
-      {cfg.emoji} {level}
+      {level}
     </span>
   )
 }

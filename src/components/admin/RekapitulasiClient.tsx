@@ -9,8 +9,8 @@ function KlasifikasiBadge({ level }: { level: KlasifikasiLevel | null }) {
   if (!level) return <span className="text-xs text-gray-400 italic">—</span>
   const cfg = KLASIFIKASI_CONFIG[level]
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold border ${cfg.bg} ${cfg.color} ${cfg.border}`}>
-      {cfg.emoji} {level}
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold border ${cfg.bg} ${cfg.color} ${cfg.border}`}>
+      {level}
     </span>
   )
 }

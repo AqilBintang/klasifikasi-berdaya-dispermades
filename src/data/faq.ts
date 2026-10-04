@@ -15,7 +15,7 @@ export const FAQ_DATA: FaqCategory[] = [
       {
         question: 'Apa itu Klasifikasi Indeks Kecamatan Berdaya?',
         answer:
-          'Klasifikasi Indeks Kecamatan Berdaya adalah sistem penilaian mandiri berbasis indikator yang mengukur kapasitas dan kinerja kecamatan dalam menjalankan program pemberdayaan masyarakat di Jawa Tengah. Setiap kecamatan dinilai dan diklasifikasikan ke dalam empat level: Rintisan, Berkembang, Maju, atau Berdaya.',
+          'Klasifikasi Indeks Kecamatan Berdaya adalah sistem penilaian mandiri berbasis indikator yang mengukur kapasitas dan kinerja kecamatan dalam menjalankan program pemberdayaan masyarakat di Jawa Tengah. Setiap kecamatan dinilai dan diklasifikasikan ke dalam empat level: Rintisan, Berkembang, Maju, atau Unggul.',
       },
       {
         question: 'Siapa saja yang bisa mengakses platform ini?',
@@ -40,7 +40,7 @@ export const FAQ_DATA: FaqCategory[] = [
       {
         question: 'Apa perbedaan antara keempat level klasifikasi?',
         answer:
-          'Terdapat empat level: Rintisan (skor ≤ 14,41) — kecamatan yang baru memulai inisiatif pemberdayaan; Berkembang (skor ≤ 29,13) — sudah memiliki sistem dasar; Maju (skor ≤ 43,23) — sistem pemberdayaan berjalan terstruktur; Berdaya (skor ≥ 43,24) — mencapai tingkat pemberdayaan optimal dan dapat menjadi percontohan.',
+          'Terdapat empat level: Rintisan (skor ≤ 14,41) — kecamatan yang baru memulai inisiatif pemberdayaan; Berkembang (skor ≤ 29,13) — sudah memiliki sistem dasar; Maju (skor ≤ 43,23) — sistem pemberdayaan berjalan terstruktur; Unggul (skor ≥ 43,24) — mencapai tingkat pemberdayaan optimal dan dapat menjadi percontohan.',
       },
       {
         question: 'Apakah hasil klasifikasi bisa berubah setiap tahun?',
