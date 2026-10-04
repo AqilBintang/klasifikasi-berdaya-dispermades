@@ -46,6 +46,8 @@ export async function middleware(req: NextRequest) {
     }
     if (session.user.role === 'ADMIN')     return NextResponse.redirect(new URL('/admin', req.url))
     if (session.user.role === 'VALIDATOR') return NextResponse.redirect(new URL('/validator', req.url))
+    // Redirect /kecamatan (root) ke /kecamatan/dashboard
+    if (pathname === '/kecamatan') return NextResponse.redirect(new URL('/kecamatan/dashboard', req.url))
   }
 
   // ── Halaman login kecamatan — redirect jika sudah login ───────────────
