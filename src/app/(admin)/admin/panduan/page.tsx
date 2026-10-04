@@ -22,13 +22,15 @@ export default async function PanduanListPage() {
             Buat panduan rubrik yang akan ditampilkan kepada kecamatan saat mengisi assessment
           </p>
         </div>
-        <Link
-          href="/admin/panduan/new"
-          className="flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-sky-700 transition-colors"
-        >
-          <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
-          Buat Rubrik
-        </Link>
+        {rubrics.length === 0 && (
+          <Link
+            href="/admin/panduan/new"
+            className="flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-sky-700 transition-colors"
+          >
+            <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
+            Buat Rubrik
+          </Link>
+        )}
       </div>
 
       <PanduanListClient rubrics={rubrics} />

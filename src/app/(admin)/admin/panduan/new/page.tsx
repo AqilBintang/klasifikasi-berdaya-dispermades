@@ -2,9 +2,13 @@ import Link from 'next/link'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { prisma } from '@/lib/prisma'
+import { redirect } from 'next/navigation'
 import { CreateRubricForm } from '@/components/admin/CreateRubricForm'
 
 export default async function NewPanduanPage() {
+  const existing = await prisma.assessmentRubric.count()
+  if (existing > 0) redirect('/admin/panduan')
+
   const assessments = await prisma.assessment.findMany({
     where: { status: { in: ['PUBLISHED', 'DRAFT'] } },
     orderBy: { createdAt: 'desc' },

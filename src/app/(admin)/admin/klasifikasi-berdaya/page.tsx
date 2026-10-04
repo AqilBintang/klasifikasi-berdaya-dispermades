@@ -289,9 +289,6 @@ export default async function KlasifikasiBerdayaPage({
               const cfg = KLASIFIKASI_CONFIG[level]
               return (
                 <div key={level} className="text-center">
-                  <div className={`mx-auto w-12 h-12 rounded-full ${cfg.bg} ${cfg.color} flex items-center justify-center text-sm font-bold mb-2`}>
-                    {level[0]}
-                  </div>
                   <p className="font-bold text-lg text-gray-900">{count}</p>
                   <p className="text-sm font-medium text-gray-700">{level}</p>
                   <p className="text-xs text-gray-500">{pct}% dari tervalidasi</p>

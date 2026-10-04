@@ -65,6 +65,11 @@ export async function POST(req: NextRequest) {
 
     const { assessmentId, title, description, items } = parsed.data
 
+    const existing = await prisma.assessmentRubric.count()
+    if (existing > 0) {
+      return NextResponse.json({ error: 'Hanya boleh ada satu panduan rubrik. Hapus atau edit rubrik yang ada terlebih dahulu.' }, { status: 409 })
+    }
+
     const rubric = await prisma.$transaction(async (tx) => {
       const created = await tx.assessmentRubric.create({
         data: { assessmentId, title, description },
