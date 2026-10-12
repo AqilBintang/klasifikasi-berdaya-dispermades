@@ -60,10 +60,12 @@ export default async function KecamatanPanduanPage() {
 
               {/* Header rubrik */}
               <div className="rounded-xl bg-sky-600 px-5 py-4 text-white">
-                <p className="text-sky-100 text-xs mb-0.5">
-                  {rubric.assessment.title} · Periode {rubric.assessment.periode}
+                <h3 className="text-base font-bold" style={{ textTransform: 'capitalize' }}>
+                  {rubric.title.toLowerCase()}
+                </h3>
+                <p className="text-sky-200 text-xs mt-0.5">
+                  Periode {rubric.assessment.periode}
                 </p>
-                <h3 className="text-base font-bold">{rubric.title}</h3>
               </div>
 
               {/* Per kategori */}
