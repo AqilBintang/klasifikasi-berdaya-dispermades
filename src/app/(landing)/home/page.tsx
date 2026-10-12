@@ -1,4 +1,4 @@
-﻿import { MapPin, CheckCircle, CalendarDays, TrendingUp } from 'lucide-react'
+import { MapPin, CheckCircle, CalendarDays, TrendingUp } from 'lucide-react'
 import { InfoBanner } from '@/components/shared/ui/InfoBanner'
 import { LandingDataSection } from '@/components/landing/LandingDataSection'
 import { StatCard } from '@/components/landing/StatCard'

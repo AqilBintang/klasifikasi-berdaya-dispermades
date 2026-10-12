@@ -1,4 +1,4 @@
-﻿import { auth } from '@/auth'
+import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'

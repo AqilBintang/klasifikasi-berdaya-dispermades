@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 

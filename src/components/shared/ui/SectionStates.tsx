@@ -1,4 +1,4 @@
-﻿import { AlertCircle, Inbox } from 'lucide-react'
+import { AlertCircle, Inbox } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 // --- Empty State --------------------------------------------------------------

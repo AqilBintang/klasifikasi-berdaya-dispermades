@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Export self-assessment kecamatan dengan format identik file contoh Excel.
  *
  * Layout output (array-of-arrays):
