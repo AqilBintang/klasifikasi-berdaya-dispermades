@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma'
+﻿import { prisma } from '@/lib/prisma'
 import { StatisticCard } from '@/components/shared/ui/StatisticCard'
 import { ActivityLog } from '@/components/admin/ActivityLog'
 import type { ActivityItem } from '@/components/admin/ActivityLog'
@@ -10,7 +10,7 @@ const AssessmentIcon = () => <FontAwesomeIcon icon={faClipboardList} className="
 const WaitingIcon    = () => <FontAwesomeIcon icon={faHourglass}     className="h-4 w-4" />
 const ValidatedIcon  = () => <FontAwesomeIcon icon={faCircleCheck}   className="h-4 w-4" />
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
+// --- Data ---------------------------------------------------------------------
 
 async function getActivityLog(): Promise<ActivityItem[]> {
   // Satu submission event per (submittedById, periode) — ambil submittedAt terbaru per group.
@@ -82,7 +82,7 @@ async function getActivityLog(): Promise<ActivityItem[]> {
     .slice(0, 10)
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---------------------------------------------------------------------
 
 export default async function AdminDashboardPage() {
   const [

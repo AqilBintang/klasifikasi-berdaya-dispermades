@@ -1,4 +1,4 @@
-import { auth } from '@/auth'
+﻿import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -42,7 +42,7 @@ export default async function KecamatanStatistikPage() {
     })).map((version) => [version.id, version.indicators.length])
   )
 
-  // ── Group by periode + version → kategori ────────────────────────────────
+  // -- Group by periode + version → kategori --------------------------------
 
   const periodeMap: Record<string, {
     assessmentId: number; periode: string; versionId: number; versionNumber: number; indicatorCount: number; total: number; max: number

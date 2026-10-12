@@ -62,7 +62,7 @@ function LoginForm() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="email@kecamatan.go.id"
+          placeholder="Masukkan email"
           required
           autoComplete="email"
           className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/20"

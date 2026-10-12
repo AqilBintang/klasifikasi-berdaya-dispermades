@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -32,7 +32,7 @@ const STATUS_COLOR: Record<string, string> = {
   'Unggul':     '#4ade80',
 }
 
-// ─── Distribusi ───────────────────────────────────────────────────────────────
+// --- Distribusi ---------------------------------------------------------------
 
 function BarTooltip({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; fill: string }[]; label?: string }) {
   if (!active || !payload?.length) return null
@@ -59,7 +59,7 @@ export function LandingDistribusiChart({ data }: { data: DistribusiChartRow[] })
     <div className="space-y-3">
       <p className="text-xs text-gray-400">{totalKecamatan} kecamatan · {data.length} tahun data</p>
 
-      {/* ── Grouped bar per tahun ── */}
+      {/* -- Grouped bar per tahun -- */}
       <ResponsiveContainer width="100%" height={160}>
         <BarChart data={data} barCategoryGap="20%" barGap={2} margin={{ top: 8, right: 4, left: -20, bottom: 0 }}>
           <XAxis
@@ -95,7 +95,7 @@ export function LandingDistribusiChart({ data }: { data: DistribusiChartRow[] })
   )
 }
 
-// ─── Satu kecamatan ───────────────────────────────────────────────────────────
+// --- Satu kecamatan -----------------------------------------------------------
 
 function KecamatanBarTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number; payload: { statusAkhir: string | null; color: string } }[]; label?: string }) {
   if (!active || !payload?.length) return null

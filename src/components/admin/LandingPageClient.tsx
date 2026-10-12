@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useRef, useState, useEffect } from 'react'
 import type { ChangeEvent } from 'react'
@@ -6,7 +6,7 @@ import { Save, Plus, Trash2, ImageIcon, GripVertical, Layers, Info, Upload, Link
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 
 interface BannerSlide {
   id: string
@@ -30,12 +30,12 @@ interface Props {
   initialData: LandingPageData
 }
 
-// ─── Shared styles ────────────────────────────────────────────────────────────
+// --- Shared styles ------------------------------------------------------------
 
 const inputCls =
   'w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-400 transition-colors'
 
-// ─── Tab slugs ────────────────────────────────────────────────────────────────
+// --- Tab slugs ----------------------------------------------------------------
 
 type Tab = 'banner' | 'tentang'
 
@@ -44,7 +44,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'tentang', label: 'Tentang Platform', icon: <Info     className="size-4" /> },
 ]
 
-// ─── SlideCard ────────────────────────────────────────────────────────────────
+// --- SlideCard ----------------------------------------------------------------
 // Komponen terpisah supaya state "mode" (url | upload) per-slide tidak naik ke parent
 
 interface SlideCardProps {
@@ -233,7 +233,7 @@ function SlideCard({ slide, idx, onUpdate, onRemove }: SlideCardProps) {
   )
 }
 
-// ─── TentangImageField ────────────────────────────────────────────────────────
+// --- TentangImageField --------------------------------------------------------
 
 function TentangImageField({ imageUrl, onChange }: { imageUrl: string; onChange: (url: string) => void }) {
   const [mode, setMode]           = useState<'url' | 'upload'>(imageUrl ? 'url' : 'upload')
@@ -367,7 +367,7 @@ function TentangImageField({ imageUrl, onChange }: { imageUrl: string; onChange:
   )
 }
 
-// ─── LandingPageClient ────────────────────────────────────────────────────────
+// --- LandingPageClient --------------------------------------------------------
 
 export function LandingPageClient({ initialData }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('banner')
@@ -385,7 +385,7 @@ export function LandingPageClient({ initialData }: Props) {
     setTimeout(() => setToast(null), 3500)
   }
 
-  // ── Auto save per tab ──
+  // -- Auto save per tab --
   // Setiap kali slides berubah, auto save tab banner
   useEffect(() => {
     if (isFirstRender.current.banner) { isFirstRender.current.banner = false; return }
@@ -453,7 +453,7 @@ export function LandingPageClient({ initialData }: Props) {
     }
   }
 
-  // ── Banner helpers ──
+  // -- Banner helpers --
 
   function addSlide() {
     setSlides((prev) => [
@@ -472,7 +472,7 @@ export function LandingPageClient({ initialData }: Props) {
     )
   }
 
-  // ── Point helpers ──
+  // -- Point helpers --
 
   function addPoint() {
     setTentang((t) => ({ ...t, points: [...t.points, ''] }))
@@ -489,7 +489,7 @@ export function LandingPageClient({ initialData }: Props) {
     }))
   }
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  // --- Render ---------------------------------------------------------------
 
   return (
     <div className="space-y-4">
@@ -561,7 +561,7 @@ export function LandingPageClient({ initialData }: Props) {
         </nav>
       </div>
 
-      {/* ── Tab: Banner ── */}
+      {/* -- Tab: Banner -- */}
       {activeTab === 'banner' && (
         <div className="space-y-3">
           <div className="flex items-center gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700">
@@ -604,7 +604,7 @@ export function LandingPageClient({ initialData }: Props) {
         </div>
       )}
 
-      {/* ── Tab: Tentang Platform ── */}
+      {/* -- Tab: Tentang Platform -- */}
       {activeTab === 'tentang' && (
         <div className="space-y-2.5">
           <p className="text-sm text-gray-500">

@@ -1,10 +1,10 @@
-'use client'
+﻿'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { CheckCircle, AlertTriangle, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 
 type ToastType = 'success' | 'error' | 'warning'
 
@@ -14,7 +14,7 @@ interface Toast {
   message: string
 }
 
-// ─── Global state (singleton sederhana) ──────────────────────────────────────
+// --- Global state (singleton sederhana) --------------------------------------
 // ponytail: global mutable ref, cukup untuk satu app tanpa context/provider
 
 let _setToasts: React.Dispatch<React.SetStateAction<Toast[]>> | null = null
@@ -35,7 +35,7 @@ export const toast = {
   warning: (msg: string) => push('warning', msg),
 }
 
-// ─── Toast item ───────────────────────────────────────────────────────────────
+// --- Toast item ---------------------------------------------------------------
 
 const CONFIG: Record<ToastType, { Icon: typeof CheckCircle; bg: string; border: string; text: string }> = {
   success: { Icon: CheckCircle,    bg: 'bg-green-50',  border: 'border-green-200', text: 'text-green-800' },
@@ -76,7 +76,7 @@ function ToastItem({ toast: t, onDismiss }: { toast: Toast; onDismiss: (id: numb
   )
 }
 
-// ─── ToastContainer — letakkan sekali di layout ───────────────────────────────
+// --- ToastContainer — letakkan sekali di layout -------------------------------
 
 export function ToastContainer() {
   const [toasts, setToasts] = useState<Toast[]>([])

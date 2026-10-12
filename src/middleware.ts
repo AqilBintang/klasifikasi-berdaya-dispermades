@@ -1,4 +1,4 @@
-import NextAuth from 'next-auth'
+﻿import NextAuth from 'next-auth'
 import { authConfig } from '@/auth.config'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
@@ -9,7 +9,7 @@ export async function middleware(req: NextRequest) {
   const session = await auth()
   const { pathname } = req.nextUrl
 
-  // ── /admin (kecuali login) ──────────────────────────────────────────────
+  // -- /admin (kecuali login) ----------------------------------------------
   if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
     if (!session) {
       const url = new URL('/admin/login', req.url)
@@ -24,7 +24,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // ── /validator ─────────────────────────────────────────────────────────
+  // -- /validator ---------------------------------------------------------
   if (pathname.startsWith('/validator')) {
     if (!session) {
       const url = new URL('/admin/login', req.url)
@@ -37,7 +37,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // ── /kecamatan (kecuali login) ─────────────────────────────────────────
+  // -- /kecamatan (kecuali login) -----------------------------------------
   if (pathname.startsWith('/kecamatan') && pathname !== '/kecamatan/login') {
     if (!session) {
       const url = new URL('/kecamatan/login', req.url)
@@ -50,14 +50,14 @@ export async function middleware(req: NextRequest) {
     if (pathname === '/kecamatan') return NextResponse.redirect(new URL('/kecamatan/dashboard', req.url))
   }
 
-  // ── Halaman login kecamatan — redirect jika sudah login ───────────────
+  // -- Halaman login kecamatan — redirect jika sudah login ---------------
   if (pathname === '/kecamatan/login' && session) {
     if (session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN') return NextResponse.redirect(new URL('/admin', req.url))
     if (session.user.role === 'VALIDATOR') return NextResponse.redirect(new URL('/validator', req.url))
     return NextResponse.redirect(new URL('/kecamatan/dashboard', req.url))
   }
 
-  // ── Halaman login admin — redirect jika sudah login ───────────────────
+  // -- Halaman login admin — redirect jika sudah login -------------------
   if (pathname === '/admin/login' && session) {
     if (session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN') return NextResponse.redirect(new URL('/admin', req.url))
     if (session.user.role === 'VALIDATOR') return NextResponse.redirect(new URL('/validator', req.url))

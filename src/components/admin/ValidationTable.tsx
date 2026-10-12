@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { 
@@ -31,7 +31,7 @@ interface ValidationTableProps {
   onValidated: () => void
 }
 
-// ─── Validation Modal (single) ─────────────────────────────────────────────
+// --- Validation Modal (single) ---------------------------------------------
 
 function ValidationModal({ submission, onClose, onSuccess }: {
   submission: SelfAssessmentRow
@@ -142,7 +142,7 @@ function ValidationModal({ submission, onClose, onSuccess }: {
   )
 }
 
-// ─── Bulk Validate Modal ───────────────────────────────────────────────────
+// --- Bulk Validate Modal ---------------------------------------------------
 
 function BulkValidateModal({ pendingIds, kecamatanName, onClose, onSuccess }: {
   pendingIds: number[]; kecamatanName: string
@@ -217,7 +217,7 @@ function BulkValidateModal({ pendingIds, kecamatanName, onClose, onSuccess }: {
   )
 }
 
-// ─── Kecamatan Group ───────────────────────────────────────────────────────
+// --- Kecamatan Group -------------------------------------------------------
 
 function KecamatanGroup({ userId, name, kecamatan, kabupaten, submissions, onValidated }: {
   userId: number; name: string; kecamatan: string | null; kabupaten: string | null
@@ -317,7 +317,7 @@ function KecamatanGroup({ userId, name, kecamatan, kabupaten, submissions, onVal
   )
 }
 
-// ─── Category Section ──────────────────────────────────────────────────────
+// --- Category Section ------------------------------------------------------
 
 function CategorySection({ cat, onValidate, isOutdated }: {
   cat: { code: string; name: string; items: SelfAssessmentRow[] }
@@ -354,7 +354,7 @@ function CategorySection({ cat, onValidate, isOutdated }: {
   )
 }
 
-// ─── Indicator Row ─────────────────────────────────────────────────────────
+// --- Indicator Row ---------------------------------------------------------
 
 function IndicatorRow({ submission: s, onValidate, isOutdated }: {
   submission: SelfAssessmentRow; onValidate: (s: SelfAssessmentRow) => void
@@ -455,7 +455,7 @@ function StatusPill({ status }: { status: string }) {
   )
 }
 
-// ─── Main ──────────────────────────────────────────────────────────────────
+// --- Main ------------------------------------------------------------------
 
 export function ValidationTable({ submissions, onValidated }: ValidationTableProps) {
   const [page, setPage] = useState(1)

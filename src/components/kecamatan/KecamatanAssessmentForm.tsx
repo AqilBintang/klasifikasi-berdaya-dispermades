@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -113,7 +113,7 @@ export function KecamatanAssessmentForm({
 
   useUnsavedWarning(isDirty && !isFormLocked)
 
-  // ── Auto-save logic ───────────────────────────────────────────
+  // -- Auto-save logic -------------------------------------------
 
   const doSaveDraft = useCallback(async (currentRows: Record<number, RowState>) => {
     // Build lookup maxScore per indicatorId dari assessment
@@ -198,7 +198,7 @@ export function KecamatanAssessmentForm({
     setResult(null)
   }
 
-  // ── Manual save / submit ──────────────────────────────────────
+  // -- Manual save / submit --------------------------------------
 
   const handleSave = async (status: 'DRAFT' | 'SUBMITTED') => {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
@@ -312,7 +312,7 @@ export function KecamatanAssessmentForm({
     }
   }
 
-  // ── Render ────────────────────────────────────────────────────
+  // -- Render ----------------------------------------------------
 
   return (
     <div className="space-y-6">

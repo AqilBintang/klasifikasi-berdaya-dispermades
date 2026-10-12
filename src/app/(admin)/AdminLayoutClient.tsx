@@ -15,7 +15,7 @@ export default function AdminLayoutClient({
 
   return (
     <SessionProvider>
-      <div className="flex h-screen overflow-hidden bg-gray-100">
+      <div className="flex h-screen overflow-hidden bg-gray-100 overscroll-none">
         <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
         {/* Backdrop overlay untuk mobile — klik untuk tutup sidebar */}
@@ -32,7 +32,7 @@ export default function AdminLayoutClient({
             onMenuToggle={() => setSidebarOpen((p) => !p)}
             isSidebarOpen={sidebarOpen}
           />
-          <main className="flex-1 overflow-y-auto bg-gray-100 p-4 md:p-6 lg:p-8">
+          <main className="flex-1 overflow-y-auto overscroll-none bg-gray-100 p-4 md:p-6 lg:p-8">
             {children}
           </main>
         </div>

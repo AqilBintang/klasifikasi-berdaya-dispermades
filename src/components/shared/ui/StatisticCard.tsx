@@ -29,7 +29,7 @@ export function StatisticCard({
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
 
           {/* Right: icon */}
-          <div className="rounded-md bg-primary/10 p-2 text-primary">
+          <div className="text-primary">
             <Icon className="h-4 w-4" aria-hidden="true" />
           </div>
         </div>

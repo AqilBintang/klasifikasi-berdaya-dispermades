@@ -1,4 +1,4 @@
-import { auth } from '@/auth'
+﻿import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -9,7 +9,7 @@ import {
   faClock,
 } from '@fortawesome/free-solid-svg-icons'
 
-// ─── Status badge ──────────────────────────────────────────────────────────
+// --- Status badge ----------------------------------------------------------
 
 type AssessmentStatus = 'BELUM_DIISI' | 'DRAFT' | 'SUBMITTED' | 'VALIDATED' | 'PARTIAL' | 'NEEDS_REVISION' | 'HAS_UPDATE'
 
@@ -37,7 +37,7 @@ function StatusBadge({ status }: { status: AssessmentStatus }) {
   )
 }
 
-// ─── Derive status ─────────────────────────────────────────────────────────
+// --- Derive status ---------------------------------------------------------
 
 function deriveStatus(
   totalIndicators: number,
@@ -55,7 +55,7 @@ function deriveStatus(
   return 'DRAFT'
 }
 
-// ─── Page ──────────────────────────────────────────────────────────────────
+// --- Page ------------------------------------------------------------------
 
 export default async function KecamatanAssessmentPage() {
   const session = await auth()

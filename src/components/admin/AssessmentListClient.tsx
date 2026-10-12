@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -40,7 +40,7 @@ const PAGE_SIZE = 9
 
 const inputCls = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-400 transition-colors'
 
-// ─── Modal Versioning ─────────────────────────────────────────────────────────
+// --- Modal Versioning ---------------------------------------------------------
 
 interface VersioningModalProps {
   assessment: AssessmentItem
@@ -242,7 +242,7 @@ function VersioningModal({ assessment, onClose, onSuccess }: VersioningModalProp
   )
 }
 
-// ─── Modal Duplikat ───────────────────────────────────────────────────────────
+// --- Modal Duplikat -----------------------------------------------------------
 
 interface DuplicateModalProps {
   assessment: AssessmentItem
@@ -352,7 +352,7 @@ function DuplicateModal({ assessment, onClose, onSuccess }: DuplicateModalProps)
   )
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// --- Main component -----------------------------------------------------------
 
 export function AssessmentListClient({ assessments }: { assessments: AssessmentItem[] }) {
   const router = useRouter()

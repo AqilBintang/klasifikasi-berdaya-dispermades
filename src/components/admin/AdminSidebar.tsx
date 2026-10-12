@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -13,14 +13,14 @@ import { cn } from '@/lib/utils'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import Image from 'next/image'
 
-// ─── Nav config ───────────────────────────────────────────────────────────────
+// --- Nav config ---------------------------------------------------------------
 
 const ASSESSMENT_ITEMS: { label: string; href: string; icon: LucideIcon }[] = [
   { label: 'Create Assessment',       href: '/admin/assessment/create',     icon: PlusCircle },
   { label: 'Rekapitulasi Assessment', href: '/admin/assessment/results',     icon: Award },
 ]
 
-// ─── SidebarContent ───────────────────────────────────────────────────────────
+// --- SidebarContent -----------------------------------------------------------
 
 function SidebarContent({ onClose }: { onClose: () => void }) {
   const pathname = usePathname()
@@ -57,7 +57,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
       <nav aria-label="Admin Navigasi" className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="flex flex-col gap-1" role="list">
 
-          {/* ── Dashboard ── */}
+          {/* -- Dashboard -- */}
           <li>
             <Link
               href="/admin"
@@ -75,7 +75,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
             </Link>
           </li>
 
-          {/* ── Landing Page ── */}
+          {/* -- Landing Page -- */}
           <li>
             <Link
               href="/admin/landing-page"
@@ -93,7 +93,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
             </Link>
           </li>
 
-          {/* ── Panduan ── */}
+          {/* -- Panduan -- */}
           <li>
             <Link
               href="/admin/panduan"
@@ -111,7 +111,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
             </Link>
           </li>
 
-          {/* ── Assessment group ── */}
+          {/* -- Assessment group -- */}
           <li>
             <button
               type="button"
@@ -157,7 +157,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
             )}
           </li>
 
-          {/* ── Klasifikasi Berdaya ── */}
+          {/* -- Klasifikasi Berdaya -- */}
           <li>
             <Link
               href="/admin/klasifikasi-berdaya"
@@ -192,7 +192,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
             </Link>
           </li>
 
-          {/* ── Manage User ── */}
+          {/* -- Manage User -- */}
           <li>
             <Link
               href="/admin/users"
@@ -210,7 +210,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
             </Link>
           </li>
 
-          {/* ── Super Admin Menu ── */}
+          {/* -- Super Admin Menu -- */}
           {isSuperAdmin && (
             <>
               <li className="pt-2">
@@ -309,7 +309,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
   )
 }
 
-// ─── Sidebar wrapper ──────────────────────────────────────────────────────────
+// --- Sidebar wrapper ----------------------------------------------------------
 
 interface AdminSidebarProps {
   isOpen: boolean

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useMemo, useState } from 'react'
 import type { KabKotaJateng, KecamatanJateng } from '@/types/wilayah'
@@ -10,14 +10,14 @@ export type WilayahSelection = {
   kecamatanKode: string
 }
 
-// ─── Tipe state yang di-share antara Filter dan Map ──────────────────────────
+// --- Tipe state yang di-share antara Filter dan Map --------------------------
 
 export type WilayahState = {
   selectedKabKotaKode: string | null
   selectedKecamatanKode: string
 }
 
-// ─── Hook untuk state wilayah — dipakai di parent ────────────────────────────
+// --- Hook untuk state wilayah — dipakai di parent ----------------------------
 
 export function useWilayahState(allowAll = true): {
   state: WilayahState
@@ -43,7 +43,7 @@ export function useWilayahState(allowAll = true): {
   }
 }
 
-// ─── WilayahFilter ───────────────────────────────────────────────────────────
+// --- WilayahFilter -----------------------------------------------------------
 
 type FilterProps = {
   kabKota: KabKotaJateng[]
@@ -138,7 +138,7 @@ export function WilayahFilter({
   )
 }
 
-// ─── WilayahMap ──────────────────────────────────────────────────────────────
+// --- WilayahMap --------------------------------------------------------------
 
 type MapProps = {
   kabKota: KabKotaJateng[]
@@ -182,7 +182,7 @@ export function WilayahMap({ kabKota, kecamatanByKabKota, state, onKabKotaChange
   )
 }
 
-// ─── WilayahJatengExplorer (backward compat — dipakai admin/kecamatan) ────────
+// --- WilayahJatengExplorer (backward compat — dipakai admin/kecamatan) --------
 
 type ExplorerProps = {
   kabKota: KabKotaJateng[]

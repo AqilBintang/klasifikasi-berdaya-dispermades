@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+﻿import { Suspense } from 'react'
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -161,7 +161,7 @@ async function getStats(yearFilter?: string) {
   }
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---------------------------------------------------------------------
 
 export default async function KlasifikasiBerdayaPage({
   searchParams,
@@ -191,7 +191,7 @@ export default async function KlasifikasiBerdayaPage({
 
   return (
     <div className="space-y-6">
-      {/* ── HEADER ──────────────────────────────────────────────────────────── */}
+      {/* -- HEADER ------------------------------------------------------------ */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Klasifikasi Berdaya</h2>
@@ -206,12 +206,12 @@ export default async function KlasifikasiBerdayaPage({
         )}
       </div>
 
-      {/* ── OVERVIEW METRICS ────────────────────────────────────────────────── */}
+      {/* -- OVERVIEW METRICS -------------------------------------------------- */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="rounded-xl border bg-white p-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-blue-600">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
             </div>
@@ -225,8 +225,8 @@ export default async function KlasifikasiBerdayaPage({
 
         <div className="rounded-xl border bg-white p-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-green-600">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
@@ -240,8 +240,8 @@ export default async function KlasifikasiBerdayaPage({
 
         <div className="rounded-xl border bg-white p-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-              <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-amber-600">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
             </div>
@@ -257,8 +257,8 @@ export default async function KlasifikasiBerdayaPage({
 
         <div className="rounded-xl border bg-white p-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
-              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-purple-600">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
@@ -273,7 +273,7 @@ export default async function KlasifikasiBerdayaPage({
         </div>
       </div>
 
-      {/* ── KLASIFIKASI BREAKDOWN ───────────────────────────────────────────── */}
+      {/* -- KLASIFIKASI BREAKDOWN --------------------------------------------- */}
       <div className="rounded-xl border bg-white shadow-sm">
         <div className="px-6 py-4 border-b">
           <h3 className="font-semibold text-gray-900">Distribusi Klasifikasi</h3>
@@ -325,7 +325,7 @@ export default async function KlasifikasiBerdayaPage({
         </div>
       </div>
 
-      {/* ── CHART ANALYSIS ──────────────────────────────────────────────────── */}
+      {/* -- CHART ANALYSIS ---------------------------------------------------- */}
       <div className="rounded-xl border bg-white shadow-sm">
         <div className="px-6 py-4 border-b">
           <h3 className="font-semibold text-gray-900">Tren Historis</h3>
@@ -348,7 +348,7 @@ export default async function KlasifikasiBerdayaPage({
         </div>
       </div>
 
-      {/* ── REGIONAL BREAKDOWN ──────────────────────────────────────────────── */}
+      {/* -- REGIONAL BREAKDOWN ------------------------------------------------ */}
       {activeYear && kabDistribusi.length > 0 && (
         <div className="rounded-xl border bg-white shadow-sm">
           <div className="px-6 py-4 border-b">

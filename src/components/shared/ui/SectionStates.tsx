@@ -1,7 +1,7 @@
-import { AlertCircle, Inbox } from 'lucide-react'
+﻿import { AlertCircle, Inbox } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-// ─── Empty State ──────────────────────────────────────────────────────────────
+// --- Empty State --------------------------------------------------------------
 
 interface SectionEmptyProps {
   message: string
@@ -23,7 +23,7 @@ export function SectionEmpty({ message, actionLabel, onAction }: SectionEmptyPro
   )
 }
 
-// ─── Error State ──────────────────────────────────────────────────────────────
+// --- Error State --------------------------------------------------------------
 
 interface SectionErrorProps {
   message?: string
@@ -47,7 +47,7 @@ export function SectionError({
   )
 }
 
-// ─── Skeleton Grid ────────────────────────────────────────────────────────────
+// --- Skeleton Grid ------------------------------------------------------------
 
 interface SectionSkeletonProps {
   count?: number

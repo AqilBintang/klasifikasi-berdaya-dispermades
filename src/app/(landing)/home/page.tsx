@@ -1,4 +1,4 @@
-import { MapPin, CheckCircle, CalendarDays, TrendingUp } from 'lucide-react'
+﻿import { MapPin, CheckCircle, CalendarDays, TrendingUp } from 'lucide-react'
 import { InfoBanner } from '@/components/shared/ui/InfoBanner'
 import { LandingDataSection } from '@/components/landing/LandingDataSection'
 import { StatCard } from '@/components/landing/StatCard'
@@ -69,7 +69,7 @@ const LEVEL_CONFIG = [
   },
 ] as const
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---------------------------------------------------------------------
 
 export default async function LandingPage() {
   const [kabKota, kecamatanByKabKota, stats, landingContent] = await Promise.all([
@@ -88,7 +88,7 @@ export default async function LandingPage() {
 
   return (
     <div>
-      {/* ── ① HERO ─────────────────────────────────────────────────────────── */}
+      {/* -- ① HERO ----------------------------------------------------------- */}
       <section
         className="sticky top-0 flex items-center justify-center"
         style={{
@@ -130,10 +130,10 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── sections below overlay the sticky hero ─────────────────────── */}
+      {/* -- sections below overlay the sticky hero ----------------------- */}
       <div className="relative z-10">
 
-      {/* ── ② STAT CARDS ──────────────────────────────────────────────────── */}
+      {/* -- ② STAT CARDS ---------------------------------------------------- */}
       <section aria-label="Statistik ringkas" style={{ backgroundColor: 'oklch(88.87% 0.0568 219.092)' }}>
         <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -165,7 +165,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── ③ TENTANG KLASIFIKASI BERDAYA ─────────────────────────────────── */}
+      {/* -- ③ TENTANG KLASIFIKASI BERDAYA ----------------------------------- */}
       <section aria-labelledby="tentang-heading" style={{ backgroundColor: 'oklch(88.87% 0.0568 219.092)' }}>
         <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 pb-20">
           <div className="w-full h-px bg-sky-200/60 mb-16" />
@@ -215,7 +215,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── ④ 4 LEVEL KLASIFIKASI ─────────────────────────────────────────── */}
+      {/* -- ④ 4 LEVEL KLASIFIKASI ------------------------------------------- */}
       <div style={{ backgroundColor: 'oklch(88.87% 0.0568 219.092)' }} className="overflow-hidden leading-none -mb-1">
         <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-12 block" aria-hidden="true">
           <path d="M0,0 C720,80 720,80 1440,0 L1440,60 L0,60 Z" fill="#e2e8f0" />
@@ -258,7 +258,7 @@ export default async function LandingPage() {
         </svg>
       </div>
 
-      {/* ── ⑤ DATA KLASIFIKASI (peta + chart) ─────────────────────────────── */}
+      {/* -- ⑤ DATA KLASIFIKASI (peta + chart) ------------------------------- */}
       <section id="data" aria-labelledby="data-heading" className="bg-white">
         <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-12">
           <div className="text-center mb-6">

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Export self-assessment kecamatan dengan format identik file contoh Excel.
  *
  * Layout output (array-of-arrays):
@@ -24,7 +24,7 @@ import { prisma } from '@/lib/prisma'
 import { getStatusAkhir, getKlasifikasiPerKategori } from '@/lib/scoring'
 import { aoaToSheet, workbookToXlsxBuffer } from '@/lib/excel'
 
-// ─── Ambil data ───────────────────────────────────────────────────────────────
+// --- Ambil data ---------------------------------------------------------------
 
 export async function buildSelfAssessmentExport(userId: number, assessmentId: number, periode: string) {
   // Info user (kecamatan & kabupaten)
@@ -80,7 +80,7 @@ export async function buildSelfAssessmentExport(userId: number, assessmentId: nu
   // Map indicatorId → entry untuk lookup O(1)
   const entryMap = new Map(entries.map((e) => [e.indicatorId, e]))
 
-  // ─── Susun array-of-arrays ──────────────────────────────────────────────────
+  // --- Susun array-of-arrays --------------------------------------------------
 
   const rows: unknown[][] = []
 
@@ -141,7 +141,7 @@ export async function buildSelfAssessmentExport(userId: number, assessmentId: nu
   return { rows, kecamatanNama, kabupatenNama, assessmentTitle: assessment.title, periode }
 }
 
-// ─── Build workbook ───────────────────────────────────────────────────────────
+// --- Build workbook -----------------------------------------------------------
 
 export async function buildSelfAssessmentWorkbook(userId: number, assessmentId: number, periode: string) {
   const { rows, kecamatanNama, kabupatenNama, assessmentTitle } = await buildSelfAssessmentExport(
@@ -162,7 +162,7 @@ export async function buildSelfAssessmentWorkbook(userId: number, assessmentId: 
     { wch: 5 },
   ]
 
-  // ── Merge cells ──────────────────────────────────────────────────────────────
+  // -- Merge cells --------------------------------------------------------------
   // Kolom: A=0, B=1, C=2, D=3, E=4, F=5
   // XLSX merges: { s: {r, c}, e: {r, c} }  (0-indexed)
 
@@ -247,7 +247,7 @@ export async function buildSelfAssessmentWorkbook(userId: number, assessmentId: 
 }
 
 
-// ─── Laporan Tahunan ──────────────────────────────────────────────────────────
+// --- Laporan Tahunan ----------------------------------------------------------
 
 /**
  * Build workbook laporan tahunan — satu sheet per assessment dalam tahun tersebut.
@@ -349,7 +349,7 @@ export async function buildYearlyReportWorkbook(userId: number, tahun: number) {
     const merge = (r1: number, c1: number, r2: number, c2: number) =>
       merges.push({ s: { r: r1, c: c1 }, e: { r: r2, c: c2 } })
 
-    // ── Header dokumen (baris 0-3, A kosong, label di B, nilai di C) ──
+    // -- Header dokumen (baris 0-3, A kosong, label di B, nilai di C) --
     // r=0: judul di A1, merge A:G
     rows.push(['SELF ASESSMENT KECAMATAN BERDAYA PROVINSI JAWA TENGAH', '', '', '', '', '', ''])
     merge(0, 0, 0, 6)

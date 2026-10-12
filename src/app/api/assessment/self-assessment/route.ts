@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { z } from 'zod'
 
-// ─── Input validation schema ───────────────────────────────────────────────
+// --- Input validation schema -----------------------------------------------
 // Menggunakan Zod untuk validasi + sanitasi input sebelum masuk ke database
 // Ini mencegah injection dan data tidak valid
 

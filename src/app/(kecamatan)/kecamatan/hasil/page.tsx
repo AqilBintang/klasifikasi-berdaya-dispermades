@@ -1,4 +1,4 @@
-import { auth } from '@/auth'
+﻿import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -6,7 +6,7 @@ import { faAward, faCheckCircle, faClockRotateLeft, faTimesCircle, faMedal } fro
 import { cn } from '@/lib/utils'
 import { getKlasifikasiPerKategori, getStatusAkhir, KLASIFIKASI_CONFIG, type KlasifikasiLevel } from '@/lib/scoring'
 
-// ─── Sub-components ───────────────────────────────────────────────────────
+// --- Sub-components -------------------------------------------------------
 
 function KlasifikasiBadge({ level, size = 'sm' }: { level: KlasifikasiLevel | null; size?: 'sm' | 'lg' }) {
   if (!level) {
@@ -44,7 +44,7 @@ const STATUS_ENTRY: Record<string, { label: string; icon: typeof faCheckCircle; 
   DRAFT:     { label: 'Draft',      icon: faClockRotateLeft, cls: 'text-slate-400' },
 }
 
-// ─── Page ──────────────────────────────────────────────────────────────────
+// --- Page ------------------------------------------------------------------
 
 export default async function KecamatanHasilPage() {
   const session = await auth()
@@ -77,7 +77,7 @@ export default async function KecamatanHasilPage() {
     ],
   })
 
-  // ── Group by assessment ──
+  // -- Group by assessment --
   type EntryType = typeof entries[0]
   type CatGroup = {
     id: number; code: string; name: string

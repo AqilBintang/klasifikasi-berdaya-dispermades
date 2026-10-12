@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useCallback } from 'react'
 import {
@@ -99,7 +99,7 @@ export function LandingDataSection({ kabKota, kecamatanByKabKota, initialChartDa
   return (
     <div className="space-y-3">
 
-      {/* ── Filter: full width ──────────────────────────────────────────── */}
+      {/* -- Filter: full width -------------------------------------------- */}
       <div className="rounded-2xl border border-gray-100 bg-white px-5 py-4 shadow-sm">
         <WilayahFilter
           kabKota={kabKota}
@@ -111,7 +111,7 @@ export function LandingDataSection({ kabKota, kecamatanByKabKota, initialChartDa
         />
       </div>
 
-      {/* ── Peta + Chart: satu card ─────────────────────────────────────── */}
+      {/* -- Peta + Chart: satu card --------------------------------------- */}
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-100 items-stretch">
 

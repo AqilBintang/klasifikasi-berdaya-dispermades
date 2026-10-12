@@ -1,4 +1,4 @@
-import Link from 'next/link'
+﻿import Link from 'next/link'
 import { Suspense } from 'react'
 import { prisma } from '@/lib/prisma'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -120,7 +120,7 @@ async function getRekapitulasi(periodeFilter?: string) {
   return { data, years }
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---------------------------------------------------------------------
 
 export default async function RekapitulasiPage({
   searchParams,

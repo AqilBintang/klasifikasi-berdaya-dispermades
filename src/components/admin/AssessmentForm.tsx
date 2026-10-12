@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import {
@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 
 export interface Indicator {
   id: number
@@ -41,7 +41,7 @@ interface AssessmentFormProps {
   periode: string        // tahun/periode assessment
 }
 
-// ─── Score badge ──────────────────────────────────────────────────────────────
+// --- Score badge --------------------------------------------------------------
 
 function ScoreSelect({
   value,
@@ -69,7 +69,7 @@ function ScoreSelect({
   )
 }
 
-// ─── Main Form ────────────────────────────────────────────────────────────────
+// --- Main Form ----------------------------------------------------------------
 
 export function AssessmentForm({ categories, submittedById, periode }: AssessmentFormProps) {
   // Initialize row entries for all indicators

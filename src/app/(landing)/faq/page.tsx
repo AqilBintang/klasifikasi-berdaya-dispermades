@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
@@ -51,7 +51,7 @@ export default function FaqPage() {
 
   return (
     <div className="min-h-screen bg-white" >
-      {/* ── Hero ── */}
+      {/* -- Hero -- */}
       <section className="pt-20 sm:pt-28 pb-10 sm:pb-12 px-4" >
         <div className="max-w-2xl mx-auto text-center">
           <div className="inline-flex items-center rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700 mb-4">
@@ -66,7 +66,7 @@ export default function FaqPage() {
         </div>
       </section>
 
-      {/* ── Konten FAQ ── */}
+      {/* -- Konten FAQ -- */}
       <section className="max-w-3xl mx-auto px-4 md:px-6 pb-20">
         <div className="space-y-6">
           {FAQ_DATA.map((cat, ci) => (
@@ -95,7 +95,7 @@ export default function FaqPage() {
           ))}
         </div>
 
-        {/* ── CTA kontak ── */}
+        {/* -- CTA kontak -- */}
         <div className="mt-12 rounded-2xl bg-sky-50 border border-sky-100 px-6 py-8 text-center">
           <p className="text-sm font-semibold text-gray-800">Tidak menemukan jawaban yang kamu cari?</p>
           <p className="mt-1 text-sm text-gray-500">Hubungi kami langsung dan tim kami akan segera membantu.</p>

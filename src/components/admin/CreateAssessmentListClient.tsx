@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -35,7 +35,7 @@ const STATUS_CONFIG = {
 
 const inputCls = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-400 transition-colors'
 
-// ─── Modal Duplikat ───────────────────────────────────────────────────────────
+// --- Modal Duplikat -----------------------------------------------------------
 
 interface DuplicateModalProps {
   assessment: AssessmentItem
@@ -145,7 +145,7 @@ function DuplicateModal({ assessment, onClose, onSuccess }: DuplicateModalProps)
   )
 }
 
-// ─── Grid ─────────────────────────────────────────────────────────────────────
+// --- Grid ---------------------------------------------------------------------
 
 export function CreateAssessmentListClient({ assessments }: { assessments: AssessmentItem[] }) {
   const router = useRouter()

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import { toast } from '@/components/ui/toast'
 import type { ScoringRuleEntry } from '@/types/assessment'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 
 interface IndicatorRow { tempId: string; number: number; indicator: string; maxScore: number }
 interface CategoryBlock {
@@ -31,7 +31,7 @@ const newCategory  = (order: number): CategoryBlock => ({
   showScoringRule: false,
 })
 
-// ─── Step indicator ───────────────────────────────────────────────────────────
+// --- Step indicator -----------------------------------------------------------
 
 function StepBar({ step }: { step: 1 | 2 }) {
   const steps = [
@@ -65,7 +65,7 @@ function StepBar({ step }: { step: 1 | 2 }) {
   )
 }
 
-// ─── Indicator rows ───────────────────────────────────────────────────────────
+// --- Indicator rows -----------------------------------------------------------
 
 function IndicatorRows({ indicators, catTempId, onChange, onAdd, onRemove }: {
   indicators: IndicatorRow[]; catTempId: string
@@ -108,7 +108,7 @@ function IndicatorRows({ indicators, catTempId, onChange, onAdd, onRemove }: {
   )
 }
 
-// ─── Scoring Rule Editor ──────────────────────────────────────────────────────
+// --- Scoring Rule Editor ------------------------------------------------------
 
 function ScoringRuleEditor({ rules, onChange }: {
   rules: ScoringRuleEntry[]
@@ -183,7 +183,7 @@ function ScoringRuleEditor({ rules, onChange }: {
   )
 }
 
-// ─── Review step ──────────────────────────────────────────────────────────────
+// --- Review step --------------------------------------------------------------
 
 function ReviewStep({ title, description, periode, categories }: {
   title: string; description: string; periode: string; categories: CategoryBlock[]
@@ -255,7 +255,7 @@ function ReviewStep({ title, description, periode, categories }: {
   )
 }
 
-// ─── Confirm modal ────────────────────────────────────────────────────────────
+// --- Confirm modal ------------------------------------------------------------
 
 function ConfirmModal({ titre, periode, onConfirm, onCancel, saving }: {
   titre: string; periode: string; saving: boolean
@@ -326,7 +326,7 @@ function ConfirmModal({ titre, periode, onConfirm, onCancel, saving }: {
   )
 }
 
-// ─── Main Form ────────────────────────────────────────────────────────────────
+// --- Main Form ----------------------------------------------------------------
 
 export function CreateAssessmentForm() {
   const router = useRouter()
@@ -346,7 +346,7 @@ export function CreateAssessmentForm() {
   // dan POST auto-save akan menyebabkan conflict periode saat handleConfirm POST ulang.
   // Data aman di client state sampai user eksplisit konfirmasi.
 
-  // ── Category handlers ──────────────────────────────────────
+  // -- Category handlers --------------------------------------
 
   const addCategory    = () => setCategories((p) => [...p, newCategory(p.length)])
   const removeCategory = (id: string) => setCategories((p) =>
@@ -371,7 +371,7 @@ export function CreateAssessmentForm() {
       c.tempId !== cId ? c : { ...c, indicators: c.indicators.map((i) => i.tempId === iId ? { ...i, [f]: v } : i) }
     ))
 
-  // ── Validate ───────────────────────────────────────────────
+  // -- Validate -----------------------------------------------
 
   const validate = (): string | null => {
     if (!title.trim()) return 'Judul assessment wajib diisi.'
@@ -386,7 +386,7 @@ export function CreateAssessmentForm() {
     return null
   }
 
-  // ── Step 1 → Step 2 ────────────────────────────────────────
+  // -- Step 1 → Step 2 ----------------------------------------
 
   const goToReview = async () => {
     const err = validate()
@@ -415,7 +415,7 @@ export function CreateAssessmentForm() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // ── Step 2 → Submit ────────────────────────────────────────
+  // -- Step 2 → Submit ----------------------------------------
 
   const handleConfirm = async (status: 'DRAFT' | 'PUBLISHED') => {
     setSaving(true)
@@ -465,7 +465,7 @@ export function CreateAssessmentForm() {
     }
   }
 
-  // ── Render ─────────────────────────────────────────────────
+  // -- Render -------------------------------------------------
 
   return (
     <div className="space-y-6">
@@ -479,7 +479,7 @@ export function CreateAssessmentForm() {
 
       <StepBar step={step} />
 
-      {/* ── STEP 1: Form ── */}
+      {/* -- STEP 1: Form -- */}
       {step === 1 && (
         <>
           {/* Info dasar */}
@@ -580,7 +580,7 @@ export function CreateAssessmentForm() {
         </>
       )}
 
-      {/* ── STEP 2: Review ── */}
+      {/* -- STEP 2: Review -- */}
       {step === 2 && (
         <>
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800 flex items-start gap-3">

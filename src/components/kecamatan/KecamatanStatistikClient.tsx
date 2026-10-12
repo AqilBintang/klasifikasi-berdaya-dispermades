@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useMemo } from 'react'
 import {
@@ -10,7 +10,7 @@ import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons
 import { cn } from '@/lib/utils'
 import { KLASIFIKASI_CONFIG, type KlasifikasiLevel } from '@/lib/scoring'
 
-// ── Types ──────────────────────────────────────────────────────────────────
+// -- Types ------------------------------------------------------------------
 
 export type CatStat = {
   id: number; code: string; name: string; order: number
@@ -26,7 +26,7 @@ export type PeriodeStat = {
   categories: CatStat[]
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────
+// -- Sub-components ---------------------------------------------------------
 
 function KlasifikasiBadge({ level }: { level: KlasifikasiLevel | null }) {
   if (!level) return <span className="text-xs text-gray-400">—</span>
@@ -43,7 +43,7 @@ function KlasifikasiBadge({ level }: { level: KlasifikasiLevel | null }) {
 
 const PAGE_SIZE = 5
 
-// ── Main component ─────────────────────────────────────────────────────────
+// -- Main component ---------------------------------------------------------
 
 export function KecamatanStatistikClient({ riwayat }: { riwayat: PeriodeStat[] }) {
   const [filterPeriode, setFilterPeriode] = useState<string>('semua')
