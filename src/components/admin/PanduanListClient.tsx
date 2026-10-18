@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faBook, faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { Loader2 } from 'lucide-react'
 import { Pagination } from '@/components/shared/ui/Pagination'
+import { toast } from '@/components/ui/toast'
 
 interface RubricItem {
   id: number
@@ -19,26 +21,28 @@ const PAGE_SIZE = 9
 export function PanduanListClient({ rubrics: initialRubrics }: { rubrics: RubricItem[] }) {
   const router = useRouter()
   const [rubrics, setRubrics] = useState(initialRubrics)
+  const [confirmId, setConfirmId] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [page, setPage] = useState(1)
   const totalPages = Math.ceil(rubrics.length / PAGE_SIZE)
   const paged = rubrics.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
-  const handleDelete = async (id: number, title: string) => {
-    if (!confirm(`Hapus rubrik "${title}"? Tindakan ini tidak dapat dibatalkan.`)) return
+  const handleDelete = async (id: number) => {
     setDeletingId(id)
+    setConfirmId(null)
     try {
       const res = await fetch(`/api/rubric/${id}`, { method: 'DELETE' })
       if (res.ok) {
         setRubrics((prev) => prev.filter((r) => r.id !== id))
         if (paged.length === 1 && page > 1) setPage(page - 1)
+        toast.success('Rubrik berhasil dihapus.')
         router.refresh()
       } else {
         const json = await res.json()
-        alert(json.error ?? 'Gagal menghapus rubrik.')
+        toast.error(json.error ?? 'Gagal menghapus rubrik.')
       }
     } catch {
-      alert('Terjadi kesalahan jaringan.')
+      toast.error('Terjadi kesalahan jaringan.')
     } finally {
       setDeletingId(null)
     }
@@ -78,23 +82,48 @@ export function PanduanListClient({ rubrics: initialRubrics }: { rubrics: Rubric
             <h3 className="font-semibold text-gray-900 text-sm leading-snug">{r.title}</h3>
             <p className="mt-1 text-xs text-gray-500 line-clamp-1">{r.assessment.title}</p>
             <p className="mt-2 text-xs text-gray-400">{r._count.items} indikator</p>
-            <div className="mt-4 flex gap-2">
-              <Link
-                href={`/admin/panduan/${r.id}`}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"
-              >
-                <FontAwesomeIcon icon={faPencil} className="w-3 h-3" />
-                Lihat / Edit
-              </Link>
-              <button
-                type="button"
-                onClick={() => handleDelete(r.id, r.title)}
-                disabled={deletingId === r.id}
-                className="flex items-center justify-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
-              </button>
-            </div>
+
+            {/* Inline confirm dialog */}
+            {confirmId === r.id ? (
+              <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5">
+                <p className="text-xs text-red-700 font-medium mb-2">Hapus rubrik ini?</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(r.id)}
+                    disabled={deletingId === r.id}
+                    className="flex-1 flex items-center justify-center gap-1 rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {deletingId === r.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Ya, hapus'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmId(null)}
+                    className="flex-1 rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4 flex gap-2">
+                <Link
+                  href={`/admin/panduan/${r.id}`}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                >
+                  <FontAwesomeIcon icon={faPencil} className="w-3 h-3" />
+                  Lihat / Edit
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setConfirmId(r.id)}
+                  disabled={deletingId === r.id}
+                  className="flex items-center justify-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>
