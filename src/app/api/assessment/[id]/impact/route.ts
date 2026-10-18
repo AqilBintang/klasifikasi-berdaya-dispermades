@@ -28,7 +28,12 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid assessment ID' }, { status: 400 })
   }
 
-  const body = await req.json()
+  let body: unknown
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Request body harus berupa JSON.' }, { status: 400 })
+  }
   const parsed = bodySchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })

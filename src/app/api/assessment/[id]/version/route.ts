@@ -56,7 +56,12 @@ export async function POST(
       return NextResponse.json({ error: 'ID tidak valid.' }, { status: 400 })
     }
 
-    const body = await req.json()
+    let body: unknown
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json({ error: 'Request body harus berupa JSON.' }, { status: 400 })
+    }
     const parsed = versionInputSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json(
