@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPlus, faBook, faPencil } from '@fortawesome/free-solid-svg-icons'
+import { faPlus, faBook, faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { Pagination } from '@/components/shared/ui/Pagination'
 
 interface RubricItem {
@@ -15,10 +16,33 @@ interface RubricItem {
 
 const PAGE_SIZE = 9
 
-export function PanduanListClient({ rubrics }: { rubrics: RubricItem[] }) {
+export function PanduanListClient({ rubrics: initialRubrics }: { rubrics: RubricItem[] }) {
+  const router = useRouter()
+  const [rubrics, setRubrics] = useState(initialRubrics)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
   const [page, setPage] = useState(1)
   const totalPages = Math.ceil(rubrics.length / PAGE_SIZE)
   const paged = rubrics.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const handleDelete = async (id: number, title: string) => {
+    if (!confirm(`Hapus rubrik "${title}"? Tindakan ini tidak dapat dibatalkan.`)) return
+    setDeletingId(id)
+    try {
+      const res = await fetch(`/api/rubric/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setRubrics((prev) => prev.filter((r) => r.id !== id))
+        if (paged.length === 1 && page > 1) setPage(page - 1)
+        router.refresh()
+      } else {
+        const json = await res.json()
+        alert(json.error ?? 'Gagal menghapus rubrik.')
+      }
+    } catch {
+      alert('Terjadi kesalahan jaringan.')
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   if (rubrics.length === 0) {
     return (
@@ -54,14 +78,22 @@ export function PanduanListClient({ rubrics }: { rubrics: RubricItem[] }) {
             <h3 className="font-semibold text-gray-900 text-sm leading-snug">{r.title}</h3>
             <p className="mt-1 text-xs text-gray-500 line-clamp-1">{r.assessment.title}</p>
             <p className="mt-2 text-xs text-gray-400">{r._count.items} indikator</p>
-            <div className="mt-4">
+            <div className="mt-4 flex gap-2">
               <Link
                 href={`/admin/panduan/${r.id}`}
-                className="flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 w-full"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"
               >
                 <FontAwesomeIcon icon={faPencil} className="w-3 h-3" />
                 Lihat / Edit
               </Link>
+              <button
+                type="button"
+                onClick={() => handleDelete(r.id, r.title)}
+                disabled={deletingId === r.id}
+                className="flex items-center justify-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
+              </button>
             </div>
           </div>
         ))}
