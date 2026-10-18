@@ -280,6 +280,13 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
     setSaving(true)
     setResult(null)
     try {
+      // Kirim status jika:
+      // - ARCHIVED (selalu boleh)
+      // - PUBLISHED dari DRAFT yang belum terkunci (tidak ada jawaban masuk)
+      const shouldSendStatus =
+        status === 'ARCHIVED' ||
+        (status === 'PUBLISHED' && assessment.status === 'DRAFT' && !isLocked)
+
       const res = await fetch(`/api/assessment/${assessment.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -287,8 +294,7 @@ export function EditAssessmentForm({ assessment, isLocked = false }: { assessmen
           title: title.trim(),
           description: description.trim() || null,
           periode: periode.trim(),
-          // Kirim status hanya jika berubah ke ARCHIVED (satu-satunya perubahan yang valid dari form)
-          ...(status === 'ARCHIVED' && { status: 'ARCHIVED' }),
+          ...(shouldSendStatus && { status }),
         }),
       })
 
