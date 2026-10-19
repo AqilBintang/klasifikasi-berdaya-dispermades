@@ -61,7 +61,7 @@ export function PanduanListClient({ rubrics: initialRubrics }: { rubrics: Rubric
           className="mt-5 flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-sky-700"
         >
           <FontAwesomeIcon icon={faPlus} className="w-3.5 h-3.5" />
-          Buat Rubrik Pertama
+          Buat Rubrik
         </Link>
       </div>
     )
